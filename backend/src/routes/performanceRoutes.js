@@ -26,13 +26,13 @@ router.get('/metrics', protect, admin, async (req, res) => {
       },
       cache: {
         redis: {
-          connected: redisClient.isReady,
+          connected: redisClient && redisClient.isReady,
         },
       },
     };
 
     // Get Redis info if connected
-    if (redisClient.isReady) {
+    if (redisClient && redisClient.isReady) {
       try {
         const redisInfo = await redisClient.info();
         const lines = redisInfo.split('\r\n');
@@ -113,7 +113,7 @@ router.post('/cache/clear', protect, admin, async (req, res) => {
   try {
     const { pattern = '*' } = req.body;
     
-    if (redisClient.isReady) {
+    if (redisClient && redisClient.isReady) {
       const keys = await redisClient.keys(`cache:${pattern}`);
       if (keys.length > 0) {
         await redisClient.del(keys);

@@ -4,6 +4,11 @@ import logger from '../config/logger.js';
 // Cache middleware for API responses
 export const cacheMiddleware = (duration = 300) => { // 5 minutes default
   return async (req, res, next) => {
+    // Skip if Redis is disabled
+    if (!redisClient) {
+      return next();
+    }
+
     // Skip caching for non-GET requests
     if (req.method !== 'GET') {
       return next();
@@ -54,6 +59,9 @@ export const cacheMiddleware = (duration = 300) => { // 5 minutes default
 // Cache invalidation helper
 export const invalidateCache = async (pattern) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return;
+    }
     const keys = await redisClient.keys(pattern);
     if (keys.length > 0) {
       await redisClient.del(keys);
@@ -67,6 +75,9 @@ export const invalidateCache = async (pattern) => {
 // Batch cache operations
 export const batchCacheSet = async (entries) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return;
+    }
     const pipeline = redisClient.multi();
     
     entries.forEach(({ key, value, ttl = 300 }) => {

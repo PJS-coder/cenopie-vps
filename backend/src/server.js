@@ -62,10 +62,13 @@ const PORT = process.env.PORT || 4000;
         credentials: true,
         methods: ['GET', 'POST']
       },
-      transports: ['websocket', 'polling'],
+      transports: ['polling'], // Use only polling for cPanel compatibility
       pingTimeout: 60000,
       pingInterval: 25000,
-      allowEIO3: true
+      allowEIO3: true,
+      // cPanel-specific options
+      upgrade: false,
+      rememberUpgrade: false,
     });
 
     // Attach io to global object so it can be accessed in controllers

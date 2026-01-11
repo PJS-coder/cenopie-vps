@@ -3,6 +3,11 @@ import redisClient from '../config/redis.js';
 // Cache middleware for API responses
 export const cacheMiddleware = (duration = 300) => { // 5 minutes default
   return async (req, res, next) => {
+    // Skip if Redis is disabled
+    if (!redisClient) {
+      return next();
+    }
+
     // Only cache GET requests
     if (req.method !== 'GET') {
       return next();
@@ -61,6 +66,9 @@ export const cacheMiddleware = (duration = 300) => { // 5 minutes default
 // Cache invalidation helper
 export const invalidateCache = async (pattern) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return;
+    }
     const keys = await redisClient.keys(`cache:${pattern}*`);
     if (keys.length > 0) {
       await redisClient.del(keys);
@@ -110,6 +118,9 @@ export const warmCache = async () => {
 // Session caching for user data
 export const cacheUserSession = async (userId, userData, ttl = 3600) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return;
+    }
     const sessionKey = `session:${userId}`;
     await redisClient.setEx(sessionKey, ttl, JSON.stringify(userData));
   } catch (error) {
@@ -119,6 +130,9 @@ export const cacheUserSession = async (userId, userData, ttl = 3600) => {
 
 export const getUserSession = async (userId) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return null;
+    }
     const sessionKey = `session:${userId}`;
     const cached = await redisClient.get(sessionKey);
     return cached ? JSON.parse(cached) : null;
@@ -131,6 +145,9 @@ export const getUserSession = async (userId) => {
 // Real-time data caching for dashboards
 export const cacheRealtimeData = async (key, data, ttl = 60) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return;
+    }
     await redisClient.setEx(`realtime:${key}`, ttl, JSON.stringify(data));
   } catch (error) {
     console.error('Realtime cache error:', error);
@@ -139,6 +156,9 @@ export const cacheRealtimeData = async (key, data, ttl = 60) => {
 
 export const getRealtimeData = async (key) => {
   try {
+    if (!redisClient || !redisClient.isOpen) {
+      return null;
+    }
     const cached = await redisClient.get(`realtime:${key}`);
     return cached ? JSON.parse(cached) : null;
   } catch (error) {

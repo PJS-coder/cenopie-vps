@@ -104,9 +104,14 @@ export const createPost = async (req, res) => {
     // Invalidate feed cache for all users (simplified approach)
     // In a production environment, you might want to be more selective
     if (redisClient && redisClient.isOpen) {
-      const keys = await redisClient.keys('feed:*');
-      if (keys.length > 0) {
-        await redisClient.del(keys);
+      try {
+        const keys = await redisClient.keys('feed:*');
+        if (keys.length > 0) {
+          await redisClient.del(keys);
+        }
+      } catch (cacheError) {
+        console.error('Error invalidating cache:', cacheError);
+        // Don't fail the request if cache invalidation fails
       }
     }
     

@@ -230,6 +230,7 @@ app.use(limiter);
 
 // Health check route (before rate limiting)
 app.use('/health', healthRoutes);
+app.use('/api/health', healthRoutes);
 
 // API routes
 app.use('/api/auth', authRoutes);

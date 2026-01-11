@@ -56,6 +56,8 @@ const useSocket = () => {
       upgrade: false, // Don't try to upgrade to websocket
       rememberUpgrade: false,
       autoConnect: true,
+      // Force polling only - no websocket attempts
+      tryAllTransports: false,
     });
 
     socketRef.current = socket;

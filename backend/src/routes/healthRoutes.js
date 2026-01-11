@@ -32,8 +32,15 @@ router.get('/detailed', async (req, res) => {
 
     // Check Redis connection
     try {
-      await redisClient.ping();
-      healthCheck.dependencies.redis = { status: 'connected' };
+      if (redisClient && redisClient.isOpen) {
+        await redisClient.ping();
+        healthCheck.dependencies.redis = { status: 'connected' };
+      } else {
+        healthCheck.dependencies.redis = { 
+          status: 'disabled', 
+          message: 'Redis is disabled or not configured' 
+        };
+      }
     } catch (error) {
       healthCheck.dependencies.redis = { 
         status: 'disconnected', 
