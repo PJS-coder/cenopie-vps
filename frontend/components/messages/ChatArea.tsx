@@ -391,7 +391,7 @@ export default function ChatArea({
 
                 return (
                   <MessageBubble
-                    key={message._id}
+                    key={`${message._id}-${index}-${date}`}
                     message={message}
                     isOwn={isOwn}
                     showAvatar={showAvatar}

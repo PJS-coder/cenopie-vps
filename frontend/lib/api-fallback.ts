@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = 'https://api.cenopie.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
 
 // Check if backend is available
 export const checkBackendHealth = async (): Promise<boolean> => {

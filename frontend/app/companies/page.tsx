@@ -39,7 +39,7 @@ export default function CompaniesPage() {
     const fetchCompanies = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:4000/api/companies');
+        const response = await fetch('https://api.cenopie.com/api/companies');
         if (!response.ok) {
           throw new Error('Failed to fetch companies');
         }

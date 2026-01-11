@@ -35,6 +35,7 @@ export default function MessagesPage() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   // Get current user ID from localStorage
   const getCurrentUserId = () => {
@@ -54,7 +55,10 @@ export default function MessagesPage() {
       if (userParam && !conversationParam) {
         // Create or get direct conversation with user
         try {
+          console.log('Creating conversation with user:', userParam);
+          setCreatingConversation(true);
           const conversation = await getOrCreateDirectConversation(userParam);
+          console.log('Conversation created/found:', conversation);
           setSelectedConversation(conversation);
           
           // Update URL to use conversation ID
@@ -64,6 +68,8 @@ export default function MessagesPage() {
           window.history.replaceState({}, '', url.toString());
         } catch (error) {
           console.error('Failed to create conversation:', error);
+        } finally {
+          setCreatingConversation(false);
         }
       } else if (conversationParam) {
         // Find conversation by ID
@@ -74,7 +80,9 @@ export default function MessagesPage() {
       }
     };
 
-    if (conversations.length > 0) {
+    // Run URL parameter handling regardless of existing conversations
+    // This allows creating new conversations even if user has no existing ones
+    if (userParam || conversationParam) {
       handleUrlParams();
     }
   }, [conversationParam, userParam, conversations, getOrCreateDirectConversation]);
@@ -170,10 +178,6 @@ export default function MessagesPage() {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handleStartNewConversation = () => {
-    router.push('/messages/new');
-  };
-
   const handleSearch = () => {
     // TODO: Implement search functionality
     console.log('Search in conversation');
@@ -229,12 +233,14 @@ export default function MessagesPage() {
   }
 
   // Show loading only for initial conversations load, not for individual message loading
-  if (loading && conversations.length === 0) {
+  if ((loading && conversations.length === 0) || creatingConversation) {
     return (
       <div className="fixed inset-0 top-14 sm:top-16 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0BC0DF] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading conversations...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {creatingConversation ? 'Starting conversation...' : 'Loading conversations...'}
+          </p>
         </div>
       </div>
     );
@@ -250,7 +256,6 @@ export default function MessagesPage() {
               conversations={conversations}
               selectedConversationId={selectedConversation?._id}
               onSelectConversation={handleSelectConversation}
-              onStartNewConversation={handleStartNewConversation}
               loading={loading}
               className="w-full"
             />
@@ -290,12 +295,6 @@ export default function MessagesPage() {
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     Choose a conversation from the sidebar to start messaging
                   </p>
-                  <Button
-                    onClick={handleStartNewConversation}
-                    className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white"
-                  >
-                    Start new conversation
-                  </Button>
                 </div>
               </div>
             )}

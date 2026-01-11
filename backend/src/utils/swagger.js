@@ -10,8 +10,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:4000',
-        description: 'Development server',
+        url: 'https://api.cenopie.com',
+        description: 'Production server',
       },
     ],
   },

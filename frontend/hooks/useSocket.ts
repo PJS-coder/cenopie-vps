@@ -17,8 +17,16 @@ const useSocket = () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     const userId = currentUser._id || currentUser.id;
 
+    console.log('🔧 Connection attempt details:', {
+      hasToken: !!token,
+      hasUserId: !!userId,
+      tokenLength: token?.length || 0,
+      userIdValue: userId || 'none'
+    });
+
     if (!token || !userId) {
       setConnectionError('User not authenticated');
+      console.warn('❌ Cannot connect socket: missing token or userId', { token: !!token, userId: !!userId });
       return;
     }
 
@@ -27,10 +35,14 @@ const useSocket = () => {
       socketRef.current.close();
     }
 
-    console.log('🔌 Connecting to Socket.IO server...');
-
     // Initialize socket connection with better configuration
-    const socket = io('https://api.cenopie.com', {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
+    console.log('🔌 Connecting to Socket.IO server at:', apiUrl);
+    console.log('🔧 Environment:', process.env.NODE_ENV);
+    console.log('🔑 Auth token available:', !!token);
+    console.log('👤 User ID available:', !!userId);
+
+    const socket = io(apiUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -70,6 +82,19 @@ const useSocket = () => {
 
     socket.on('connect_error', (error) => {
       console.error('❌ Socket.IO connection error:', error);
+      console.error('❌ Error details:', {
+        message: error.message || 'No message',
+        description: (error as any).description || 'No description',
+        context: (error as any).context || 'No context',
+        type: (error as any).type || 'No type',
+        stack: error.stack || 'No stack'
+      });
+      console.error('❌ Connection attempt details:', {
+        apiUrl,
+        hasToken: !!token,
+        userId,
+        socketExists: !!socketRef.current
+      });
       setIsConnected(false);
       setConnectionError(error.message || 'Connection failed');
       
@@ -110,8 +135,15 @@ const useSocket = () => {
         return; // Don't process empty errors
       }
       
+      // Handle string errors
+      if (typeof error === 'string' && error.trim() === '') {
+        console.warn('⚠️ Empty string error received from socket - ignoring');
+        return;
+      }
+      
       console.error('❌ Message error:', error);
-      setConnectionError(error.message || error.error || 'Message error');
+      const errorMessage = typeof error === 'string' ? error : (error.message || error.error || 'Message error');
+      setConnectionError(errorMessage);
       
       // Dispatch custom event for error handling
       window.dispatchEvent(new CustomEvent('socket:message:error', { detail: error }));
@@ -186,6 +218,14 @@ const useSocket = () => {
     attachments?: any[];
     clientId?: string;
   }) => {
+    console.log('📤 Attempting to send message via socket:', {
+      conversationId: data.conversationId,
+      hasContent: !!data.content,
+      hasAttachments: !!(data.attachments && data.attachments.length > 0),
+      type: data.type,
+      clientId: data.clientId
+    });
+
     if (!data.conversationId || (!data.content && (!data.attachments || data.attachments.length === 0))) {
       console.warn('❌ Cannot send message: missing required data');
       return false;
@@ -203,7 +243,10 @@ const useSocket = () => {
       socketRef.current.emit('message:send', data);
       return true;
     } else {
-      console.warn('❌ Cannot send message: socket not connected');
+      console.warn('❌ Cannot send message: socket not connected', {
+        hasSocket: !!socketRef.current,
+        isConnected: socketRef.current?.connected || false
+      });
       return false;
     }
   }, []);

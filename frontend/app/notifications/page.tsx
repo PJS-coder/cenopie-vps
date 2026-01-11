@@ -94,7 +94,7 @@ export default function UpdatesPage() {
     try {
       setNotificationsLoading(true);
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/notifications`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/notifications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -139,7 +139,7 @@ export default function UpdatesPage() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/notifications/read`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/notifications/read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

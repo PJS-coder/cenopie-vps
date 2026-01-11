@@ -10,11 +10,11 @@ import { Conversation } from '@/lib/messageApi';
 import { formatDistanceToNow } from 'date-fns';
 import VerificationBadge from '@/components/VerificationBadge';
 
+// ConversationList component props - updated to remove onStartNewConversation
 interface ConversationListProps {
   conversations: Conversation[];
   selectedConversationId?: string;
   onSelectConversation: (conversation: Conversation) => void;
-  onStartNewConversation: () => void;
   loading?: boolean;
   className?: string;
 }
@@ -23,7 +23,6 @@ export default function ConversationList({
   conversations,
   selectedConversationId,
   onSelectConversation,
-  onStartNewConversation,
   loading = false,
   className = ''
 }: ConversationListProps) {
@@ -121,15 +120,8 @@ export default function ConversationList({
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Messages</h1>
-          <Button
-            onClick={onStartNewConversation}
-            size="sm"
-            className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white"
-          >
-            New Chat
-          </Button>
         </div>
         
         {/* Search */}
@@ -161,14 +153,6 @@ export default function ConversationList({
                 : 'Start a conversation by messaging someone from their profile'
               }
             </p>
-            {!searchTerm && (
-              <Button 
-                onClick={onStartNewConversation}
-                className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white"
-              >
-                Start a conversation
-              </Button>
-            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">

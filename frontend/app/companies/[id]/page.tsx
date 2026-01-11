@@ -68,7 +68,7 @@ export default function CompanyProfilePage() {
         setLoading(true);
         
         // Fetch company profile
-        const apiUrl = 'http://localhost:4000'; // Direct URL for now
+        const apiUrl = 'https://api.cenopie.com'; // Direct URL for now
         const companyResponse = await fetch(`${apiUrl}/api/companies/${companyId}/public`);
         
         if (!companyResponse.ok) {

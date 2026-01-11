@@ -41,7 +41,7 @@ export default function CreateJobPage() {
       
       // Fetch fresh company data from API to ensure status is up-to-date
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
         const response = await fetch(`${apiUrl}/api/company/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -146,7 +146,7 @@ export default function CreateJobPage() {
 
       console.log('Submitting job data:', jobData);
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
       const token = localStorage.getItem('companyAuthToken');
       
       console.log('API URL:', apiUrl);

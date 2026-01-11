@@ -48,6 +48,8 @@ export function useMessaging() {
       setError(null);
       
       const response = await messageApi.getConversations();
+      console.log('📊 Raw conversations response:', response);
+      
       const conversationsData = response.data || [];
       
       console.log('📊 Loaded conversations:', conversationsData.length);
@@ -75,6 +77,7 @@ export function useMessaging() {
       
     } catch (err) {
       console.error('Failed to load conversations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load conversations');
       // Don't set error state for network issues, just log them
       // The UI will show loading state until successful
     } finally {
@@ -113,7 +116,7 @@ export function useMessaging() {
       // Get current user info
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       
-      // Optimistic update
+      // Optimistic update with unique temp ID
       const tempMessage: Message = {
         _id: `temp-${clientId}`,
         conversationId: data.conversationId,
@@ -135,11 +138,21 @@ export function useMessaging() {
         deliveredTo: []
       };
       
-      // Add to local state immediately
-      setMessages(prev => ({
-        ...prev,
-        [data.conversationId]: [...(prev[data.conversationId] || []), tempMessage]
-      }));
+      // Add to local state immediately, but check for duplicates
+      setMessages(prev => {
+        const existingMessages = prev[data.conversationId] || [];
+        const messageExists = existingMessages.some(msg => msg._id === tempMessage._id);
+        
+        if (messageExists) {
+          console.log('Temp message already exists, skipping:', tempMessage._id);
+          return prev;
+        }
+        
+        return {
+          ...prev,
+          [data.conversationId]: [...existingMessages, tempMessage]
+        };
+      });
       
       // Try socket first for real-time delivery
       let socketSent = false;
@@ -155,9 +168,12 @@ export function useMessaging() {
         // Replace temp message with actual message
         setMessages(prev => ({
           ...prev,
-          [data.conversationId]: prev[data.conversationId]?.map(msg => 
-            msg._id === tempMessage._id ? actualMessage : msg
-          ) || []
+          [data.conversationId]: prev[data.conversationId]?.map(msg => {
+            if (msg._id === tempMessage._id) {
+              return actualMessage;
+            }
+            return msg;
+          }) || [actualMessage]
         }));
         
         return actualMessage;
@@ -251,15 +267,21 @@ export function useMessaging() {
   // Get or create direct conversation
   const getOrCreateDirectConversation = useCallback(async (userId: string) => {
     try {
+      console.log('🔄 Creating/getting direct conversation with user:', userId);
       const response = await messageApi.getOrCreateDirectConversation(userId);
+      console.log('📊 Direct conversation response:', response);
+      
       const conversation = response.data.conversation;
+      console.log('📊 Conversation data:', conversation);
       
       // Add to conversations if not already present
       setConversations(prev => {
         const exists = prev.some(conv => conv._id === conversation._id);
         if (exists) {
+          console.log('📊 Conversation already exists, updating:', conversation._id);
           return prev.map(conv => conv._id === conversation._id ? conversation : conv);
         }
+        console.log('📊 Adding new conversation:', conversation._id);
         return [conversation, ...prev];
       });
       
@@ -294,10 +316,21 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const message: Message = customEvent.detail;
       
-      setMessages(prev => ({
-        ...prev,
-        [message.conversationId]: [...(prev[message.conversationId] || []), message]
-      }));
+      // Check if message already exists to prevent duplicates
+      setMessages(prev => {
+        const existingMessages = prev[message.conversationId] || [];
+        const messageExists = existingMessages.some(msg => msg._id === message._id);
+        
+        if (messageExists) {
+          console.log('Message already exists, skipping:', message._id);
+          return prev;
+        }
+        
+        return {
+          ...prev,
+          [message.conversationId]: [...existingMessages, message]
+        };
+      });
       
       // Update conversation last message and unread count
       setConversations(prev => 
@@ -338,14 +371,20 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const { message, clientId } = customEvent.detail;
       
-      // Replace temp message with actual message
+      // Replace temp message with actual message using clientId
       setMessages(prev => ({
         ...prev,
-        [message.conversationId]: prev[message.conversationId]?.map(msg => 
-          msg._id.startsWith('temp-') && msg._id.includes(clientId.split('-')[1]) 
-            ? message 
-            : msg
-        ) || [message]
+        [message.conversationId]: prev[message.conversationId]?.map(msg => {
+          // Match by clientId if available, or by temp ID pattern
+          if (clientId && msg._id.startsWith('temp-') && msg._id.includes(clientId.split('-')[1])) {
+            return message;
+          }
+          // Fallback: if message IDs match exactly (shouldn't happen but just in case)
+          if (msg._id === message._id && msg._id.startsWith('temp-')) {
+            return message;
+          }
+          return msg;
+        }) || [message]
       }));
     };
 

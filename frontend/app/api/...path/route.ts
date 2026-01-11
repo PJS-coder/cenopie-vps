@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 // This is a catch-all API route that proxies requests to the backend API
 export async function GET(request: NextRequest) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
   const path = request.nextUrl.pathname.replace('/api', '');
   const queryString = request.nextUrl.search;
   
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
   const path = request.nextUrl.pathname.replace('/api', '');
   
   try {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
   const path = request.nextUrl.pathname.replace('/api', '');
   
   try {
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
   const path = request.nextUrl.pathname.replace('/api', '');
   
   try {

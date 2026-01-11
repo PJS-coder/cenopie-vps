@@ -398,12 +398,27 @@ export const createOrGetDirectConversation = async (req, res) => {
     }
 
     // Find or create conversation
-    const conversation = await Conversation.findOrCreateDirectConversation(currentUserId, otherUserId);
+    const conversation = await Conversation.findOrCreateDirect(currentUserId, otherUserId);
+
+    // Format the conversation response to match frontend expectations
+    const formattedConversation = {
+      _id: conversation._id,
+      type: conversation.type,
+      name: otherUser.name,
+      avatar: otherUser.profileImage,
+      isVerified: otherUser.isVerified,
+      lastMessage: conversation.lastMessage,
+      lastActivity: conversation.lastActivity || new Date(),
+      unreadCount: 0, // New conversation has no unread messages
+      participantCount: conversation.participants.length,
+      participants: conversation.participants,
+      otherParticipant: otherUser
+    };
 
     res.json({
       success: true,
       data: {
-        conversation,
+        conversation: formattedConversation,
         otherUser
       }
     });

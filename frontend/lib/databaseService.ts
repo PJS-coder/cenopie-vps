@@ -21,7 +21,7 @@ export const fetchAllJobs = async (params?: {
   type?: string;
 }): Promise<{ jobs: JobWithCompany[]; pagination?: any }> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     
     // Build query parameters
     const queryParams = new URLSearchParams();
@@ -74,7 +74,7 @@ export const fetchAllJobs = async (params?: {
 
 export const fetchJobsByCompanyId = async (companyId: string): Promise<JobWithCompany[]> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     
     const response = await fetch(`${apiUrl}/api/jobs?companyId=${companyId}`, {
       method: 'GET',
@@ -112,7 +112,7 @@ export const fetchJobsByCompanyId = async (companyId: string): Promise<JobWithCo
 
 export const createJob = async (job: JobPosting): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -146,7 +146,7 @@ export const createJob = async (job: JobPosting): Promise<boolean> => {
 
 export const deleteJob = async (jobId: string): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -173,7 +173,7 @@ export const deleteJob = async (jobId: string): Promise<boolean> => {
 // Applications API functions
 export const fetchAllApplications = async (): Promise<ApplicationData[]> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     const response = await fetch(`${apiUrl}/api/applications`, {
       method: 'GET',
       headers: {
@@ -199,7 +199,7 @@ export const fetchAllApplications = async (): Promise<ApplicationData[]> => {
 
 export const fetchApplicationsByCompany = async (companyId: string): Promise<ApplicationData[]> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     const response = await fetch(`${apiUrl}/api/applications?companyId=${companyId}`, {
       method: 'GET',
       headers: {
@@ -225,7 +225,7 @@ export const fetchApplicationsByCompany = async (companyId: string): Promise<App
 
 export const createApplication = async (application: ApplicationData): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -259,7 +259,7 @@ export const createApplication = async (application: ApplicationData): Promise<b
 
 export const updateApplicationStatus = async (applicationId: string, status: 'pending' | 'reviewed' | 'accepted' | 'rejected'): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -294,7 +294,7 @@ export const fetchAllCompanies = async (params?: {
   userId?: string;
 }): Promise<{ companies: CompanyData[]; pagination?: any }> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     
     // Build query parameters
     const queryParams = new URLSearchParams();
@@ -357,7 +357,7 @@ export const fetchAllCompanies = async (params?: {
 
 export const fetchCompanyById = async (id: string): Promise<CompanyData | null> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     
     const response = await fetch(`${apiUrl}/api/companies/${id}`, {
       method: 'GET',
@@ -389,7 +389,7 @@ export const fetchCompanyById = async (id: string): Promise<CompanyData | null> 
 
 export const createCompany = async (company: CompanyCreationData): Promise<any> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -463,7 +463,7 @@ export const isOnline = (): boolean => {
 // Users API functions
 export const fetchAllUsers = async (): Promise<UserData[]> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     console.log('Fetching users from:', `${apiUrl}/api/users`);
     
     // Get auth token from localStorage
@@ -498,7 +498,7 @@ export const fetchAllUsers = async (): Promise<UserData[]> => {
 
 export const createUser = async (user: UserData): Promise<boolean> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -534,7 +534,7 @@ export const verifyUserInDB = async (userId: string, isVerified: boolean): Promi
   try {
     console.log('Attempting to verify user:', userId, 'with verification status:', isVerified);
     
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -580,7 +580,7 @@ export const verifyUserInDB = async (userId: string, isVerified: boolean): Promi
 export const initializeDatabase = async (): Promise<void> => {
   try {
     // Check database connectivity
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     
     const response = await fetch(`${apiUrl}/api/health`, {
       method: 'GET',
@@ -644,7 +644,7 @@ export const approveCompanyInDB = async (companyId: string, isVerified: boolean 
   try {
     console.log('Attempting to approve company:', companyId, 'with verification:', isVerified);
     
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -690,7 +690,7 @@ export const rejectCompanyInDB = async (companyId: string): Promise<boolean> => 
   try {
     console.log('Attempting to reject company:', companyId);
     
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     
@@ -743,7 +743,7 @@ export const updateCompany = async (company: CompanyData): Promise<boolean> => {
   try {
     console.log('Updating company with data:', company);
     
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
     

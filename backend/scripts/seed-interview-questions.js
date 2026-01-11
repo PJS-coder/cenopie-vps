@@ -369,7 +369,7 @@ const questions = [
 async function seedQuestions() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/cenopie');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://pjs89079_db_user:adO1gs2LZryrCKbM@cenopie.ae8q9xo.mongodb.net/?retryWrites=true&w=majority&appName=Cenopie');
     console.log('✅ Connected to MongoDB');
 
     // Find or create system admin user

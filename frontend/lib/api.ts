@@ -1,5 +1,5 @@
 // API service for handling requests to the backend
-const API_BASE_URL = 'https://api.cenopie.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
 
 export interface ApiResponse<T> {
   data?: T;
@@ -641,7 +641,7 @@ export const feedApi = {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/posts/${postId}/like`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/posts/${postId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1175,7 +1175,7 @@ export const companyApi = {
   
   // Get public company profile (no auth required)
   getPublicCompanyProfile: async (companyId: string): Promise<ApiResponse<Company>> => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/companies/${companyId}/public`);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/companies/${companyId}/public`);
     if (!response.ok) {
       throw new Error('Company not found');
     }

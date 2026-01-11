@@ -120,7 +120,7 @@ export function useProfileWithFallback() {
 
   return useApiWithTimeout(
     async () => {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/profile`, {
@@ -173,7 +173,7 @@ export function useFeedWithFallback() {
 
   return useApiWithTimeout(
     async () => {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/posts/feed`, {
@@ -222,7 +222,7 @@ export function useNewsWithFallback() {
 
   return useApiWithTimeout(
     async () => {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
       
       const response = await fetch(`${API_BASE_URL}/api/news`);
       

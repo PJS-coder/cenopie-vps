@@ -49,10 +49,12 @@ const allowedOrigins = [
   'http://localhost:3001',
   'https://cenopie.com',
   'https://www.cenopie.com', // Add this line for production
+  'https://cenopie-cpanel-vercel.vercel.app',
   'https://cenopie-production-i2d97xotf-pjs-coders-projects.vercel.app',
   'https://cenopie-production.vercel.app',
   /https?:\/\/cenopie-.*-pjs-coders-projects.vercel.app$/, // Match all preview deployments
-  /https?:\/\/cenopie-production-.*.vercel.app$/ // Match all production deployments
+  /https?:\/\/cenopie-production-.*.vercel.app$/, // Match all production deployments
+  /https?:\/\/cenopie-.*\.vercel\.app$/ // Match all Vercel deployments
 ];
 
 // CORS configuration optimized for high concurrency
@@ -108,7 +110,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      connectSrc: ["'self'", process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'],
+      connectSrc: ["'self'", process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'],
     }
   } : false,
   hsts: {

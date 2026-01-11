@@ -76,11 +76,20 @@ export function initMessageSocket(io, socket) {
 
   // Handle message sending
   socket.on('message:send', async (data) => {
+    console.log('📨 Received message:send event from', user.name, ':', {
+      conversationId: data.conversationId,
+      hasContent: !!data.content,
+      contentLength: data.content?.length || 0,
+      type: data.type,
+      clientId: data.clientId
+    });
+
     try {
       const { conversationId, content, type = MESSAGE_TYPE.TEXT, replyTo, attachments, clientId } = data;
 
       // Validation
       if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId)) {
+        console.warn('❌ Invalid conversation ID:', conversationId);
         socket.emit('message:error', { 
           error: 'Invalid conversation ID',
           clientId 
@@ -89,6 +98,7 @@ export function initMessageSocket(io, socket) {
       }
 
       if (!content && (!attachments || attachments.length === 0)) {
+        console.warn('❌ Message content or attachments are required');
         socket.emit('message:error', { 
           error: 'Message content or attachments are required',
           clientId 

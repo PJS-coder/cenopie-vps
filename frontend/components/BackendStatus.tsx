@@ -21,7 +21,7 @@ export default function BackendStatus({ className = '' }: BackendStatusProps) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
       const response = await fetch(`${API_BASE_URL}/api/health`, {
         method: 'GET',
         signal: controller.signal,
@@ -121,7 +121,7 @@ export function useBackendStatus() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
         const response = await fetch(`${API_BASE_URL}/api/health`, {
           method: 'GET',
           signal: controller.signal,

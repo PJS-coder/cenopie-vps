@@ -53,13 +53,20 @@ const PORT = process.env.PORT || 4000;
           'http://localhost:3000',
           'http://localhost:3001',
           'https://cenopie.com',
-          'https://cenopie-production.vercel.app'
+          'https://www.cenopie.com',
+          'https://cenopie-production.vercel.app',
+          'https://cenopie-cpanel-vercel.vercel.app',
+          /https?:\/\/cenopie-.*-pjs-coders-projects.vercel.app$/,
+          /https?:\/\/cenopie-production-.*.vercel.app$/,
+          /https?:\/\/cenopie-.*\.vercel\.app$/
         ],
-        credentials: true
+        credentials: true,
+        methods: ['GET', 'POST']
       },
       transports: ['websocket', 'polling'],
       pingTimeout: 60000,
       pingInterval: 25000,
+      allowEIO3: true
     });
 
     // Attach io to global object so it can be accessed in controllers

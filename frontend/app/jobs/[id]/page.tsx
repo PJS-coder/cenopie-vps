@@ -73,7 +73,7 @@ export default function JobDetailPage() {
       try {
         setLoading(true);
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
         const response = await fetch(`${apiUrl}/api/jobs/${jobId}`);
         
         if (response.ok) {
