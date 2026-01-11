@@ -158,8 +158,30 @@ export function useMessaging() {
         const socketSent = socketSendMessage(messageData);
         if (socketSent) {
           // Socket sent successfully - API call in background for reliability
-          messageApi.sendMessage(messageData).catch(err => {
+          messageApi.sendMessage(messageData).then(response => {
+            const actualMessage = response.data;
+            // Update temp message with actual message data (but keep it in same position)
+            setMessages(prev => ({
+              ...prev,
+              [data.conversationId]: prev[data.conversationId]?.map(msg => {
+                if (msg._id === tempMessage._id) {
+                  return { ...actualMessage, _id: actualMessage._id }; // Use real ID
+                }
+                return msg;
+              }) || [actualMessage]
+            }));
+          }).catch(err => {
             console.warn('Background API call failed (socket succeeded):', err);
+            // Mark message as failed but keep it visible
+            setMessages(prev => ({
+              ...prev,
+              [data.conversationId]: prev[data.conversationId]?.map(msg => {
+                if (msg._id === tempMessage._id) {
+                  return { ...msg, status: 'failed' as const };
+                }
+                return msg;
+              }) || []
+            }));
           });
           return tempMessage; // Return immediately for better UX
         }
@@ -318,6 +340,16 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const message: Message = customEvent.detail;
       
+      // Get current user to avoid showing own messages twice
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const currentUserId = currentUser._id || currentUser.id;
+      
+      // Skip if this is our own message (already handled by optimistic update)
+      if (message.sender._id === currentUserId) {
+        console.log('Skipping own message from socket to prevent duplicates:', message._id);
+        return;
+      }
+      
       // Check if message already exists to prevent duplicates
       setMessages(prev => {
         const existingMessages = prev[message.conversationId] || [];
@@ -373,21 +405,34 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const { message, clientId } = customEvent.detail;
       
-      // Replace temp message with actual message using clientId
-      setMessages(prev => ({
-        ...prev,
-        [message.conversationId]: prev[message.conversationId]?.map(msg => {
-          // Match by clientId if available, or by temp ID pattern
-          if (clientId && msg._id.startsWith('temp-') && msg._id.includes(clientId.split('-')[1])) {
-            return message;
-          }
-          // Fallback: if message IDs match exactly (shouldn't happen but just in case)
-          if (msg._id === message._id && msg._id.startsWith('temp-')) {
-            return message;
-          }
-          return msg;
-        }) || [message]
-      }));
+      console.log('📤 Message sent confirmation received:', { messageId: message._id, clientId });
+      
+      // Don't replace temp messages - they should already be updated by the API response
+      // This prevents the flicker effect
+      setMessages(prev => {
+        const conversationMessages = prev[message.conversationId] || [];
+        
+        // Check if message already exists (from API response)
+        const messageExists = conversationMessages.some(msg => msg._id === message._id);
+        if (messageExists) {
+          console.log('Message already exists from API response, skipping socket update');
+          return prev;
+        }
+        
+        // Only add if no temp or real message exists
+        const hasTempMessage = conversationMessages.some(msg => 
+          msg._id.startsWith('temp-') && clientId && msg._id.includes(clientId)
+        );
+        
+        if (!hasTempMessage) {
+          return {
+            ...prev,
+            [message.conversationId]: [...conversationMessages, message]
+          };
+        }
+        
+        return prev;
+      });
     };
 
     // Handle typing indicators
