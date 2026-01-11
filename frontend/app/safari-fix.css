@@ -1,0 +1,46 @@
+/* Safari-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Fix for flex gap in Safari */
+  .safari-gap-fix {
+    margin: -4px; /* Adjust based on your gap size */
+  }
+  
+  .safari-gap-fix > * {
+    margin: 4px; /* Adjust based on your gap size */
+  }
+  
+  /* Fix for backdrop blur */
+  .backdrop-blur {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  
+  /* Fix for sticky elements */
+  .sticky {
+    position: -webkit-sticky;
+  }
+  
+  /* Fix for flex-shrink */
+  .flex-shrink-0 {
+    flex-shrink: 0;
+    -webkit-flex-shrink: 0;
+  }
+  
+  /* Fix for transform issues */
+  .transform {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* Fix for animation performance */
+  @keyframes spin {
+    from {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    to {
+      -webkit-transform: rotate(360deg);
+      transform: rotate(360deg);
+    }
+  }
+}
