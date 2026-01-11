@@ -106,7 +106,7 @@ export function useMessaging() {
     }
   }, [messages]);
 
-  // Send a message
+  // Send a message - Optimized for speed
   const sendMessage = useCallback(async (data: SendMessageData) => {
     try {
       // Generate client ID for deduplication
@@ -138,13 +138,12 @@ export function useMessaging() {
         deliveredTo: []
       };
       
-      // Add to local state immediately, but check for duplicates
+      // Add to local state immediately for instant UI feedback
       setMessages(prev => {
         const existingMessages = prev[data.conversationId] || [];
         const messageExists = existingMessages.some(msg => msg._id === tempMessage._id);
         
         if (messageExists) {
-          console.log('Temp message already exists, skipping:', tempMessage._id);
           return prev;
         }
         
@@ -154,13 +153,19 @@ export function useMessaging() {
         };
       });
       
-      // Try socket first for real-time delivery
-      let socketSent = false;
+      // Prioritize socket for speed, fallback to API only if socket fails
       if (socket && isConnected) {
-        socketSent = socketSendMessage(messageData);
+        const socketSent = socketSendMessage(messageData);
+        if (socketSent) {
+          // Socket sent successfully - API call in background for reliability
+          messageApi.sendMessage(messageData).catch(err => {
+            console.warn('Background API call failed (socket succeeded):', err);
+          });
+          return tempMessage; // Return immediately for better UX
+        }
       }
       
-      // Always send via API as backup
+      // Fallback to API if socket failed or not connected
       try {
         const response = await messageApi.sendMessage(messageData);
         const actualMessage = response.data;
@@ -178,15 +183,12 @@ export function useMessaging() {
         
         return actualMessage;
       } catch (apiError) {
-        if (!socketSent) {
-          // Remove temp message if both socket and API failed
-          setMessages(prev => ({
-            ...prev,
-            [data.conversationId]: prev[data.conversationId]?.filter(msg => msg._id !== tempMessage._id) || []
-          }));
-          throw apiError;
-        }
-        // If socket succeeded but API failed, that's okay
+        // Remove temp message if API failed
+        setMessages(prev => ({
+          ...prev,
+          [data.conversationId]: prev[data.conversationId]?.filter(msg => msg._id !== tempMessage._id) || []
+        }));
+        throw apiError;
       }
       
     } catch (err) {

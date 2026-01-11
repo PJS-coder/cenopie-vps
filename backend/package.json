@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/cluster.js",
     "cpanel": "node cpanel-start.js",
+    "cpanel-cjs": "node cpanel-start-cjs.js",
     "lint": "eslint .",
     "cluster": "node src/cluster.js",
     "single": "node src/server.js",

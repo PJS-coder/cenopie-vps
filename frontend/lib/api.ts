@@ -190,7 +190,22 @@ const performAuthenticatedRequest = async <T = any>(
         await new Promise(resolve => setTimeout(resolve, 500 * retries));
       }
       
-      let response = await fetch(`${API_BASE_URL}${endpoint}`, finalConfig);
+      let response: Response | null = null;
+      
+      try {
+        response = await fetch(`${API_BASE_URL}${endpoint}`, finalConfig);
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError);
+        if (fetchError instanceof TypeError && fetchError.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
+        }
+        throw fetchError;
+      }
+      
+      // Null check for response
+      if (!response) {
+        throw new Error('No response received from server');
+      }
       
       // Handle rate limiting (429) with exponential backoff
       if (response.status === 429) {
@@ -223,6 +238,11 @@ const performAuthenticatedRequest = async <T = any>(
           };
           response = await fetch(`${API_BASE_URL}${endpoint}`, retryConfig);
           
+          // Null check for retry response
+          if (!response) {
+            throw new Error('No response received from server on retry');
+          }
+          
           // Check if retry also failed with 429
           if (response.status === 429) {
             retries++;
@@ -247,37 +267,35 @@ const performAuthenticatedRequest = async <T = any>(
         }
       }
       
-      if (!response || !response.ok) {
+      if (!response.ok) {
         // Log response info for debugging
         console.log('Non-OK response received:');
         console.log('  Response object:', response);
-        console.log('  Status:', response?.status);
-        console.log('  Status text:', response?.statusText);
-        console.log('  Headers:', response?.headers ? [...response.headers.entries()] : 'No headers available');
+        console.log('  Status:', response.status);
+        console.log('  Status text:', response.statusText);
+        console.log('  Headers:', response.headers ? [...response.headers.entries()] : 'No headers available');
         
         // Try to get error details from response
         let errorDetails = '';
         let errorData: Record<string, unknown> = {};
         
-        if (response) {
+        try {
+          errorData = await response.json();
+          console.log('Error response parsed as JSON:', errorData);
+        } catch (jsonError: any) {
+          console.log('Failed to parse error response as JSON:', jsonError.message);
           try {
-            errorData = await response.json();
-            console.log('Error response parsed as JSON:', errorData);
-          } catch (jsonError: any) {
-            console.log('Failed to parse error response as JSON:', jsonError.message);
-            try {
-              errorDetails = await response.text();
-              console.log('Error response as text (first 200 chars):', errorDetails.substring(0, 200));
-            // Check if the response contains multipart boundaries
-            if (errorDetails.includes('------WebKitFormBoundary')) {
-              console.error('Received multipart form data instead of JSON. This suggests a server configuration issue.');
-              errorDetails = 'Server configuration error: Received form data instead of JSON response';
-            }
-            } catch (textError: any) {
-              console.error('API Error Response (No details available)');
-              console.error('Response status:', response.status);
-              console.error('Response status text:', response.statusText);
-            }
+            errorDetails = await response.text();
+            console.log('Error response as text (first 200 chars):', errorDetails.substring(0, 200));
+          // Check if the response contains multipart boundaries
+          if (errorDetails.includes('------WebKitFormBoundary')) {
+            console.error('Received multipart form data instead of JSON. This suggests a server configuration issue.');
+            errorDetails = 'Server configuration error: Received form data instead of JSON response';
+          }
+          } catch (textError: any) {
+            console.error('API Error Response (No details available)');
+            console.error('Response status:', response.status);
+            console.error('Response status text:', response.statusText);
           }
         }
         
@@ -306,22 +324,22 @@ const performAuthenticatedRequest = async <T = any>(
       }
       
       // Log response info for debugging
-      console.log('Response status:', response?.status);
-      console.log('Response headers:', response?.headers ? [...response.headers.entries()] : 'No headers available');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers ? [...response.headers.entries()] : 'No headers available');
       
       // Check content type to determine how to parse the response
-      const contentType = response?.headers ? response.headers.get('content-type') : null;
+      const contentType = response.headers ? response.headers.get('content-type') : null;
       console.log('Response content-type:', contentType);
       
       // If it's JSON, parse it normally
       if (contentType && contentType.includes('application/json')) {
-        const data = response ? await response.json() : null;
+        const data = await response.json();
         console.log('Response data:', data);
         return data;
       }
       
       // If it's not JSON but we expected JSON, try to parse it anyway
-      const text = response ? await response.text() : '';
+      const text = await response.text();
       console.log('Response text (first 500 chars):', text.substring(0, 500));
       
       // Check if response contains multipart boundaries

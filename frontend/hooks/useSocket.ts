@@ -47,10 +47,10 @@ const useSocket = () => {
       auth: { token },
       transports: ['polling'], // Use only polling for cPanel compatibility
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      reconnectionDelayMax: 10000,
-      timeout: 30000,
+      reconnectionAttempts: 5, // Increased attempts
+      reconnectionDelay: 1000, // Faster initial reconnect
+      reconnectionDelayMax: 5000, // Reduced max delay
+      timeout: 10000, // Faster timeout
       forceNew: true,
       // cPanel-specific options
       upgrade: false, // Don't try to upgrade to websocket
@@ -58,6 +58,9 @@ const useSocket = () => {
       autoConnect: true,
       // Force polling only - no websocket attempts
       tryAllTransports: false,
+      // Additional performance options
+      closeOnBeforeunload: false,
+      withCredentials: true,
     });
 
     socketRef.current = socket;
@@ -104,6 +107,14 @@ const useSocket = () => {
       });
       setIsConnected(false);
       setConnectionError(error.message || 'Connection failed');
+      
+      // Don't attempt reconnection on auth errors
+      if (error.message && error.message.includes('Authentication')) {
+        console.log('🚫 Authentication error - stopping reconnection attempts');
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      }
     });
 
     socket.on('reconnect', (attemptNumber) => {
