@@ -35,28 +35,33 @@ const useSocket = () => {
       socketRef.current.close();
     }
 
-    // Initialize socket connection with better configuration
+    // Initialize socket connection with cPanel-optimized configuration
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
     console.log('🔌 Connecting to Socket.IO server at:', apiUrl);
     console.log('🔧 Environment:', process.env.NODE_ENV);
     console.log('🔑 Auth token available:', !!token);
     console.log('👤 User ID available:', !!userId);
+    console.log('🌐 API URL from env:', process.env.NEXT_PUBLIC_API_URL);
 
     const socket = io(apiUrl, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ['polling'], // Use only polling for cPanel compatibility
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 30000,
       forceNew: true,
+      // cPanel-specific options
+      upgrade: false, // Don't try to upgrade to websocket
+      rememberUpgrade: false,
+      autoConnect: true,
     });
 
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ Socket.IO connected successfully');
+      console.log('✅ Socket.IO connected successfully (polling mode)');
       setIsConnected(true);
       setConnectionError(null);
       
@@ -76,7 +81,7 @@ const useSocket = () => {
         reconnectTimeoutRef.current = setTimeout(() => {
           console.log('🔄 Attempting to reconnect...');
           connectSocket();
-        }, 2000);
+        }, 3000);
       }
     });
 
@@ -97,11 +102,6 @@ const useSocket = () => {
       });
       setIsConnected(false);
       setConnectionError(error.message || 'Connection failed');
-      
-      // Don't emit message:error for connection errors
-      if ((error as any).type !== 'TransportError') {
-        console.log('🔄 Will attempt to reconnect...');
-      }
     });
 
     socket.on('reconnect', (attemptNumber) => {
@@ -115,27 +115,23 @@ const useSocket = () => {
       setConnectionError('Reconnection failed');
     });
 
-    // New message events
+    // Message events
     socket.on('message:received', (data) => {
       console.log('📨 Message received via socket:', data);
-      // Dispatch custom event for message components to listen to
       window.dispatchEvent(new CustomEvent('socket:message:received', { detail: data }));
     });
 
     socket.on('message:sent', (data) => {
       console.log('📤 Message sent confirmation via socket:', data);
-      // Dispatch custom event for message components to listen to
       window.dispatchEvent(new CustomEvent('socket:message:sent', { detail: data }));
     });
 
     socket.on('message:error', (error) => {
-      // Handle empty error objects or null/undefined errors
       if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
         console.warn('⚠️ Empty message error received from socket - ignoring');
-        return; // Don't process empty errors
+        return;
       }
       
-      // Handle string errors
       if (typeof error === 'string' && error.trim() === '') {
         console.warn('⚠️ Empty string error received from socket - ignoring');
         return;
@@ -145,7 +141,6 @@ const useSocket = () => {
       const errorMessage = typeof error === 'string' ? error : (error.message || error.error || 'Message error');
       setConnectionError(errorMessage);
       
-      // Dispatch custom event for error handling
       window.dispatchEvent(new CustomEvent('socket:message:error', { detail: error }));
     });
 

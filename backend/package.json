@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/cluster.js",
+    "cpanel": "node cpanel-start.js",
     "lint": "eslint .",
     "cluster": "node src/cluster.js",
     "single": "node src/server.js",

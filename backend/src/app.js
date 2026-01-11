@@ -110,7 +110,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      connectSrc: ["'self'", process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'],
+      connectSrc: ["'self'", 'https://api.cenopie.com', 'http://localhost:4000'],
     }
   } : false,
   hsts: {

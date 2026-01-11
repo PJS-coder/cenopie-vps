@@ -1,60 +1,48 @@
 import { createClient } from 'redis';
 
-const redisClient = createClient({
-  url: process.env.REDIS_DISABLED ? null : (process.env.REDIS_URL || 'redis://localhost:6379'),
+// Skip Redis entirely if disabled
+if (process.env.REDIS_DISABLED === 'true') {
+  console.log('Redis is disabled');
+} 
+
+const redisClient = process.env.REDIS_DISABLED === 'true' ? null : createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
   socket: {
-    connectTimeout: 10000,
+    connectTimeout: 5000,
     keepAlive: 30000,
-    reconnectStrategy: (retries) => Math.min(retries * 50, 500)
+    reconnectStrategy: (retries) => {
+      // Stop retrying after 3 attempts
+      if (retries > 3) {
+        console.log('Redis: Max retries reached, giving up');
+        return false;
+      }
+      return Math.min(retries * 1000, 3000);
+    }
   },
   database: 0,
-  // Performance settings for high concurrency
-  disableOfflineQueue: false,
-  enableOfflineQueue: true,
-  retryUnfulfilledCommands: true,
-  maxRetriesPerRequest: 3,
+  disableOfflineQueue: true,
+  enableOfflineQueue: false,
+  retryUnfulfilledCommands: false,
+  maxRetriesPerRequest: 1,
 });
 
-// Enhanced event handlers
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error', err);
-});
+// Enhanced event handlers only if Redis client exists
+if (redisClient) {
+  redisClient.on('error', (err) => {
+    console.error('Redis Client Error', err.message);
+  });
 
-redisClient.on('connect', () => {
-  console.log('Redis Client Connected');
-});
+  redisClient.on('connect', () => {
+    console.log('Redis Client Connected');
+  });
 
-redisClient.on('ready', () => {
-  console.log('Redis Client Ready');
-  // Log Redis info in production
-  if (process.env.NODE_ENV === 'production') {
-    redisClient.info().then(info => {
-      console.log('Redis Info:', info.split('\n').filter(line => 
-        line.includes('connected_clients') || 
-        line.includes('used_memory') || 
-        line.includes('total_connections_received')
-      ).join(', '));
-    }).catch(err => {
-      console.error('Failed to get Redis info:', err.message);
-    });
-  }
-});
+  redisClient.on('ready', () => {
+    console.log('Redis Client Ready');
+  });
 
-redisClient.on('reconnecting', () => {
-  console.log('Redis Client Reconnecting');
-});
-
-// Add connection pool monitoring
-if (process.env.NODE_ENV === 'production') {
-  setInterval(() => {
-    if (redisClient.isOpen) {
-      redisClient.ping().then(result => {
-        console.log('Redis Ping Response:', result);
-      }).catch(err => {
-        console.error('Redis Ping Error:', err.message);
-      });
-    }
-  }, 30000); // Every 30 seconds
+  redisClient.on('reconnecting', () => {
+    console.log('Redis Client Reconnecting');
+  });
 }
 
 export default redisClient;

@@ -18,20 +18,19 @@ const PORT = process.env.PORT || 4000;
     console.log('📊 Connecting to MongoDB...');
     await connectDB();
 
-    // Connect to Redis
+    // Connect to Redis (skip if disabled)
     console.log('🗄️ Connecting to Redis...');
-    try {
-      await redisClient.connect();
-      console.log('✅ Redis connected successfully');
-    } catch (error) {
-      console.warn('⚠️ Redis connection failed:', error.message);
-      if (error.message.includes('ECONNREFUSED')) {
-        console.log('💡 Redis is not running. Please start Redis:');
-        console.log('   • macOS: brew services start redis');
-        console.log('   • Linux: sudo systemctl start redis');
-        console.log('   • Windows: Download and install Redis from official website');
-      }
+    if (process.env.REDIS_DISABLED === 'true' || !redisClient) {
+      console.log('⚠️ Redis disabled or not configured - skipping Redis connection');
       console.log('📝 Server will continue without Redis caching');
+    } else {
+      try {
+        await redisClient.connect();
+        console.log('✅ Redis connected successfully');
+      } catch (error) {
+        console.warn('⚠️ Redis connection failed:', error.message);
+        console.log('📝 Server will continue without Redis caching');
+      }
     }
 
     // Configure Cloudinary
@@ -90,7 +89,7 @@ const PORT = process.env.PORT || 4000;
       });
 
       try {
-        if (redisClient.isOpen) {
+        if (redisClient && redisClient.isOpen) {
           await redisClient.quit();
           console.log('🗄️ Redis connection closed');
         }

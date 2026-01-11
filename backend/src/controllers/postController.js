@@ -103,7 +103,7 @@ export const createPost = async (req, res) => {
     
     // Invalidate feed cache for all users (simplified approach)
     // In a production environment, you might want to be more selective
-    if (redisClient.isOpen) {
+    if (redisClient && redisClient.isOpen) {
       const keys = await redisClient.keys('feed:*');
       if (keys.length > 0) {
         await redisClient.del(keys);
@@ -235,7 +235,7 @@ export const likePost = async (req, res) => {
     }
     
     // Invalidate feed cache for all users (similar to deletePost)
-    if (redisClient.isOpen) {
+    if (redisClient && redisClient.isOpen) {
       try {
         // Get all keys that match the feed pattern
         const keys = await redisClient.keys('feed:*');
@@ -322,7 +322,7 @@ export const commentPost = async (req, res) => {
     }
     
     // Invalidate feed cache for all users (similar to deletePost)
-    if (redisClient.isOpen) {
+    if (redisClient && redisClient.isOpen) {
       try {
         // Get all keys that match the feed pattern
         const keys = await redisClient.keys('feed:*');
@@ -401,7 +401,7 @@ export const deletePost = async (req, res) => {
     await Post.findByIdAndDelete(req.params.postId);
     
     // Invalidate feed cache for all users more effectively
-    if (redisClient.isOpen) {
+    if (redisClient && redisClient.isOpen) {
       try {
         // Get all keys that match the feed pattern
         const keys = await redisClient.keys('feed:*');
@@ -436,7 +436,7 @@ export const feed = async (req, res) => {
     const cacheKey = `feed:${req.user._id}:${req.query.filter || 'all'}:${page}:${limit}`;
     
     // Try to get from cache first (only for first page)
-    if (page === 1 && redisClient.isOpen) {
+    if (page === 1 && redisClient && redisClient.isOpen) {
       const cachedFeed = await redisClient.get(cacheKey);
       if (cachedFeed) {
         console.log(`Returning cached feed for user ${req.user._id} with filter ${req.query.filter || 'all'}`);
@@ -594,7 +594,7 @@ export const feed = async (req, res) => {
       });
     
     // Cache the result for 1 minute (only for first page)
-    if (page === 1 && redisClient.isOpen) {
+    if (page === 1 && redisClient && redisClient.isOpen) {
       await redisClient.setEx(cacheKey, 60, JSON.stringify(formattedPosts));
     }
     
@@ -829,7 +829,7 @@ export const deleteComment = async (req, res) => {
     await post.save();
     
     // Invalidate feed cache for all users (similar to deletePost)
-    if (redisClient.isOpen) {
+    if (redisClient && redisClient.isOpen) {
       try {
         // Get all keys that match the feed pattern
         const keys = await redisClient.keys('feed:*');
