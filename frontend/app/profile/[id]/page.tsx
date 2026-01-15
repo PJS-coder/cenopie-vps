@@ -492,7 +492,8 @@ function ProfilePage() {
         const currentUserId = getCurrentUserId();
         if (currentUserId && (id === currentUserId || (updatedProfile as any)._id === currentUserId)) {
           localStorage.setItem('currentUser', JSON.stringify(profileWithId));
-          window.dispatchEvent(new Event('storage'));
+          
+          // Dispatch event to update UI immediately
           window.dispatchEvent(new Event('profileUpdated'));
         }
       }

@@ -11,7 +11,7 @@ export interface SuggestedUser {
   connected: boolean;
 }
 
-export const useSuggestedUsers = () => {
+export const useSuggestedUsers = (enabled: boolean = true) => {
   const [users, setUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +50,10 @@ export const useSuggestedUsers = () => {
   };
 
   useEffect(() => {
-    fetchSuggestedUsers();
-  }, []);
+    if (enabled) {
+      fetchSuggestedUsers();
+    }
+  }, [enabled]);
 
   return {
     users,

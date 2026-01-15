@@ -266,8 +266,10 @@ export default function ProfilePage() {
       setBannerImageFile(null);
       
       if (updatedProfile) {
+        // Update currentUser in localStorage with the fresh data
         localStorage.setItem('currentUser', JSON.stringify(updatedProfile));
-        window.dispatchEvent(new Event('storage'));
+        
+        // Dispatch event to update UI immediately
         window.dispatchEvent(new Event('profileUpdated'));
       }
       

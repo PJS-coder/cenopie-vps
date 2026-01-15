@@ -8,7 +8,7 @@ interface UseNewsReturn {
   refreshNews: () => Promise<void>;
 }
 
-export const useNews = (limit: number = 5): UseNewsReturn => {
+export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsReturn => {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +39,10 @@ export const useNews = (limit: number = 5): UseNewsReturn => {
   };
 
   useEffect(() => {
-    fetchNews();
-  }, [limit]);
+    if (enabled) {
+      fetchNews();
+    }
+  }, [enabled, limit]);
 
   // Listen for news updates from other parts of the app
   useEffect(() => {

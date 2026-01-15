@@ -432,176 +432,77 @@ export const deletePost = async (req, res) => {
 
 export const feed = async (req, res) => {
   try {
-    // Get pagination parameters
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10; // Reduced from 30 to 10 for better performance
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
-    // Check if feed is cached (only for first page)
-    const cacheKey = `feed:${req.user._id}:${req.query.filter || 'all'}:${page}:${limit}`;
-    
-    // Try to get from cache first (only for first page)
-    if (page === 1 && redisClient && redisClient.isOpen) {
-      const cachedFeed = await redisClient.get(cacheKey);
-      if (cachedFeed) {
-        console.log(`Returning cached feed for user ${req.user._id} with filter ${req.query.filter || 'all'}`);
-        return res.json({
-          data: JSON.parse(cachedFeed)
-        });
-      }
-    }
-    
-    // Get the current user
-    const currentUser = await User.findById(req.user._id);
-    
-    // Determine which posts to fetch based on filter
     let query = {};
     
-    // If filter is 'following', only get posts from users the current user is connected to
+    // If filter is 'following', get connected users first
     if (req.query.filter === 'following') {
-      // Get connected users from the Connection model
       const connections = await Connection.find({
         $or: [
           { requester: req.user._id, status: 'accepted' },
           { recipient: req.user._id, status: 'accepted' }
         ]
-      });
+      }).select('requester recipient').lean();
       
-      // Extract user IDs from connections
       const connectedUserIds = connections.map(conn => {
-        // If current user is the requester, get the recipient, and vice versa
         return conn.requester.toString() === req.user._id.toString() 
-          ? conn.recipient.toString() 
-          : conn.requester.toString();
+          ? conn.recipient 
+          : conn.requester;
       });
       
-      // Also include the current user's own posts
-      connectedUserIds.push(req.user._id.toString());
-      
-      // Filter posts to only include those from connected users
+      connectedUserIds.push(req.user._id);
       query = { 'author': { $in: connectedUserIds } };
     }
     
-    // Optimize: Get all unique author IDs first to batch connection checks
+    // OPTIMIZED: Get posts with minimal data, NO comment population
     const posts = await Post.find(query)
+      .select('author content createdAt likes comments image mediaType')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('author', 'name headline profileImage isVerified')
-      .populate('comments.author', 'name profileImage isVerified')
-      .populate({
-        path: 'originalPost',
-        populate: [
-          { path: 'author', select: 'name headline profileImage isVerified' },
-          { path: 'comments.author', select: 'name profileImage isVerified' }
-        ]
-      });
+      .lean();
     
-    // Get all unique author IDs for connection status check
-    const authorIds = [
-      ...new Set([
-        ...posts.filter(post => post.author && post.author._id).map(post => post.author._id.toString()),
-        ...posts.filter(post => post.originalPost && post.originalPost.author && post.originalPost.author._id)
-                 .map(post => post.originalPost.author._id.toString())
-      ])
-    ];
+    // OPTIMIZED: Single query for all connection statuses
+    const authorIds = [...new Set(posts.map(post => post.author._id.toString()))];
     
-    // Batch check connection status for all authors at once
-    const connectionStatusMap = {};
-    if (authorIds.length > 0) {
-      const connections = await Connection.find({
-        $or: [
-          { requester: req.user._id, recipient: { $in: authorIds }, status: 'accepted' },
-          { recipient: req.user._id, requester: { $in: authorIds }, status: 'accepted' }
-        ]
-      });
-      
-      // Create a map of connected user IDs
-      const connectedUserIds = new Set([
-        ...connections.map(conn => conn.requester.toString()),
-        ...connections.map(conn => conn.recipient.toString())
-      ]);
-      
-      // Add current user ID as connected to themselves
-      connectedUserIds.add(req.user._id.toString());
-      
-      // Populate connection status map
-      authorIds.forEach(authorId => {
-        connectionStatusMap[authorId] = connectedUserIds.has(authorId);
-      });
-    }
+    const connections = await Connection.find({
+      $or: [
+        { requester: req.user._id, recipient: { $in: authorIds }, status: 'accepted' },
+        { recipient: req.user._id, requester: { $in: authorIds }, status: 'accepted' }
+      ]
+    }).select('requester recipient').lean();
     
-    // Format posts for frontend, filtering out posts without valid authors
-    const formattedPosts = posts
-      .filter(post => post.author && post.author.name) // Only include posts with valid authors
-      .map((post) => {
-        // Get connection status from our precomputed map
-        const isAuthorConnected = connectionStatusMap[post.author._id.toString()] || false;
-        
-        // Format the post
-        const formattedPost = {
-          id: post._id,
-          author: post.author.name,
-          role: post.author.headline || 'User',
-          content: post.content,
-          likes: post.likes.length,
-          comments: post.comments.length,
-          commentDetails: post.comments.map(comment => ({
-            id: comment._id,
-            author: comment.author?.name || 'Unknown User',
-            authorId: comment.author?._id || null,
-            profileImage: comment.author?.profileImage || null,
-            text: comment.text,
-            createdAt: formatTimeAgo(comment.createdAt),
-            isVerified: comment.author?.isVerified || false
-          })),
-          shares: post.reposts?.length || 0,
-          timestamp: formatTimeAgo(post.createdAt),
-          image: post.image || null,
-          mediaType: post.mediaType || 'article',
-          isConnected: isAuthorConnected,
-          authorId: post.author._id,
-          profileImage: post.author.profileImage || null,
-          isLiked: post.likes.includes(req.user._id),
-          isVerified: post.author?.isVerified || false,
-          // Add repost information if this is a repost
-          isRepost: !!post.originalPost,
-          originalPost: post.originalPost ? {
-            id: post.originalPost._id,
-            author: post.originalPost.author?.name || 'Unknown User',
-            role: post.originalPost.author?.headline || 'User',
-            content: post.originalPost.content,
-            likes: post.originalPost.likes.length,
-            comments: post.originalPost.comments.length,
-            commentDetails: post.originalPost.comments.map(comment => ({
-              id: comment._id,
-              author: comment.author?.name || 'Unknown User',
-              authorId: comment.author?._id || null,
-              profileImage: comment.author?.profileImage || null,
-              text: comment.text,
-              createdAt: formatTimeAgo(comment.createdAt),
-              isVerified: comment.author?.isVerified || false
-            })) || [],
-            shares: post.originalPost.reposts?.length || 0,
-            timestamp: formatTimeAgo(post.originalPost.createdAt),
-            image: post.originalPost.image || null,
-            mediaType: post.originalPost.mediaType || 'article',
-            authorId: post.originalPost.author?._id || null,
-            profileImage: post.originalPost.author?.profileImage || null,
-            isConnected: post.originalPost.author ? 
-              (connectionStatusMap[post.originalPost.author._id.toString()] || false) : false,
-            isLiked: post.originalPost.likes.includes(req.user._id),
-            isVerified: post.originalPost.author?.isVerified || false
-          } : null
-        };
-        
-        return formattedPost;
-      });
+    const connectedUserIds = new Set([
+      ...connections.map(conn => conn.requester.toString()),
+      ...connections.map(conn => conn.recipient.toString()),
+      req.user._id.toString()
+    ]);
     
-    // Cache the result for 1 minute (only for first page)
-    if (page === 1 && redisClient && redisClient.isOpen) {
-      await redisClient.setEx(cacheKey, 60, JSON.stringify(formattedPosts));
-    }
+    // OPTIMIZED: Format posts without expensive operations
+    const formattedPosts = posts.map((post) => ({
+      id: post._id,
+      author: post.author.name,
+      role: post.author.headline || 'User',
+      content: post.content,
+      likes: post.likes.length,
+      comments: post.comments.length,
+      commentDetails: [], // Don't load comments upfront - load on demand
+      shares: 0,
+      timestamp: formatTimeAgo(post.createdAt),
+      image: post.image || null,
+      mediaType: post.mediaType || 'article',
+      isConnected: connectedUserIds.has(post.author._id.toString()),
+      authorId: post.author._id,
+      profileImage: post.author.profileImage || null,
+      isLiked: post.likes.some(like => like.toString() === req.user._id.toString()),
+      isVerified: post.author.isVerified || false,
+      isRepost: false,
+      originalPost: null
+    }));
     
     res.json({
       data: formattedPosts,
@@ -616,7 +517,6 @@ export const feed = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const repostPost = async (req, res) => {
   try {
     const { postId: originalPostId } = req.params;

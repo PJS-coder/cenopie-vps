@@ -106,8 +106,8 @@ const processRequestQueue = async () => {
         .catch(request.reject)
         .finally(() => {
           activeRequests--;
-          // Process next batch
-          setTimeout(processRequestQueue, 50);
+          // Process next batch immediately
+          processRequestQueue();
         });
     }
   }
@@ -144,16 +144,9 @@ const performAuthenticatedRequest = async <T = any>(
   config: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
   try {
-    console.log('performAuthenticatedRequest called for endpoint:', endpoint);
-    // Add a small delay to prevent too many requests
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
     const token = localStorage.getItem('authToken');
-    console.log('Token available:', !!token);
-    console.log('Token value (first 20 chars):', token ? token.substring(0, 20) + '...' : 'null');
     
     if (!token) {
-      console.error('No auth token found in localStorage');
       throw new Error('Authentication required. Please log in again.');
     }
   

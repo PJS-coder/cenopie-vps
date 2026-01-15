@@ -71,31 +71,25 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   }, [ensureUniquePosts]);
 
   const fetchFeed = useCallback(async (pageNum = 1, forceRefresh = false) => {
-    console.log(`fetchFeed called: pageNum=${pageNum}, forceRefresh=${forceRefresh}, filter=${filter}, postsLength=${posts.length}`);
-    
     // Only allow manual refresh or initial load
     if (!forceRefresh && pageNum === 1 && posts.length > 0) {
-      console.log('❌ Auto-refresh BLOCKED - use manual refresh button');
       return;
     }
-    
-    console.log('✅ Proceeding with fetch');
     
     // Clear any existing timeouts
     if (fetchFeedRef.current) {
       clearTimeout(fetchFeedRef.current);
     }
     
-    // Fetch immediately - no debouncing or cooldowns
+    // Fetch immediately
     return performFetchFeed(pageNum);
-  }, [filter]); // Add filter as dependency
+  }, [filter, posts.length]);
   
   const performFetchFeed = async (pageNum = 1) => {
     try {
       setLoading(pageNum === 1);
       setError(null);
       const response: any = await feedApi.getFeed(filter, pageNum);
-      // Ensure we have an array, even if the response is empty or malformed
       const feedData = Array.isArray(response.data) ? response.data : [];
       
       // Transform the feed data to match our FeedPost interface
@@ -109,7 +103,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         commentDetails: post.commentDetails || post.comments?.map((comment: any) => ({
           id: comment._id || comment.id,
           author: comment.author?.name || comment.author || 'Unknown User',
-          authorId: comment.author?._id || comment.authorId || undefined, // Add authorId
+          authorId: comment.author?._id || comment.authorId || undefined,
           profileImage: comment.author?.profileImage || comment.profileImage || undefined,
           text: comment.text || '',
           createdAt: comment.createdAt || comment.timestamp || ''
@@ -119,63 +113,37 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         image: post.image,
         mediaType: post.mediaType,
         isConnected: post.isConnected || false,
-        // Debug connection status
-        _debugConnection: {
-          provided: post.isConnected,
-          authorId: post.author?._id || post.author?.id || post.authorId,
-          currentUser: 'will be logged separately'
-        },
         authorId: post.author?._id || post.author?.id || post.authorId,
         profileImage: post.author?.profileImage || post.profileImage,
-        isLiked: post.isLiked || false, // Add isLiked property
-        isVerified: post.author?.isVerified || post.isVerified || false, // Add isVerified property
-        // Add repost information
+        isLiked: post.isLiked || false,
+        isVerified: post.author?.isVerified || post.isVerified || false,
         isRepost: post.isRepost || false,
         originalPost: post.originalPost || null
       }));
       
-      console.log('Transformed posts:', transformedPosts);
-      console.log('Transformed post IDs:', transformedPosts.map((post: FeedPost) => post.id));
-      
-      // Ensure all posts have unique IDs by adding a timestamp suffix if needed
+      // Ensure all posts have unique IDs
       const uniqueTransformedPosts = transformedPosts.map((post: FeedPost, index: number) => {
-        // Check if there's already a post with this ID in the current batch
         const duplicateIndex = transformedPosts.findIndex((p: FeedPost, i: number) => i < index && p.id === post.id);
         if (duplicateIndex >= 0) {
-          // Create a unique ID by appending timestamp
-          const uniqueId = `${post.id}-${Date.now()}-${index}`;
-          console.log(`Found duplicate post ID ${post.id}, creating unique ID:`, uniqueId);
-          return {
-            ...post,
-            id: uniqueId
-          };
+          return { ...post, id: `${post.id}-${Date.now()}-${index}` };
         }
         return post;
       });
       
-      console.log('Unique transformed posts:', uniqueTransformedPosts);
-      console.log('Unique transformed post IDs:', uniqueTransformedPosts.map((post: FeedPost) => post.id));
-      
       if (pageNum === 1) {
-        // For first page, ensure no duplicates within the page itself and with existing posts
         const uniquePosts = ensureUniquePosts(uniqueTransformedPosts);
-        console.log('Setting first page posts:', uniquePosts);
         setPosts(uniquePosts);
       } else {
-        // Filter out duplicates when loading more posts
         const uniquePosts = uniqueTransformedPosts.filter(
           (newPost: FeedPost) => !posts.some(existingPost => existingPost.id === newPost.id)
         );
-        console.log('Adding more posts:', uniquePosts);
         setPosts(prev => ensureUniquePosts([...prev, ...uniquePosts]));
       }
       
-      // Check if there are more posts to load
       setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
     } catch (err) {
       console.error('Feed fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch feed');
-      // Set posts to empty array on error to avoid showing sample data
       if (pageNum === 1) {
         setPosts([]);
       }
@@ -186,43 +154,13 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
-      // Clear any existing timeouts
       if (fetchFeedRef.current) {
         clearTimeout(fetchFeedRef.current);
       }
-      
-      // Load more immediately without debouncing
-      fetchFeed(page + 1, true); // Force load more
+      fetchFeed(page + 1, true);
       setPage(prev => prev + 1);
     }
   }, [hasMore, loading, page, fetchFeed]);
-
-  // Effect to ensure posts are always unique
-  useEffect(() => {
-    if (posts.length > 0) {
-      // Log current posts for debugging
-      console.log('Current posts in feed:', posts);
-      console.log('Post IDs:', posts.map(post => post.id));
-      
-      const uniquePosts = ensureUniquePosts(posts);
-      if (uniquePosts.length !== posts.length) {
-        console.log('Duplicate posts found, removing duplicates');
-        console.log('Before deduplication:', posts.length, 'posts');
-        console.log('After deduplication:', uniquePosts.length, 'posts');
-        // Log which posts were duplicates
-        const seen = new Set();
-        const duplicates = posts.filter(post => {
-          if (seen.has(post.id)) {
-            return true;
-          }
-          seen.add(post.id);
-          return false;
-        });
-        console.log('Duplicate posts:', duplicates);
-        updatePostsSafely(() => uniquePosts);
-      }
-    }
-  }, [posts, ensureUniquePosts, updatePostsSafely]);
 
   const createPost = async (content: string, image?: string, mediaType?: string) => {
     try {
@@ -286,30 +224,15 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   };
 
   const likePost = async (postId: string) => {
-    console.log('=== LIKE POST START ===');
-    console.log('Post ID:', postId);
-    
     // Optimistically update UI first
     updatePostsSafely(prev => {
-      if (!Array.isArray(prev)) {
-        console.error('Posts array is not valid:', prev);
-        return prev || [];
-      }
+      if (!Array.isArray(prev)) return prev || [];
       
       return prev.map(post => {
         if (post.id === postId) {
           const newIsLiked = !post.isLiked;
           const newLikes = newIsLiked ? post.likes + 1 : Math.max(0, post.likes - 1);
-          
-          console.log(`Optimistically updating post ${postId}:`);
-          console.log(`  isLiked: ${post.isLiked} -> ${newIsLiked}`);
-          console.log(`  likes: ${post.likes} -> ${newLikes}`);
-          
-          return {
-            ...post,
-            isLiked: newIsLiked,
-            likes: newLikes
-          };
+          return { ...post, isLiked: newIsLiked, likes: newLikes };
         }
         return post;
       });
@@ -317,15 +240,11 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
 
     // Then make API call
     try {
-      console.log('Making API call to like post...');
       const response = await feedApi.likePost(postId);
-      // API response received
       
       // Update with server response if available
       if (response && response.data) {
         const serverData = response.data;
-        // Updating with server data
-        
         updatePostsSafely(prev => {
           if (!Array.isArray(prev)) return prev || [];
           
@@ -341,12 +260,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           });
         });
       }
-      
-      console.log('=== LIKE POST SUCCESS ===');
     } catch (err) {
-      console.error('=== LIKE POST ERROR ===');
-      console.error('Error details:', err);
-      
       // Revert optimistic update on error
       updatePostsSafely(prev => {
         if (!Array.isArray(prev)) return prev || [];
@@ -355,16 +269,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           if (post.id === postId) {
             const revertedIsLiked = !post.isLiked;
             const revertedLikes = revertedIsLiked ? post.likes + 1 : Math.max(0, post.likes - 1);
-            
-            console.log(`Reverting post ${postId} due to error:`);
-            console.log(`  isLiked: ${post.isLiked} -> ${revertedIsLiked}`);
-            console.log(`  likes: ${post.likes} -> ${revertedLikes}`);
-            
-            return {
-              ...post,
-              isLiked: revertedIsLiked,
-              likes: revertedLikes
-            };
+            return { ...post, isLiked: revertedIsLiked, likes: revertedLikes };
           }
           return post;
         });

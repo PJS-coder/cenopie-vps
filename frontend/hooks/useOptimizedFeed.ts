@@ -4,7 +4,6 @@ import { useSuggestedUsers } from './useSuggestedUsers';
 import { useConnections } from './useConnections';
 import { useNews } from './useNews';
 import { profileApi } from '@/lib/api';
-import { userCache } from '@/lib/performance';
 
 interface CurrentUser {
   id?: string;
@@ -25,44 +24,69 @@ interface CurrentUser {
 
 export function useOptimizedFeed(filter: 'all' | 'following' = 'all') {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(false);
   
-  // Main feed data
-  const feedData = useFeed({ filter });
+  // Priority 1: Load user profile immediately from localStorage (instant)
+  // Priority 2: Load connections (fast - simple query)
+  // Priority 3: Load feed posts in parallel with news and suggested users (slower)
   
-  // Secondary data - load with delay to prioritize main content
-  const [loadSecondary, setLoadSecondary] = useState(false);
-  const suggestedUsers = useSuggestedUsers();
-  const connections = useConnections();
-  const news = useNews(5);
+  const connections = useConnections(); // Start loading connections immediately
+  const feedData = useFeed({ filter }); // Start loading feed immediately
+  
+  // Delay loading of news and suggested users slightly to prioritize feed
+  const [shouldLoadSecondary, setShouldLoadSecondary] = useState(false);
+  
+  useEffect(() => {
+    // Wait 100ms before loading secondary data to prioritize feed
+    const timer = setTimeout(() => {
+      setShouldLoadSecondary(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  const suggestedUsers = useSuggestedUsers(shouldLoadSecondary);
+  const news = useNews(shouldLoadSecondary);
 
-  // Load current user data with caching
+  // Load current user from localStorage first (instant), then fetch from API
   const fetchCurrentUser = useCallback(async () => {
     try {
-      setUserLoading(true);
-      
-      // Check memory cache first
-      const cachedUser = userCache.get('currentUser');
+      // Try localStorage first for instant load
+      const cachedUser = localStorage.getItem('currentUser');
       if (cachedUser) {
-        setCurrentUser(cachedUser);
-        setUserLoading(false);
-        return;
+        try {
+          const userData = JSON.parse(cachedUser);
+          const company = userData.experience?.find((exp: any) => exp.current)?.company || 
+                         userData.experience?.[0]?.company;
+          
+          const college = userData.education?.find((edu: any) => edu.current)?.college || 
+                         userData.education?.[0]?.college;
+          
+          const transformedUser: CurrentUser = {
+            id: userData.id || userData._id,
+            _id: userData._id || userData.id,
+            name: userData.name,
+            role: userData.headline || 'Professional',
+            company: company,
+            college: college,
+            connections: userData.followers?.length || 0,
+            profileViews: userData.profileViews || 0,
+            profileImage: userData.profileImage,
+            bannerImage: userData.bannerImage,
+            headline: userData.headline,
+            bio: userData.bio,
+            followers: userData.followers,
+            isVerified: userData.isVerified
+          };
+          
+          setCurrentUser(transformedUser);
+        } catch (e) {
+          console.error('Error parsing cached user:', e);
+        }
       }
 
-      // Check localStorage cache
-      const localCachedUser = localStorage.getItem('currentUserCache');
-      const cacheTimestamp = localStorage.getItem('currentUserCacheTime');
-      const now = Date.now();
-      
-      // Use localStorage cache if it's less than 5 minutes old
-      if (localCachedUser && cacheTimestamp && (now - parseInt(cacheTimestamp)) < 5 * 60 * 1000) {
-        const parsedUser = JSON.parse(localCachedUser);
-        setCurrentUser(parsedUser);
-        userCache.set('currentUser', parsedUser, 5 * 60 * 1000); // Cache in memory too
-        setUserLoading(false);
-        return;
-      }
-
+      // Then fetch fresh data in background
+      setUserLoading(true);
       const response = await profileApi.getProfile();
       const userData = response.data?.user || (response as any).user;
       
@@ -91,11 +115,6 @@ export function useOptimizedFeed(filter: 'all' | 'following' = 'all') {
         };
         
         setCurrentUser(transformedUser);
-        
-        // Cache the user data in both memory and localStorage
-        userCache.set('currentUser', transformedUser, 5 * 60 * 1000);
-        localStorage.setItem('currentUserCache', JSON.stringify(transformedUser));
-        localStorage.setItem('currentUserCacheTime', now.toString());
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
@@ -107,16 +126,18 @@ export function useOptimizedFeed(filter: 'all' | 'following' = 'all') {
   // Load user data immediately
   useEffect(() => {
     fetchCurrentUser();
+    
+    // Listen for profile updates and refetch immediately
+    const handleProfileUpdate = () => {
+      fetchCurrentUser();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [fetchCurrentUser]);
-
-  // Load secondary data after a delay to prioritize main content
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoadSecondary(true);
-    }, 1000); // 1 second delay
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Memoize the return value to prevent unnecessary re-renders
   return useMemo(() => ({

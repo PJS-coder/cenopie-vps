@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useCallback, memo } from 'react';
+
+import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { PhotoIcon, VideoCameraIcon, DocumentTextIcon, BookmarkIcon, NewspaperIcon, EyeIcon, HeartIcon } from '@heroicons/react/24/outline';
@@ -7,7 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { mediaApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import VerificationBadge from '@/components/VerificationBadge';
-import { OptimizedFeedLoader } from '@/components/OptimizedFeedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 import { LazyPostCard, LazyCustomVideoPlayer } from '@/components/LazyFeedComponents';
 import { useToastContext } from '@/components/ToastProvider';
 import { useOptimizedFeed } from '@/hooks/useOptimizedFeed';
@@ -147,9 +148,17 @@ export default function FeedPage() {
     try { if (commentText) await commentOnPost(postId, commentText); } catch (err) { alert('Failed to add comment'); }
   };
 
-  // Loading state
-  if (loading && posts.length === 0) {
-    return <ProtectedRoute><OptimizedFeedLoader /></ProtectedRoute>;
+  // Loading state - only show full loader on initial mount, not when switching filters
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  useEffect(() => {
+    if (!loading && posts.length > 0) {
+      setHasLoadedOnce(true);
+    }
+  }, [loading, posts.length]);
+
+  if (loading && posts.length === 0 && !hasLoadedOnce) {
+    return <ProtectedRoute><CenopieLoader /></ProtectedRoute>;
   }
 
   // Error state
@@ -363,10 +372,24 @@ export default function FeedPage() {
               </div>
               {/* Posts Content */}
               <div className="space-y-4">
-                {loading && (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <div className="w-8 h-8 border-3 border-gray-300 dark:border-gray-600 border-t-[#0BC0DF] rounded-full animate-spin mb-3"></div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Loading posts...</p>
+                {loading && posts.length === 0 && (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm p-6 animate-pulse">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6"></div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -465,21 +488,21 @@ export default function FeedPage() {
                     </div>
                   ) : newsError ? (
                     <div className="p-4 text-center text-red-500">Error loading news</div>
-                  ) : news.length === 0 ? (
+                  ) : !news || news.length === 0 ? (
                     <div className="p-4 text-center text-gray-500 dark:text-gray-400">No news available</div>
                   ) : (
-                    news.map((article, index) => (
-                      <div key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-b-0 group" onClick={() => router.push(`/news/${article.id}`)}>
+                    news.map((article: any, index: number) => (
+                      <div key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-b-0 group" onClick={() => article?.id && router.push(`/news/${article.id}`)}>
                         <div className="flex items-start gap-3">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-2 group-hover:text-[#0BC0DF] transition-colors">
-                              {article.title}
+                              {article?.title || 'Untitled'}
                             </div>
                             <div className="flex items-center justify-between mt-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{article.company.name}</span>
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{article?.company?.name || 'Company'}</span>
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{article.timeAgo}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{article?.timeAgo || 'Recently'}</div>
                             </div>
                           </div>
                         </div>
