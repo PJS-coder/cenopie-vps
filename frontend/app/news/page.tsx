@@ -38,7 +38,7 @@ interface CurrentUser {
 
 export default function NewsPage() {
   const router = useRouter();
-  const { news, loading, error, refreshNews } = useNews(20); // Load more news for the dedicated page
+  const { news, loading, error, refreshNews } = useNews(true, 20); // Load more news for the dedicated page
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   
   const { users: suggestedUsers, loading: suggestedUsersLoading } = useSuggestedUsers();
