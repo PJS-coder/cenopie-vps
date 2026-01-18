@@ -30,6 +30,8 @@ import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import VerificationBadge from '@/components/VerificationBadge';
 
+import SimpleLoader from '@/components/SimpleLoader';
+
 interface UserProfile {
   id: string;
   name: string;
@@ -317,8 +319,8 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <SimpleLoader size="lg" />
         </div>
       </ProtectedRoute>
     );

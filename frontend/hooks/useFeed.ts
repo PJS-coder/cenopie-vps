@@ -40,24 +40,18 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   
-  // Add refs for debouncing
-  const fetchFeedRef = useRef<NodeJS.Timeout | null>(null);
-  const lastFetchTimeRef = useRef<number>(0);
-  
   // Removed console.log for better performance
   
-  // Helper function to ensure posts array has unique IDs
+  // Helper function to ensure posts array has unique IDs (simplified)
   const ensureUniquePosts = useCallback((postsArray: FeedPost[]): FeedPost[] => {
-    const uniquePostsMap = new Map<string, FeedPost>();
-    postsArray.forEach(post => {
-      // If we already have a post with this ID, we'll keep the newer one
-      if (!uniquePostsMap.has(post.id) || 
-          (post.timestamp && uniquePostsMap.get(post.id)?.timestamp && 
-           new Date(post.timestamp) > new Date(uniquePostsMap.get(post.id)!.timestamp))) {
-        uniquePostsMap.set(post.id, post);
-      }
+    if (!Array.isArray(postsArray)) return [];
+    
+    const seen = new Set<string>();
+    return postsArray.filter(post => {
+      if (seen.has(post.id)) return false;
+      seen.add(post.id);
+      return true;
     });
-    return Array.from(uniquePostsMap.values());
   }, []);
 
   // Function to update posts state with deduplication
@@ -71,92 +65,58 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   }, [ensureUniquePosts]);
 
   const fetchFeed = useCallback(async (pageNum = 1, forceRefresh = false) => {
-    // Only allow manual refresh or initial load
-    if (!forceRefresh && pageNum === 1 && posts.length > 0) {
+    if (loading && !forceRefresh) {
       return;
     }
     
-    // Clear any existing timeouts
-    if (fetchFeedRef.current) {
-      clearTimeout(fetchFeedRef.current);
-    }
-    
-    // Fetch immediately
-    return performFetchFeed(pageNum);
-  }, [filter, posts.length]);
-  
-  const performFetchFeed = async (pageNum = 1) => {
     try {
       setLoading(pageNum === 1);
       setError(null);
+      
       const response: any = await feedApi.getFeed(filter, pageNum);
-      const feedData = Array.isArray(response.data) ? response.data : [];
       
-      // Transform the feed data to match our FeedPost interface
-      const transformedPosts = feedData.map((post: any) => ({
-        id: post._id || post.id,
-        author: post.author?.name || post.author || 'Unknown User',
-        role: post.author?.headline || post.author?.role || post.role || 'Professional',
-        content: post.content,
-        likes: post.likes?.length || post.likes || 0,
-        comments: post.comments?.length || post.comments || 0,
-        commentDetails: post.commentDetails || post.comments?.map((comment: any) => ({
-          id: comment._id || comment.id,
-          author: comment.author?.name || comment.author || 'Unknown User',
-          authorId: comment.author?._id || comment.authorId || undefined,
-          profileImage: comment.author?.profileImage || comment.profileImage || undefined,
-          text: comment.text || '',
-          createdAt: comment.createdAt || comment.timestamp || ''
-        })) || [],
-        shares: post.shares || 0,
-        timestamp: post.timestamp || new Date(post.createdAt || Date.now()).toLocaleDateString(),
-        image: post.image,
-        mediaType: post.mediaType,
-        isConnected: post.isConnected || false,
-        authorId: post.author?._id || post.author?.id || post.authorId,
-        profileImage: post.author?.profileImage || post.profileImage,
-        isLiked: post.isLiked || false,
-        isVerified: post.author?.isVerified || post.isVerified || false,
-        isRepost: post.isRepost || false,
-        originalPost: post.originalPost || null
-      }));
-      
-      // Ensure all posts have unique IDs
-      const uniqueTransformedPosts = transformedPosts.map((post: FeedPost, index: number) => {
-        const duplicateIndex = transformedPosts.findIndex((p: FeedPost, i: number) => i < index && p.id === post.id);
-        if (duplicateIndex >= 0) {
-          return { ...post, id: `${post.id}-${Date.now()}-${index}` };
+      if (response && response.data) {
+        const feedData = Array.isArray(response.data) ? response.data : [];
+        
+        const transformedPosts = feedData.map((post: any) => ({
+          id: post.id || post._id,
+          author: post.author,
+          role: post.role,
+          content: post.content,
+          likes: post.likes,
+          comments: post.comments,
+          commentDetails: post.commentDetails || [],
+          shares: post.shares || 0,
+          timestamp: post.timestamp,
+          image: post.image,
+          mediaType: post.mediaType,
+          isConnected: post.isConnected,
+          authorId: post.authorId,
+          profileImage: post.profileImage,
+          isLiked: post.isLiked,
+          isVerified: post.isVerified,
+          originalPost: post.originalPost
+        }));
+        
+        if (pageNum === 1) {
+          setPosts(transformedPosts);
+        } else {
+          setPosts(prev => [...prev, ...transformedPosts]);
         }
-        return post;
-      });
-      
-      if (pageNum === 1) {
-        const uniquePosts = ensureUniquePosts(uniqueTransformedPosts);
-        setPosts(uniquePosts);
-      } else {
-        const uniquePosts = uniqueTransformedPosts.filter(
-          (newPost: FeedPost) => !posts.some(existingPost => existingPost.id === newPost.id)
-        );
-        setPosts(prev => ensureUniquePosts([...prev, ...uniquePosts]));
+        
+        setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
       }
-      
-      setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
     } catch (err) {
-      console.error('Feed fetch error:', err);
+      console.error('fetchFeed error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch feed');
-      if (pageNum === 1) {
-        setPosts([]);
-      }
+      if (pageNum === 1) setPosts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, loading]);
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
-      if (fetchFeedRef.current) {
-        clearTimeout(fetchFeedRef.current);
-      }
       fetchFeed(page + 1, true);
       setPage(prev => prev + 1);
     }
@@ -430,22 +390,65 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   };
 
   useEffect(() => {
-    // Fetch feed when filter changes or on initial load
-    console.log(`useEffect triggered: filter=${filter}, posts.length=${posts.length}`);
-    
-    // Reset posts and fetch new data when filter changes
+    // Reset state when filter changes
     setPosts([]);
     setPage(1);
     setHasMore(true);
-    fetchFeed(1, true); // Force refresh when filter changes
+    setError(null);
     
-    // Cleanup timeout on unmount
-    return () => {
-      if (fetchFeedRef.current) {
-        clearTimeout(fetchFeedRef.current);
+    // Fetch new data immediately
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response: any = await feedApi.getFeed(filter, 1);
+        
+        if (response && response.data) {
+          const feedData = Array.isArray(response.data) ? response.data : [];
+          
+          if (feedData.length > 0) {
+            const transformedPosts = feedData.map((post: any) => ({
+              id: post.id || post._id,
+              author: post.author,
+              role: post.role,
+              content: post.content,
+              likes: post.likes,
+              comments: post.comments,
+              commentDetails: post.commentDetails || [],
+              shares: post.shares || 0,
+              timestamp: post.timestamp,
+              image: post.image,
+              mediaType: post.mediaType,
+              isConnected: post.isConnected,
+              authorId: post.authorId,
+              profileImage: post.profileImage,
+              isLiked: post.isLiked,
+              isVerified: post.isVerified,
+              originalPost: post.originalPost
+            }));
+            
+            setPosts(transformedPosts);
+            setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
+          } else {
+            setPosts([]);
+            setHasMore(false);
+          }
+        } else {
+          setPosts([]);
+          setHasMore(false);
+        }
+      } catch (err) {
+        console.error('Feed fetch error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch feed');
+        setPosts([]);
+      } finally {
+        setLoading(false);
       }
     };
-  }, [filter]); // Re-run when filter changes
+    
+    fetchData();
+  }, [filter]);
   
   return {
     posts,

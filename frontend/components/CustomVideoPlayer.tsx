@@ -1,118 +1,45 @@
 "use client";
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, memo } from 'react';
 import { PlayIcon, PauseIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/solid';
 import { ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
 
-interface CustomVideoPlayerProps {
+interface MinimalVideoPlayerProps {
   src: string;
   className?: string;
-  preload?: string;
 }
 
-const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({ 
+const MinimalVideoPlayer: React.FC<MinimalVideoPlayerProps> = ({ 
   src, 
-  className = "", 
-  preload = "metadata" 
+  className = "" 
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showControls, setShowControls] = useState(false);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const updateTime = () => {
-      setCurrentTime(video.currentTime);
-    };
-    
-    const updateDuration = () => {
-      if (video.duration && !isNaN(video.duration) && isFinite(video.duration)) {
-        setDuration(video.duration);
-        console.log('Video duration set:', video.duration);
-      }
-    };
-    
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    
-    const handleLoadedData = () => {
-      if (video.duration && !isNaN(video.duration) && isFinite(video.duration)) {
-        setDuration(video.duration);
-        console.log('Video duration from loadeddata:', video.duration);
-      }
-    };
-
-    // Add multiple event listeners to ensure duration is captured
-    video.addEventListener('timeupdate', updateTime);
-    video.addEventListener('loadedmetadata', updateDuration);
-    video.addEventListener('loadeddata', handleLoadedData);
-    video.addEventListener('canplay', updateDuration);
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-
-    // Try to get duration immediately if video is already loaded
-    if (video.readyState >= 1) {
-      updateDuration();
-    }
-
-    return () => {
-      video.removeEventListener('timeupdate', updateTime);
-      video.removeEventListener('loadedmetadata', updateDuration);
-      video.removeEventListener('loadeddata', handleLoadedData);
-      video.removeEventListener('canplay', updateDuration);
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-    };
-  }, [src]);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (isPlaying) {
-      video.pause();
-    } else {
+    if (video.paused) {
       video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
     }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const newTime = parseFloat(e.target.value);
-    video.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const newVolume = parseFloat(e.target.value);
-    video.volume = newVolume;
-    setVolume(newVolume);
-    setIsMuted(newVolume === 0);
   };
 
   const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (isMuted) {
-      video.volume = volume > 0 ? volume : 0.5;
-      setIsMuted(false);
-    } else {
-      video.volume = 0;
-      setIsMuted(true);
-    }
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
   };
 
   const handleSpeedChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -135,47 +62,77 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     }
   };
 
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video || isDragging) return;
+    
+    setCurrentTime(video.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    setDuration(video.duration);
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const newTime = (clickX / width) * duration;
+    
+    video.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
   const formatTime = (time: number) => {
-    if (!time || isNaN(time) || !isFinite(time)) {
-      return '0:00';
-    }
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleMouseEnter = () => {
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    setShowControls(true);
-  };
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-  const handleMouseLeave = () => {
-    if (isPlaying) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false);
-      }, 2000); // Hide controls after 2 seconds when playing
-    }
-  };
+    const handleTimeUpdateEvent = () => handleTimeUpdate();
+    const handleLoadedMetadataEvent = () => handleLoadedMetadata();
+
+    video.addEventListener('timeupdate', handleTimeUpdateEvent);
+    video.addEventListener('loadedmetadata', handleLoadedMetadataEvent);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdateEvent);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadataEvent);
+    };
+  }, [isDragging]);
 
   return (
     <div 
       className={`relative group ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
     >
       <video
+        key={src}
         ref={videoRef}
         src={src}
-        className="w-full h-full object-cover"
-        preload={preload}
+        className="w-full h-auto max-h-[500px] object-contain rounded-lg"
         onClick={togglePlay}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        playsInline
+        muted
+        preload="metadata"
       >
         Your browser does not support the video tag.
       </video>
 
-      {/* Center Play Button Overlay */}
+      {/* Play/Pause Overlay */}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity duration-300">
           <button
@@ -187,89 +144,61 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Custom Controls */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 transition-opacity duration-300 ${(showControls || !isPlaying) ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Minimal Controls */}
+      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
         {/* Progress Bar */}
         <div className="mb-3">
-          <div className="relative">
-            <div className="w-full h-1 bg-gray-600 rounded-lg">
-              <div 
-                className="h-full bg-[#0BC0DF] rounded-lg transition-all duration-100"
-                style={{
-                  width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
-                }}
-              />
-            </div>
-            <input
-              type="range"
-              min="0"
-              max={duration > 0 ? duration : 100}
-              value={currentTime}
-              onChange={handleSeek}
-              className="absolute top-0 w-full h-1 opacity-0 cursor-pointer"
-              style={{ margin: 0 }}
+          <div 
+            className="w-full h-1 bg-white/30 rounded-full cursor-pointer group"
+            onClick={handleProgressClick}
+          >
+            <div 
+              className="h-full bg-[#0BC0DF] rounded-full transition-all duration-150 group-hover:h-1.5"
+              style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
             />
           </div>
-          {/* Debug info - remove in production */}
-          {duration === 0 && (
-            <div className="text-xs text-yellow-400 mt-1">
-              Loading video duration...
-            </div>
-          )}
+          <div className="flex justify-between text-xs text-white/80 mt-1">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
 
-        {/* Controls Row */}
         <div className="flex items-center justify-between">
+          {/* Left Controls */}
           <div className="flex items-center space-x-3">
-            {/* Play/Pause Button */}
+            {/* Play/Pause */}
             <button
               onClick={togglePlay}
               className="text-white hover:text-[#0BC0DF] transition-colors"
             >
               {isPlaying ? (
-                <PauseIcon className="w-6 h-6" />
+                <PauseIcon className="w-5 h-5" />
               ) : (
-                <PlayIcon className="w-6 h-6" />
+                <PlayIcon className="w-5 h-5" />
               )}
             </button>
 
-            {/* Volume Control */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={toggleMute}
-                className="text-white hover:text-[#0BC0DF] transition-colors"
-              >
-                {isMuted || volume === 0 ? (
-                  <SpeakerXMarkIcon className="w-5 h-5" />
-                ) : (
-                  <SpeakerWaveIcon className="w-5 h-5" />
-                )}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-              />
-            </div>
-
-            {/* Time Display */}
-            <span className="text-white text-sm">
-              {formatTime(currentTime)} / {duration > 0 ? formatTime(duration) : '--:--'}
-            </span>
+            {/* Sound */}
+            <button
+              onClick={toggleMute}
+              className="text-white hover:text-[#0BC0DF] transition-colors"
+            >
+              {isMuted ? (
+                <SpeakerXMarkIcon className="w-5 h-5" />
+              ) : (
+                <SpeakerWaveIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
 
+          {/* Right Controls */}
           <div className="flex items-center space-x-3">
-            {/* Speed Control */}
+            {/* Playback Speed */}
             <select
               value={playbackRate}
               onChange={handleSpeedChange}
               className="bg-black/50 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:border-[#0BC0DF]"
             >
-              <option value="0.25">0.25x</option>
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
               <option value="1">1x</option>
@@ -278,7 +207,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               <option value="2">2x</option>
             </select>
 
-            {/* Fullscreen Button */}
+            {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
               className="text-white hover:text-[#0BC0DF] transition-colors"
@@ -292,4 +221,4 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   );
 };
 
-export default CustomVideoPlayer;
+export default memo(MinimalVideoPlayer);

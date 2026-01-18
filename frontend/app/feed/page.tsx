@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import VerificationBadge from '@/components/VerificationBadge';
 import CenopieLoader from '@/components/CenopieLoader';
 import { LazyPostCard, LazyCustomVideoPlayer } from '@/components/LazyFeedComponents';
+import PostCard from '@/components/PostCard';
 import { useToastContext } from '@/components/ToastProvider';
 import { useOptimizedFeed } from '@/hooks/useOptimizedFeed';
 
@@ -20,11 +21,12 @@ export default function FeedPage() {
   const [showTrending, setShowTrending] = useState(false);
   
   // Use optimized feed hook for better performance
+  const feedData = useOptimizedFeed(activeFilter);
   const {
     posts, loading, error, fetchFeed, loadMore, hasMore, createPost, likePost, repostPost, deletePost, commentOnPost, deleteComment,
     currentUser, userLoading, suggestedUsers, suggestedUsersLoading, suggestedUsersError, connections, connectionsLoading,
     news, newsLoading, newsError, refreshNews, getUserInitials, isPostSaved
-  } = useOptimizedFeed(activeFilter);
+  } = feedData;
 
   const [postContent, setPostContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -176,7 +178,6 @@ export default function FeedPage() {
     );
   }
 
-  const MemoizedPostCard = memo(LazyPostCard);
   return (
     <ProtectedRoute>
       <div className="w-full flex justify-center px-4 lg:px-6 pb-8 pt-6">
@@ -309,7 +310,7 @@ export default function FeedPage() {
                           {selectedFiles[0]?.type.startsWith('video/') ? (
                             <LazyCustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain" />
                           ) : (
-                            <Image src={previewUrls[0]} alt="Preview" className="w-full h-auto object-contain" width={400} height={300} />
+                            <Image src={previewUrls[0]} alt="Preview" className="w-full h-auto max-h-[300px] object-contain" width={400} height={300} />
                           )}
                           <button type="button" className="absolute top-2 right-2 bg-black/70 text-white p-1.5 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 rounded-full" onClick={() => { setSelectedFiles([]); previewUrls.forEach(url => URL.revokeObjectURL(url)); setPreviewUrls([]); }} title="Remove file">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -404,41 +405,43 @@ export default function FeedPage() {
                 )}
 
                 {/* Feed Posts */}
-                {posts.map((post, index) => {
-                  return post.id && post.author && post.content ? (
-                    <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
-                      <MemoizedPostCard
-                        id={post.id}
-                        author={post.author}
-                        role={post.role}
-                        content={post.content}
-                        likes={post.likes}
-                        comments={post.comments}
-                        commentDetails={post.commentDetails}
-                        timestamp={post.timestamp}
-                        image={post.image}
-                        mediaType={post.mediaType}
-                        isUserConnected={post.isConnected}
-                        currentUserId={currentUser?._id || currentUser?.id}
-                        postAuthorId={post.authorId}
-                        profileImage={post.profileImage}
-                        onLike={handleLike}
-                        onComment={handleComment}
-                        onShare={handleShare}
-                        onRepost={handleRepost}
-                        onSave={handleSave}
-                        onDelete={handleDelete}
-                        onDeleteComment={handleDeleteComment}
-                        onMessage={handleMessage}
-                        isLiked={post.isLiked}
-                        isSaved={isPostSaved(post.id)}
-                        isRepost={post.originalPost ? true : false}
-                        isVerified={post.isVerified}
-                        originalPost={post.originalPost}
-                      />
-                    </div>
-                  ) : null;
-                })}
+                {posts && posts.length > 0 ? (
+                  posts.map((post, index) => {
+                    return post.id && post.author && post.content ? (
+                      <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+                        <PostCard
+                          id={post.id}
+                          author={post.author}
+                          role={post.role}
+                          content={post.content}
+                          likes={post.likes}
+                          comments={post.comments}
+                          commentDetails={post.commentDetails}
+                          timestamp={post.timestamp}
+                          image={post.image}
+                          mediaType={post.mediaType}
+                          isUserConnected={post.isConnected}
+                          currentUserId={currentUser?._id || currentUser?.id}
+                          postAuthorId={post.authorId}
+                          profileImage={post.profileImage}
+                          onLike={handleLike}
+                          onComment={handleComment}
+                          onShare={handleShare}
+                          onRepost={handleRepost}
+                          onSave={handleSave}
+                          onDelete={handleDelete}
+                          onDeleteComment={handleDeleteComment}
+                          onMessage={handleMessage}
+                          isLiked={post.isLiked}
+                          isSaved={isPostSaved(post.id)}
+                          isRepost={post.originalPost ? true : false}
+                          isVerified={post.isVerified}
+                          originalPost={post.originalPost}
+                        />
+                      </div>
+                    ) : null;
+                  })
+                ) : null}
                 
                 {/* Infinite scroll loader */}
                 <div ref={loaderRef} className="flex justify-center py-4">

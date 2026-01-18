@@ -13,16 +13,11 @@ const createDistributedRateLimit = (options = {}) => {
     skipFailedRequests = false,
   } = options;
 
-  // If Redis is disabled, use memory store (less effective but works)
-  const storeConfig = redisClient ? {
+  return rateLimit({
     store: new RedisStore({
       sendCommand: (...args) => redisClient.sendCommand(args),
       prefix: keyPrefix,
     }),
-  } : {};
-
-  return rateLimit({
-    ...storeConfig,
     windowMs,
     max,
     message: {

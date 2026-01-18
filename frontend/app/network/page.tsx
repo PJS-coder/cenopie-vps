@@ -8,6 +8,7 @@ import { UserGroupIcon, UserPlusIcon, ClockIcon, CheckIcon, XMarkIcon } from '@h
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ConnectButton from '@/components/ConnectButton';
 import VerificationBadge from '@/components/VerificationBadge';
+import SimpleLoader from '@/components/SimpleLoader';
 import { useConnections, useConnectionRequests } from '@/hooks/useConnections';
 import { profileApi } from '@/lib/api';
 import OptimizedLoader from '@/components/OptimizedLoader';
@@ -110,70 +111,7 @@ export default function NetworkPage() {
   if (!mounted || initialLoading || (connectionsLoading && connections.length === 0)) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-          {/* Show Cenopie loader first */}
-          <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex items-center justify-center z-50">
-            <div className="flex flex-col items-center space-y-4">
-              {/* Brand Logo */}
-              <div className="flex items-center space-x-1">
-                <div className="text-2xl font-light text-[#0CC0DF] tracking-tight">Ceno</div>
-                <div className="bg-[#0CC0DF] text-white px-2 py-1 rounded-lg text-sm font-bold">pie</div>
-              </div>
-              
-              {/* Spinner */}
-              <div className="w-8 h-8 animate-spin rounded-full border-2 border-[#0CC0DF]/20 border-t-[#0CC0DF]" />
-              
-              {/* Loading Text */}
-              <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">Loading your network...</p>
-            </div>
-          </div>
-
-          <div className="w-full px-4 lg:px-6 py-8 flex justify-center">
-            {/* Center content area with responsive width */}
-            <div className="w-full lg:w-[1000px]">
-              {/* Header Skeleton */}
-              <div className="mb-8 animate-pulse">
-                <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-2"></div>
-                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
-              </div>
-
-              {/* Tabs Skeleton */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-6">
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="flex space-x-8 px-6">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="py-4 px-1 animate-pulse">
-                      <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                    </div>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Content Skeleton */}
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 animate-pulse">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-600"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3"></div>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded flex-1"></div>
-                        <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded flex-1"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
+        <SimpleLoader size="lg" className="min-h-screen" />
       </ProtectedRoute>
     );
   }

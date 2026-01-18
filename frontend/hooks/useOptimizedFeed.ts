@@ -26,66 +26,53 @@ export function useOptimizedFeed(filter: 'all' | 'following' = 'all') {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [userLoading, setUserLoading] = useState(false);
   
-  // Priority 1: Load user profile immediately from localStorage (instant)
-  // Priority 2: Load connections (fast - simple query)
-  // Priority 3: Load feed posts in parallel with news and suggested users (slower)
-  
-  const connections = useConnections(); // Start loading connections immediately
-  const feedData = useFeed({ filter }); // Start loading feed immediately
-  
-  // Delay loading of news and suggested users slightly to prioritize feed
-  const [shouldLoadSecondary, setShouldLoadSecondary] = useState(false);
-  
+  // Load user profile immediately from localStorage (instant)
   useEffect(() => {
-    // Wait 100ms before loading secondary data to prioritize feed
-    const timer = setTimeout(() => {
-      setShouldLoadSecondary(true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    const cachedUser = localStorage.getItem('currentUser');
+    if (cachedUser) {
+      try {
+        const userData = JSON.parse(cachedUser);
+        const company = userData.experience?.find((exp: any) => exp.current)?.company || 
+                       userData.experience?.[0]?.company;
+        
+        const college = userData.education?.find((edu: any) => edu.current)?.college || 
+                       userData.education?.[0]?.college;
+        
+        const transformedUser: CurrentUser = {
+          id: userData.id || userData._id,
+          _id: userData._id || userData.id,
+          name: userData.name,
+          role: userData.headline || 'Professional',
+          company: company,
+          college: college,
+          connections: userData.followers?.length || 0,
+          profileViews: userData.profileViews || 0,
+          profileImage: userData.profileImage,
+          bannerImage: userData.bannerImage,
+          headline: userData.headline,
+          bio: userData.bio,
+          followers: userData.followers,
+          isVerified: userData.isVerified
+        };
+        
+        setCurrentUser(transformedUser);
+      } catch (e) {
+        console.error('Error parsing cached user:', e);
+      }
+    }
   }, []);
   
-  const suggestedUsers = useSuggestedUsers(shouldLoadSecondary);
-  const news = useNews(shouldLoadSecondary);
+  // Load all data in parallel immediately
+  const connections = useConnections();
+  const feedData = useFeed({ filter });
+  const suggestedUsers = useSuggestedUsers(true); // Load immediately
+  const news = useNews(true); // Load immediately
 
-  // Load current user from localStorage first (instant), then fetch from API
+  // Fetch fresh user data in background (non-blocking)
   const fetchCurrentUser = useCallback(async () => {
+    if (userLoading) return; // Prevent multiple calls
+    
     try {
-      // Try localStorage first for instant load
-      const cachedUser = localStorage.getItem('currentUser');
-      if (cachedUser) {
-        try {
-          const userData = JSON.parse(cachedUser);
-          const company = userData.experience?.find((exp: any) => exp.current)?.company || 
-                         userData.experience?.[0]?.company;
-          
-          const college = userData.education?.find((edu: any) => edu.current)?.college || 
-                         userData.education?.[0]?.college;
-          
-          const transformedUser: CurrentUser = {
-            id: userData.id || userData._id,
-            _id: userData._id || userData.id,
-            name: userData.name,
-            role: userData.headline || 'Professional',
-            company: company,
-            college: college,
-            connections: userData.followers?.length || 0,
-            profileViews: userData.profileViews || 0,
-            profileImage: userData.profileImage,
-            bannerImage: userData.bannerImage,
-            headline: userData.headline,
-            bio: userData.bio,
-            followers: userData.followers,
-            isVerified: userData.isVerified
-          };
-          
-          setCurrentUser(transformedUser);
-        } catch (e) {
-          console.error('Error parsing cached user:', e);
-        }
-      }
-
-      // Then fetch fresh data in background
       setUserLoading(true);
       const response = await profileApi.getProfile();
       const userData = response.data?.user || (response as any).user;
@@ -115,28 +102,24 @@ export function useOptimizedFeed(filter: 'all' | 'following' = 'all') {
         };
         
         setCurrentUser(transformedUser);
+        // Update localStorage for next time
+        localStorage.setItem('currentUser', JSON.stringify(userData));
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
     } finally {
       setUserLoading(false);
     }
-  }, []);
+  }, [userLoading]);
 
-  // Load user data immediately
+  // Load fresh user data in background after initial render
   useEffect(() => {
-    fetchCurrentUser();
-    
-    // Listen for profile updates and refetch immediately
-    const handleProfileUpdate = () => {
+    // Delay user profile fetch to not block initial render
+    const timer = setTimeout(() => {
       fetchCurrentUser();
-    };
+    }, 50);
     
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
-    return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-    };
+    return () => clearTimeout(timer);
   }, [fetchCurrentUser]);
 
   // Memoize the return value to prevent unnecessary re-renders

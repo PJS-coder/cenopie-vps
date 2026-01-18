@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { HeartIcon, ChatBubbleOvalLeftIcon, ArrowPathRoundedSquareIcon, ShareIcon, BookmarkIcon, EllipsisHorizontalIcon, TrashIcon, ChatBubbleLeftIcon, ArrowsRightLeftIcon, EnvelopeIcon, UserPlusIcon, XMarkIcon, LinkIcon, AtSymbolIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import VerificationBadge from './VerificationBadge';
-import CustomVideoPlayer from './CustomVideoPlayer';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -20,6 +19,7 @@ import RepostModal from '@/components/RepostModalNew';
 import ConnectButton from '@/components/ConnectButton';
 import { useToastContext } from '@/components/ToastProvider';
 import ConfirmModal from '@/components/ConfirmModal';
+import MinimalVideoPlayer from '@/components/CustomVideoPlayer';
 
 
 
@@ -630,17 +630,10 @@ const PostCard = ({
               <div className="relative w-full mb-3">
                 {mediaType === 'video' ? (
                   <div className="relative w-full bg-gray-50 dark:bg-gray-800">
-                    <CustomVideoPlayer
+                    <MinimalVideoPlayer
                       src={image}
-                      className="w-full h-auto object-contain"
-                      preload="metadata"
+                      className="w-full"
                     />
-                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                      </svg>
-                      Video
-                    </div>
                   </div>
                 ) : (
                   <div className="relative group cursor-pointer w-full bg-gray-50 dark:bg-gray-800">
@@ -696,17 +689,10 @@ const PostCard = ({
                   <div className="relative w-full bg-gray-50 dark:bg-gray-800 border border-gray-200/50 dark:border-gray-600/50 mt-2">
                     {originalPost.mediaType === 'video' ? (
                       <div className="relative w-full">
-                        <CustomVideoPlayer
+                        <MinimalVideoPlayer
                           src={originalPost.image}
-                          className="w-full h-auto object-contain"
-                          preload="metadata"
+                          className="w-full max-h-[400px]"
                         />
-                        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                          </svg>
-                          Video
-                        </div>
                       </div>
                     ) : (
                       <div className="relative group cursor-pointer w-full">

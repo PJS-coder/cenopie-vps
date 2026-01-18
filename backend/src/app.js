@@ -27,7 +27,6 @@ import companyInterviewRoutes from './routes/companyInterviewRoutes.js';
 import adminInterviewRoutes from './routes/adminInterviewRoutes.js';
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 import { performanceMiddleware, memoryMonitor, rateMonitor } from './middlewares/performance.js';
-import { cacheMiddleware } from './middlewares/cache.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';

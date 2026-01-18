@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import SimpleLoader from '@/components/SimpleLoader';
 import { Button } from '@/components/ui/button';
 import {
   SparklesIcon,
@@ -141,7 +142,7 @@ function ShowcaseContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0BC0DF]"></div>
+        <SimpleLoader size="lg" />
       </div>
     );
   }

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "build:turbo": "next build --turbopack",
     "start": "next start",
     "export": "next export",
@@ -27,8 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
-    "critters": "^0.0.24",
-    "date-fns": "^4.1.0",
+        "date-fns": "^4.1.0",
     "framer-motion": "^11.13.5",
     "mongoose": "^8.8.4",
     "next": "^16.0.10",

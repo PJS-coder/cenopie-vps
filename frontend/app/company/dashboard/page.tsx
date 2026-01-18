@@ -67,8 +67,8 @@ function CompanyNewsTab({ companyId }: { companyId: string }) {
         <div className="border-b border-gray-200 px-6 py-4">
           <h2 className="text-xl font-semibold text-gray-900">Company News</h2>
         </div>
-        <div className="p-6 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="p-6">
+          <SimpleLoader size="sm" />
         </div>
       </div>
     );
@@ -155,6 +155,8 @@ function CompanyNewsTab({ companyId }: { companyId: string }) {
     </div>
   );
 }
+
+import SimpleLoader from '@/components/SimpleLoader';
 
 interface Company {
   id: string;
@@ -435,7 +437,11 @@ export default function CompanyDashboard() {
   };
 
   if (loading) {
-    return <OptimizedLoader variant="page" />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <SimpleLoader size="lg" />
+      </div>
+    );
   }
 
   if (!company) {

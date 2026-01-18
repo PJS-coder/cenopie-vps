@@ -16,6 +16,8 @@ import VerificationBadge from '@/components/VerificationBadge';
 import { authenticatedFetchWithRetry, handleApiResponse } from '@/lib/apiUtils';
 import { jobApi } from '@/lib/api';
 
+import SimpleLoader from '@/components/SimpleLoader';
+
 interface Job {
   id: string;
   title: string;
@@ -237,61 +239,8 @@ export default function JobsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        {/* Header Skeleton */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="py-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-blue-50 p-2 rounded-lg">
-                    <BriefcaseIcon className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900">Jobs & Opportunities</h1>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full px-4 lg:px-6 py-8 flex justify-center">
-          <div className="w-full lg:w-[1000px]">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Filters Skeleton */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-20 mb-4"></div>
-                <div className="space-y-4">
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Jobs List Skeleton */}
-            <div className="lg:col-span-3">
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 animate-pulse">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-16 h-16 bg-gray-200 rounded-xl"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                        <div className="flex space-x-2">
-                          <div className="h-3 bg-gray-200 rounded w-16"></div>
-                          <div className="h-3 bg-gray-200 rounded w-16"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <SimpleLoader size="lg" />
       </div>
     );
   }

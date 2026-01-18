@@ -9,6 +9,8 @@ import { Conversation, Message } from '@/lib/messageApi';
 import { Button } from '@/components/ui/button';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
+import SimpleLoader from '@/components/SimpleLoader';
+
 export default function MessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -235,13 +237,12 @@ export default function MessagesPage() {
   // Show loading only for initial conversations load, not for individual message loading
   if ((loading && conversations.length === 0) || creatingConversation) {
     return (
-      <div className="fixed inset-0 top-14 sm:top-16 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#0BC0DF] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {creatingConversation ? 'Starting conversation...' : 'Loading conversations...'}
-          </p>
-        </div>
+      <div className="fixed inset-0 top-14 sm:top-16 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <SimpleLoader 
+          size="lg" 
+          showText={true} 
+          text={creatingConversation ? 'Starting conversation...' : 'Loading conversations...'} 
+        />
       </div>
     );
   }

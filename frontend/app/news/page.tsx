@@ -12,7 +12,7 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 import { useNews } from '@/hooks/useNews';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import SimpleLoader from '@/components/SimpleLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 import ConnectButton from '@/components/ConnectButton';
 import { profileApi } from '@/lib/api';
@@ -132,7 +132,11 @@ export default function NewsPage() {
   };
 
   if (loading) {
-    return <OptimizedLoader variant="page" />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <SimpleLoader size="lg" />
+      </div>
+    );
   }
 
   return (
@@ -398,8 +402,8 @@ export default function NewsPage() {
                   </div>
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
                     {suggestedUsersLoading ? (
-                      <div className="p-4 flex justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                      <div className="p-4">
+                        <SimpleLoader size="sm" />
                       </div>
                     ) : suggestedUsers.length === 0 ? (
                       <div className="p-4 text-center text-gray-500 dark:text-gray-400">

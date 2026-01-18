@@ -437,6 +437,7 @@ export const feed = async (req, res) => {
     const skip = (page - 1) * limit;
     
     let query = {};
+    let connectedUserIds = [];
     
     // If filter is 'following', get connected users first
     if (req.query.filter === 'following') {
@@ -447,7 +448,7 @@ export const feed = async (req, res) => {
         ]
       }).select('requester recipient').lean();
       
-      const connectedUserIds = connections.map(conn => {
+      connectedUserIds = connections.map(conn => {
         return conn.requester.toString() === req.user._id.toString() 
           ? conn.recipient 
           : conn.requester;
@@ -466,21 +467,45 @@ export const feed = async (req, res) => {
       .populate('author', 'name headline profileImage isVerified')
       .lean();
     
-    // OPTIMIZED: Single query for all connection statuses
-    const authorIds = [...new Set(posts.map(post => post.author._id.toString()))];
+    if (posts.length === 0) {
+      return res.json({
+        data: [],
+        pagination: {
+          page,
+          limit,
+          hasMore: false
+        }
+      });
+    }
     
-    const connections = await Connection.find({
-      $or: [
-        { requester: req.user._id, recipient: { $in: authorIds }, status: 'accepted' },
-        { recipient: req.user._id, requester: { $in: authorIds }, status: 'accepted' }
-      ]
-    }).select('requester recipient').lean();
+    // OPTIMIZED: Pre-calculate connection status for all users
+    let connectionStatusMap = new Map();
     
-    const connectedUserIds = new Set([
-      ...connections.map(conn => conn.requester.toString()),
-      ...connections.map(conn => conn.recipient.toString()),
-      req.user._id.toString()
-    ]);
+    if (req.query.filter !== 'following') {
+      // Only calculate connections if not already filtered by following
+      const authorIds = [...new Set(posts.map(post => post.author._id.toString()))];
+      
+      const connections = await Connection.find({
+        $or: [
+          { requester: req.user._id, recipient: { $in: authorIds }, status: 'accepted' },
+          { recipient: req.user._id, requester: { $in: authorIds }, status: 'accepted' }
+        ]
+      }).select('requester recipient').lean();
+      
+      // Build connection map
+      connections.forEach(conn => {
+        const otherUserId = conn.requester.toString() === req.user._id.toString() 
+          ? conn.recipient.toString() 
+          : conn.requester.toString();
+        connectionStatusMap.set(otherUserId, true);
+      });
+      
+      // User is always connected to themselves
+      connectionStatusMap.set(req.user._id.toString(), true);
+    } else {
+      // If filtering by following, all posts are from connected users
+      connectedUserIds.forEach(id => connectionStatusMap.set(id.toString(), true));
+    }
     
     // OPTIMIZED: Format posts without expensive operations
     const formattedPosts = posts.map((post) => ({
@@ -495,7 +520,7 @@ export const feed = async (req, res) => {
       timestamp: formatTimeAgo(post.createdAt),
       image: post.image || null,
       mediaType: post.mediaType || 'article',
-      isConnected: connectedUserIds.has(post.author._id.toString()),
+      isConnected: connectionStatusMap.get(post.author._id.toString()) || false,
       authorId: post.author._id,
       profileImage: post.author.profileImage || null,
       isLiked: post.likes.some(like => like.toString() === req.user._id.toString()),

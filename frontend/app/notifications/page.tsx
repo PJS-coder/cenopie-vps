@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { BellIcon, UserGroupIcon, UserPlusIcon, CheckIcon, XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import SimpleLoader from '@/components/SimpleLoader';
 import { useConnections, useConnectionRequests } from '@/hooks/useConnections';
 import { profileApi } from '@/lib/api';
 import VerificationBadge from '@/components/VerificationBadge';
@@ -302,9 +303,7 @@ export default function UpdatesPage() {
               {activeTab === 'notifications' && (
                 <div className="space-y-4">
                   {notificationsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0BC0DF]"></div>
-                    </div>
+                    <SimpleLoader size="sm" className="py-8" />
                   ) : notifications.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -383,9 +382,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'requests' && (
                 <div>
                   {receivedLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0BC0DF]"></div>
-                    </div>
+                    <SimpleLoader size="sm" className="py-8" />
                   ) : receivedRequests.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -466,9 +463,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'connections' && (
                 <div>
                   {connectionsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0BC0DF]"></div>
-                    </div>
+                    <SimpleLoader size="sm" className="py-8" />
                   ) : connections.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -538,9 +533,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'sent' && (
                 <div>
                   {sentLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0BC0DF]"></div>
-                    </div>
+                    <SimpleLoader size="sm" className="py-8" />
                   ) : sentRequests.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
