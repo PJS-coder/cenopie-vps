@@ -155,12 +155,7 @@ export const submitAnswer = async (req, res) => {
 // Complete interview
 export const completeInterview = async (req, res) => {
   try {
-    const { totalDuration, videoUrl } = req.body;
-    
-    console.log('=== COMPLETE INTERVIEW ===');
-    console.log('Interview ID:', req.params.id);
-    console.log('Total Duration:', totalDuration);
-    console.log('Video URL:', videoUrl);
+    const { totalDuration, videoUrl, securityViolations, violationCount, forcedSubmission, submissionReason } = req.body;
     
     const interview = await Interview.findOne({
       _id: req.params.id,
@@ -175,16 +170,25 @@ export const completeInterview = async (req, res) => {
     interview.completedAt = new Date();
     interview.totalDuration = totalDuration;
     
-    // Save the full interview video URL
     if (videoUrl) {
-      console.log('Saving video URL to fullRecordingUrl:', videoUrl);
       interview.fullRecordingUrl = videoUrl;
-    } else {
-      console.warn('No video URL provided!');
     }
     
-    // Don't auto-generate AI score - let company review or implement real AI later
-    // interview.aiScore and interview.aiAnalysis remain undefined
+    if (securityViolations && Array.isArray(securityViolations)) {
+      interview.securityViolations = securityViolations;
+    }
+    
+    if (typeof violationCount === 'number') {
+      interview.violationCount = violationCount;
+    }
+    
+    if (typeof forcedSubmission === 'boolean') {
+      interview.forcedSubmission = forcedSubmission;
+    }
+    
+    if (submissionReason) {
+      interview.submissionReason = submissionReason;
+    }
     
     await interview.save();
     

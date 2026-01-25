@@ -37,10 +37,7 @@ interface User {
 
 interface Poster {
   _id: string;
-  title: string;
-  description: string;
   image: string;
-  clickUrl?: string;
   isActive: boolean;
 }
 
@@ -113,7 +110,6 @@ function ShowcaseContent() {
     }
   };
 
-  // Group users by their experience/domain
   const groupUsersByDomain = (users: User[]) => {
     const grouped = users.reduce((acc, user) => {
       const domain = user.experience || user.headline || 'Other';
@@ -131,12 +127,6 @@ function ShowcaseContent() {
         acc[domain] = users;
         return acc;
       }, {} as Record<string, User[]>);
-  };
-
-  const handlePosterClick = (poster: Poster) => {
-    if (poster.clickUrl) {
-      window.open(poster.clickUrl, '_blank');
-    }
   };
 
   if (loading) {
@@ -157,115 +147,73 @@ function ShowcaseContent() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Showcase
             </h1>
-            
-            {/* Beta Notice */}
-            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">β</span>
-                </div>
-                <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200">
-                  Beta Version Access
-                </h3>
-              </div>
-              <p className="text-sm text-orange-700 dark:text-orange-300 text-center">
-                You're currently viewing the showcase section for free as part of our beta program. 
-                This feature will be part of our premium subscription in the future.
-              </p>
-            </div>
           </div>
 
           {/* Three Posters - Carousel Style */}
           {posters.length > 0 && (
-            <div className="relative mb-6 sm:mb-8">
-              <div className="relative h-48 sm:h-56 rounded-xl overflow-hidden shadow-lg">
-                {posters.map((poster, index) => (
-                  <div
-                    key={poster._id}
-                    className={`absolute inset-0 transition-opacity duration-500 cursor-pointer ${
-                      index === currentPosterIndex ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    onClick={() => handlePosterClick(poster)}
-                  >
-                    <div className="relative w-full h-full bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500">
-                      {/* Background Pattern */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-white/30 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
-                      </div>
-                      
-                      <div className="relative z-10 flex items-center justify-center h-full text-center p-6">
-                        <div>
-                          <div className="mb-2">
-                            <div className="w-8 h-8 bg-white/20 rounded-full mx-auto mb-3 flex items-center justify-center">
-                              <span className="text-white text-lg">🏆</span>
-                            </div>
-                          </div>
-                          <h3 className="text-white font-bold text-xl sm:text-2xl mb-2">
-                            {poster.title}
-                          </h3>
-                          <p className="text-white/90 text-sm mb-4 max-w-md mx-auto">
-                            {poster.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            <div className="relative mb-6 sm:mb-8 flex justify-center">
+              <div className="relative w-full max-w-5xl h-[280px] rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={posters[currentPosterIndex]?.image}
+                  alt="Showcase Banner"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling!.classList.remove('hidden');
+                  }}
+                />
+                <div className="hidden w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800 text-gray-500">
+                  Image not available
+                </div>
                 
                 {/* Navigation Arrows */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Left arrow clicked, current index:', currentPosterIndex);
-                    setCurrentPosterIndex(prev => {
-                      const newIndex = prev === 0 ? posters.length - 1 : prev - 1;
-                      console.log('New index:', newIndex);
-                      return newIndex;
-                    });
-                  }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Right arrow clicked, current index:', currentPosterIndex);
-                    setCurrentPosterIndex(prev => {
-                      const newIndex = prev === posters.length - 1 ? 0 : prev + 1;
-                      console.log('New index:', newIndex);
-                      return newIndex;
-                    });
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                
-                {/* Dots Indicator */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                  {posters.map((_, index) => (
+                {posters.length > 1 && (
+                  <>
                     <button
-                      key={index}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Dot clicked, index:', index);
-                        setCurrentPosterIndex(index);
+                        setCurrentPosterIndex(prev => prev === 0 ? posters.length - 1 : prev - 1);
                       }}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentPosterIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                    />
-                  ))}
-                </div>
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setCurrentPosterIndex(prev => prev === posters.length - 1 ? 0 : prev + 1);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Dots Indicator */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                      {posters.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCurrentPosterIndex(index);
+                          }}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                            index === currentPosterIndex ? 'bg-white' : 'bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

@@ -65,7 +65,8 @@ export default function HRAdminInterviewsPage() {
         const data = await response.json();
         setInterviews(data.interviews || []);
       } else if (response.status === 401 || response.status === 403) {
-        alert('HR access required. Please login as an HR user.');
+        // Use console.error instead of alert for better UX
+        console.error('HR access required. Redirecting to login.');
         router.push('/hr-admin');
       }
     } catch (error) {
@@ -120,154 +121,146 @@ export default function HRAdminInterviewsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 lg:pb-8">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Cenopie HR - Interview Review
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Review and manage all candidate test interviews
-            </p>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <ArrowRightOnRectangleIcon className="w-5 h-5 mr-2" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Simple Header Text */}
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Cenopie HR - Interview Review
+          </h1>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleLogout}
+          >
             Logout
           </Button>
         </div>
-
-        {/* Stats Cards */}
+        <p className="text-gray-600 mb-8">
+          Review and manage all candidate test interviews
+        </p>
+        {/* Simple Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Interviews</div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {interviews.length}
-              </div>
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{interviews.length}</div>
+              <div className="text-sm text-gray-600">Total Interviews</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending Review</div>
-              <div className="text-3xl font-bold text-yellow-600">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
                 {stats.decisionStats?.find((s: any) => s._id === 'pending')?.count || 0}
               </div>
+              <div className="text-sm text-gray-600">Pending Review</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Shortlisted</div>
-              <div className="text-3xl font-bold text-green-600">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
                 {stats.decisionStats?.find((s: any) => s._id === 'shortlisted')?.count || 0}
               </div>
+              <div className="text-sm text-gray-600">Shortlisted</div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Rejected</div>
-              <div className="text-3xl font-bold text-red-600">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">
                 {stats.decisionStats?.find((s: any) => s._id === 'rejected')?.count || 0}
               </div>
+              <div className="text-sm text-gray-600">Rejected</div>
             </div>
           </div>
         )}
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
+        {/* Simple Tabs */}
+        <div className="flex gap-1 mb-6">
+          <button
             onClick={() => setFilter('all')}
-            size="sm"
+            className={`px-4 py-2 text-sm rounded ${
+              filter === 'all'
+                ? 'bg-cyan-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
           >
-            <FunnelIcon className="w-4 h-4 mr-2" />
             All
-          </Button>
-          <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
+          </button>
+          <button
             onClick={() => setFilter('pending')}
-            size="sm"
+            className={`px-4 py-2 text-sm rounded ${
+              filter === 'pending'
+                ? 'bg-cyan-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
           >
             Pending Review
-          </Button>
-          <Button
-            variant={filter === 'shortlisted' ? 'default' : 'outline'}
+          </button>
+          <button
             onClick={() => setFilter('shortlisted')}
-            size="sm"
+            className={`px-4 py-2 text-sm rounded ${
+              filter === 'shortlisted'
+                ? 'bg-cyan-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
           >
             Shortlisted
-          </Button>
-          <Button
-            variant={filter === 'rejected' ? 'default' : 'outline'}
+          </button>
+          <button
             onClick={() => setFilter('rejected')}
-            size="sm"
+            className={`px-4 py-2 text-sm rounded ${
+              filter === 'rejected'
+                ? 'bg-cyan-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
           >
             Rejected
-          </Button>
+          </button>
         </div>
 
-        {/* Interviews List */}
+        {/* Simple Interview List */}
         {interviews.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
-            <VideoCameraIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              No interviews yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Completed interviews will appear here
-            </p>
+          <div className="text-center py-12">
+            <VideoCameraIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No interviews yet</h3>
+            <p className="text-gray-500">Completed interviews will appear here</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-2">
             {interviews
-              .filter((interview) => interview.user !== null) // Filter out interviews with null user data
+              .filter((interview) => interview.user !== null)
               .map((interview) => (
               <Link
                 key={interview._id}
                 href={`/hr-admin/interviews/${interview._id}`}
-                className="block bg-white dark:bg-gray-800 rounded-xl p-6 hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+                className="block bg-white rounded p-4 hover:bg-gray-50"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    {/* Candidate Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                      {interview.user?.profilePicture ? (
-                        <img
-                          src={interview.user.profilePicture}
-                          alt={interview.user.name || 'User'}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                      )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                      {(interview.user?.name || 'U').charAt(0).toUpperCase()}
                     </div>
-
-                    {/* Interview Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {interview.user?.name || 'Unknown User'}
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDecisionBadge(interview.hrReview.decision)}`}>
-                          {interview.hrReview.decision}
-                        </span>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {interview.user?.name || 'Unknown User'}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {interview.user?.email || 'No email available'}
-                      </p>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <VideoCameraIcon className="w-4 h-4" />
-                          <span>{interview.domain}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ClockIcon className="w-4 h-4" />
-                          <span>{new Date(interview.createdAt).toLocaleDateString()}</span>
-                        </div>
+                      <div className="text-sm text-gray-500">
+                        {interview.domain} • {new Date(interview.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
-
-                  {/* Action Button */}
-                  <Button size="sm" variant="outline">
-                    <EyeIcon className="w-4 h-4 mr-2" />
-                    Review
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      interview.hrReview.decision === 'pending'
+                        ? 'bg-orange-100 text-orange-700'
+                        : interview.hrReview.decision === 'shortlisted'
+                        ? 'bg-green-100 text-green-700'
+                        : interview.hrReview.decision === 'rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {interview.hrReview.decision === 'pending' ? 'Pending' : 
+                       interview.hrReview.decision === 'shortlisted' ? 'Shortlisted' :
+                       interview.hrReview.decision === 'rejected' ? 'Rejected' : 
+                       interview.hrReview.decision}
+                    </span>
+                    <Button size="sm" variant="outline">
+                      Review
+                    </Button>
+                  </div>
                 </div>
               </Link>
             ))}

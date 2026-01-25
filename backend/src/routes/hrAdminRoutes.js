@@ -1,6 +1,8 @@
 import express from 'express';
 import Interview from '../models/Interview.js';
+import Notification from '../models/Notification.js';
 import { protect, hr } from '../middlewares/authMiddleware.js';
+import { getIO } from '../socket/index.js';
 
 const router = express.Router();
 
@@ -69,7 +71,6 @@ router.get('/interviews/:id', protect, hr, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Allow viewing both completed and reviewed interviews
     const interview = await Interview.findOne({
       _id: id,
       status: { $in: ['completed', 'reviewed'] }
@@ -130,15 +131,47 @@ router.post('/interviews/:id/review', protect, hr, async (req, res) => {
     interview.status = 'reviewed';
     
     await interview.save();
-    
-    // TODO: Send email notification to candidate with meeting details if shortlisted
-    if (decision === 'shortlisted' && meetingLink && interview.user) {
-      console.log(`📧 TODO: Send email to ${interview.user.email}`);
-      console.log(`   Subject: Congratulations! You've been shortlisted for HR Interview`);
-      console.log(`   Meeting Link: ${meetingLink}`);
-      console.log(`   Date: ${meetingDate}`);
-      console.log(`   Time: ${meetingTime}`);
-      // Implement email sending here
+
+    // Create notification for the student
+    let notificationMessage = '';
+    let notificationData = {
+      interviewId: interview._id,
+      decision,
+      rating,
+      comments
+    };
+
+    if (decision === 'shortlisted') {
+      notificationMessage = `Great news! You've been shortlisted for the interview. Check your interview details for the meeting information.`;
+      notificationData.meetingLink = meetingLink;
+      notificationData.meetingDate = meetingDate;
+      notificationData.meetingTime = meetingTime;
+    } else if (decision === 'rejected') {
+      notificationMessage = `Thank you for your interview. Unfortunately, we won't be moving forward at this time. Keep applying and improving!`;
+    } else if (decision === 'on-hold') {
+      notificationMessage = `Your interview is currently on hold. We'll update you soon with next steps.`;
+    }
+
+    if (notificationMessage && interview.user) {
+      // Create notification in database
+      const notification = new Notification({
+        user: interview.user._id,
+        type: 'interview_decision',
+        message: notificationMessage,
+        relatedInterview: interview._id,
+        data: notificationData
+      });
+
+      await notification.save();
+
+      // Send real-time notification via Socket.IO for notification count update
+      const io = getIO();
+      if (io) {
+        io.to(`user:${interview.user._id}`).emit('notification:update', {
+          type: 'interview_decision',
+          count: 1
+        });
+      }
     }
     
     res.json({ 

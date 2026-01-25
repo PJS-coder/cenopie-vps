@@ -73,6 +73,21 @@ const interviewSchema = new mongoose.Schema({
     communicationScore: Number
   },
   
+  // Security and Violation Tracking
+  securityViolations: [{
+    type: String,
+    default: []
+  }],
+  violationCount: {
+    type: Number,
+    default: 0
+  },
+  forcedSubmission: {
+    type: Boolean,
+    default: false
+  },
+  submissionReason: String,
+  
   // HR Review
   hrReview: {
     reviewedBy: {

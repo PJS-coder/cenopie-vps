@@ -14,6 +14,12 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Cenopie - Professional Network',
   description: 'Connect with professionals and grow your career',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.svg'
+  },
+  manifest: '/manifest.json'
 }
 
 export default function RootLayout({

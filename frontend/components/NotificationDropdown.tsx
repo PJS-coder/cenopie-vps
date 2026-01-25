@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
-import { BellIcon, BriefcaseIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { BellIcon, BriefcaseIcon, UserPlusIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import VerificationBadge from '@/components/VerificationBadge';
 
-type NotificationType = 'like' | 'comment' | 'follow' | 'message' | 'job' | 'system' | 'connection_request';
+type NotificationType = 'like' | 'comment' | 'follow' | 'message' | 'job' | 'system' | 'connection_request' | 'interview_decision';
 
 interface Notification {
   _id: string;
@@ -76,6 +76,8 @@ export default function NotificationDropdown() {
     switch (type) {
       case 'job':
         return <BriefcaseIcon className="w-4 h-4 text-blue-500" />;
+      case 'interview_decision':
+        return <AcademicCapIcon className="w-4 h-4 text-purple-500" />;
       case 'connection_request':
       case 'follow':
         return <UserPlusIcon className="w-4 h-4 text-green-500" />;
@@ -156,6 +158,14 @@ export default function NotificationDropdown() {
             >
               <UserPlusIcon className="w-3 h-3" />
               <span>Connections</span>
+            </Link>
+            <Link
+              href="/notifications?tab=interviews"
+              className="px-2.5 sm:px-3 py-1.5 sm:py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1 whitespace-nowrap"
+              onClick={() => setIsOpen(false)}
+            >
+              <AcademicCapIcon className="w-3 h-3" />
+              <span>Interviews</span>
             </Link>
           </div>
 

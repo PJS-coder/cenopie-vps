@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   getShowcases,
   getTopShowcases,
-  getPosters,
+  getBanners,
   getSponsoredBanners,
   trackBannerClick,
   getShowcase,
@@ -19,8 +19,8 @@ const router = Router();
 // Public routes
 router.get('/', getShowcases);
 router.get('/top', getTopShowcases);
-router.get('/posters', getPosters);
-router.get('/banners', getSponsoredBanners);
+router.get('/posters', getBanners);
+router.get('/carousel-banners', getSponsoredBanners);
 router.get('/user/:userId', getUserShowcases);
 router.get('/:id', getShowcase);
 

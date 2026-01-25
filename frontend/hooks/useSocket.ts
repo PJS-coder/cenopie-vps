@@ -200,6 +200,11 @@ const useSocket = () => {
       window.dispatchEvent(new CustomEvent('socket:message:reaction', { detail: data }));
     });
 
+    // Notification update events (for count updates only)
+    socket.on('notification:update', (data) => {
+      window.dispatchEvent(new Event('notificationUpdate'));
+    });
+
     return socket;
   }, []);
 

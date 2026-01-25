@@ -19,7 +19,7 @@ import VerificationBadge from '@/components/VerificationBadge';
 
 export default function SecureAdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'make-admin' | 'hr-management'>('companies');
+  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'make-admin' | 'hr-management' | 'showcase-banners'>('companies');
   const [companySubTab, setCompanySubTab] = useState<'pending' | 'approved' | 'blacklisted'>('pending');
   const [userSubTab, setUserSubTab] = useState<'active' | 'blacklisted'>('active');
   const [pendingCompanies, setPendingCompanies] = useState<CompanyData[]>([]);
@@ -47,6 +47,10 @@ export default function SecureAdminDashboard() {
   // HR Management form state
   const [hrEmail, setHrEmail] = useState('');
   const [makingHr, setMakingHr] = useState(false);
+
+  // Showcase Banner states
+  const [showcaseBanners, setShowcaseBanners] = useState<any[]>([]);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -217,6 +221,19 @@ export default function SecureAdminDashboard() {
         const hrData = await hrResponse.json();
         setHrUsers(hrData.hrUsers || []);
         console.log('Loaded HR users:', hrData.hrUsers?.length || 0);
+      }
+
+      // Load showcase banners
+      const bannersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/showcase-banners/admin`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (bannersResponse.ok) {
+        const bannersData = await bannersResponse.json();
+        setShowcaseBanners(bannersData.banners || []);
+        console.log('Loaded showcase banners:', bannersData.banners?.length || 0);
       }
       
       setLoading(false);
@@ -670,6 +687,144 @@ export default function SecureAdminDashboard() {
     }
   };
 
+  // Showcase Banner functions
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('No admin token found. Please login as admin first.');
+        setUploadingBanner(false);
+        return;
+      }
+
+      console.log('Starting banner upload...');
+      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('Token exists:', !!token);
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/showcase-banners/admin/upload`;
+      console.log('Upload URL:', uploadUrl);
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', parseError);
+        throw new Error(`Server returned invalid JSON: ${responseText}`);
+      }
+
+      console.log('Parsed response data:', data);
+
+      if (response.ok) {
+        alert('Showcase banner uploaded successfully!');
+        loadData(); // Refresh banners
+        // Reset file input
+        e.target.value = '';
+      } else {
+        const errorMessage = data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('Upload failed:', errorMessage);
+        alert(`Failed to upload banner: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to upload banner: ${errorMessage}`);
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId: string) => {
+    if (!confirm('Are you sure you want to delete this banner?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No admin token found');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/showcase-banners/admin/${bannerId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Banner deleted successfully!');
+        loadData(); // Refresh banners
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete banner');
+      }
+    } catch (error) {
+      console.error('Error deleting banner:', error);
+      alert('Failed to delete banner. Please try again.');
+    }
+  };
+
+  const handleToggleBanner = async (bannerId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No admin token found');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/showcase-banners/admin/${bannerId}/toggle`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        loadData(); // Refresh banners
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to toggle banner');
+      }
+    } catch (error) {
+      console.error('Error toggling banner:', error);
+      alert('Failed to toggle banner. Please try again.');
+    }
+  };
+
   // Access Denied
   if (accessDenied) {
     return (
@@ -830,6 +985,21 @@ export default function SecureAdminDashboard() {
                   <div className="flex items-center space-x-2">
                     <UsersIcon className="w-5 h-5" />
                     <span>HR Management ({hrUsers.length})</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('showcase-banners')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'showcase-banners'
+                      ? 'border-green-500 text-green-500'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Showcase Banners ({showcaseBanners.length})</span>
                   </div>
                 </button>
               </nav>
@@ -1604,6 +1774,113 @@ export default function SecureAdminDashboard() {
                             >
                               Remove HR
                             </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Showcase Banners Tab Content */}
+            {activeTab === 'showcase-banners' && (
+              <div className="p-6">
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {/* Upload Banner */}
+                  <div className="bg-gray-700 rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-white mb-4">Upload Showcase Banner</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Select Image File
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={uploadingBanner}
+                          className="w-full px-4 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-600 file:text-white hover:file:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <p className="text-xs text-gray-400 mt-2">
+                          Supported formats: JPG, PNG, GIF. Max size: 5MB
+                        </p>
+                      </div>
+                      {uploadingBanner && (
+                        <div className="flex items-center gap-2 text-green-400">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
+                          <span className="text-sm">Uploading banner...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Current Banners */}
+                  <div className="bg-gray-700 rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-white mb-4">
+                      Current Showcase Banners ({showcaseBanners.length})
+                    </h2>
+                    {showcaseBanners.length === 0 ? (
+                      <div className="text-center py-8">
+                        <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-gray-500">No showcase banners uploaded yet</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {showcaseBanners.map((banner) => (
+                          <div key={banner._id} className="bg-gray-600 rounded-lg overflow-hidden">
+                            {/* Banner Image */}
+                            <div className="aspect-video bg-gray-800">
+                              <img
+                                src={banner.image}
+                                alt="Showcase Banner"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling!.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="hidden w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                                Image Error
+                              </div>
+                            </div>
+                            
+                            {/* Banner Info */}
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  banner.isActive ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
+                                }`}>
+                                  {banner.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(banner.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleToggleBanner(banner._id)}
+                                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                    banner.isActive 
+                                      ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                                      : 'bg-green-600 hover:bg-green-700 text-white'
+                                  }`}
+                                >
+                                  {banner.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteBanner(banner._id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>

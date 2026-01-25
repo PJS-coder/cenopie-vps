@@ -72,15 +72,11 @@ function InterviewsContent() {
             (i: Interview) => i.hrReview.decision !== 'rejected'
           );
           if (activeInterview) {
-            console.log('Active interview:', activeInterview);
-            console.log('HR Review:', activeInterview.hrReview);
-            console.log('Meeting Link:', activeInterview.hrReview?.meetingLink);
             setInterview(activeInterview);
           }
         }
       }
     } catch (error) {
-      console.error('Error fetching interview:', error);
     } finally {
       setLoading(false);
     }
@@ -144,22 +140,6 @@ function InterviewsContent() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Interviews
           </h1>
-          
-          {/* Beta Notice */}
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 mb-6 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">β</span>
-              </div>
-              <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200">
-                Beta Version Access
-              </h3>
-            </div>
-            <p className="text-sm text-orange-700 dark:text-orange-300 text-center">
-              You're currently accessing the interview section for free as part of our beta program. 
-              This feature will be part of our premium subscription in the future.
-            </p>
-          </div>
           
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             Choose your domain and start your journey to placement
@@ -334,7 +314,6 @@ function InterviewsContent() {
                           });
                           setInterview(null);
                         } catch (error) {
-                          console.error('Delete error:', error);
                         }
                       }
                     }}

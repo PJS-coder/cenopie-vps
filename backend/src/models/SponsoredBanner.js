@@ -14,17 +14,21 @@ const sponsoredBannerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  company: {
-    name: {
-      type: String,
-      required: true
-    },
-    logo: String,
-    website: String
+  buttonText: {
+    type: String,
+    default: 'Learn More'
   },
   clickUrl: {
     type: String,
     required: true
+  },
+  backgroundColor: {
+    type: String,
+    default: '#F59E0B' // Default yellow/orange gradient
+  },
+  textColor: {
+    type: String,
+    default: '#FFFFFF'
   },
   priority: {
     type: Number,
@@ -39,8 +43,7 @@ const sponsoredBannerSchema = new mongoose.Schema({
     default: Date.now
   },
   endDate: {
-    type: Date,
-    required: true
+    type: Date
   },
   clicks: {
     type: Number,
@@ -51,12 +54,13 @@ const sponsoredBannerSchema = new mongoose.Schema({
     default: 0
   },
   targetAudience: {
-    categories: [String], // e.g., ['Web Development', 'UI/UX Design']
-    locations: [String],
-    ageRange: {
-      min: Number,
-      max: Number
-    }
+    type: String,
+    enum: ['all', 'users', 'companies'],
+    default: 'all'
+  },
+  createdBy: {
+    type: String,
+    default: 'Cenopie Team'
   }
 }, {
   timestamps: true

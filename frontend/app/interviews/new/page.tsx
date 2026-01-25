@@ -55,7 +55,7 @@ const domainsByField = {
     'CI/CD Pipeline',
     'System Administration',
     'Network Engineering',
-    'Cloud Security',
+    'Cloud Infrastructure Security',
     'Monitoring & Observability',
     'Platform Engineering',
     'Infrastructure Automation'
@@ -83,7 +83,7 @@ const domainsByField = {
     'Security Architecture',
     'Network Security',
     'Application Security',
-    'Cloud Security',
+    'Cloud Security & Compliance',
     'Incident Response',
     'Security Compliance',
     'Risk Assessment',
@@ -213,7 +213,6 @@ function NewInterviewContent() {
 
   const handleCreate = async () => {
     if (!selectedDomain) {
-      alert('Please select a domain');
       return;
     }
 
@@ -234,11 +233,8 @@ function NewInterviewContent() {
         router.push(`/interviews/${data.interview.id}/start`);
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to create interview');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to create interview');
     } finally {
       setLoading(false);
     }
@@ -322,9 +318,9 @@ function NewInterviewContent() {
                       No domains found
                     </div>
                   ) : (
-                    filteredDomains.map((domain: string) => (
+                    filteredDomains.map((domain: string, index: number) => (
                       <button
-                        key={domain}
+                        key={`${domain}-${index}`}
                         onClick={() => handleDomainSelect(domain)}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-600 last:border-b-0"
                       >

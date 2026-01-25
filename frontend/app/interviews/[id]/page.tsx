@@ -70,11 +70,9 @@ function InterviewDetailsContent() {
         const data = await response.json();
         setInterview(data.interview);
       } else {
-        alert('Failed to load interview');
         router.push('/interviews');
       }
     } catch (error) {
-      console.error('Error fetching interview:', error);
     } finally {
       setLoading(false);
     }

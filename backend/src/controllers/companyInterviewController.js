@@ -1,4 +1,6 @@
 import Interview from '../models/Interview.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../socket/index.js';
 
 // Get all interviews (test rounds - not company-specific)
 export const getCompanyInterviews = async (req, res) => {
@@ -99,7 +101,7 @@ export const reviewInterview = async (req, res) => {
     const interview = await Interview.findOne({
       _id: id,
       status: 'completed'
-    });
+    }).populate('user', 'name email');
     
     if (!interview) {
       return res.status(404).json({ error: 'Interview not found' });
@@ -115,6 +117,46 @@ export const reviewInterview = async (req, res) => {
     interview.status = 'reviewed';
     
     await interview.save();
+
+    // Create notification for the student
+    let notificationMessage = '';
+    let notificationData = {
+      interviewId: interview._id,
+      decision,
+      rating,
+      comments,
+      reviewedByCompany: true
+    };
+
+    if (decision === 'shortlisted') {
+      notificationMessage = `Congratulations! A company has shortlisted you based on your interview performance.`;
+    } else if (decision === 'rejected') {
+      notificationMessage = `Thank you for your interview. A company has reviewed your performance. Keep improving and applying!`;
+    } else if (decision === 'on-hold') {
+      notificationMessage = `Your interview is currently on hold by a company. We'll update you with next steps.`;
+    }
+
+    if (notificationMessage && interview.user) {
+      // Create notification in database
+      const notification = new Notification({
+        user: interview.user._id,
+        type: 'interview_decision',
+        message: notificationMessage,
+        relatedInterview: interview._id,
+        data: notificationData
+      });
+
+      await notification.save();
+
+      // Send real-time notification via Socket.IO for notification count update
+      const io = getIO();
+      if (io) {
+        io.to(`user:${interview.user._id}`).emit('notification:update', {
+          type: 'interview_decision',
+          count: 1
+        });
+      }
+    }
     
     // Update application status if linked
     if (interview.application) {

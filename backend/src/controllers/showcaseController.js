@@ -1,5 +1,6 @@
 import Showcase from '../models/Showcase.js';
 import SponsoredBanner from '../models/SponsoredBanner.js';
+import Banner from '../models/Banner.js';
 import User from '../models/User.js';
 
 // Get all showcases with pagination and filtering
@@ -104,51 +105,30 @@ export const getTopShowcases = async (req, res) => {
   }
 };
 
-// Get posters (static for now, can be made dynamic later)
-export const getPosters = async (req, res) => {
+// Get banners for showcase page (replace old posters)
+export const getBanners = async (req, res) => {
   try {
-    // Static poster data - can be moved to database later
-    const posters = [
-      {
-        _id: 'poster1',
-        title: 'Design Excellence Award',
-        description: 'Showcase your best designs and win amazing prizes. Competition ends soon!',
-        image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop&crop=center',
-        clickUrl: '/showcase/design-award',
-        isActive: true
-      },
-      {
-        _id: 'poster2',
-        title: 'Developer Spotlight',
-        description: 'Featured projects from our amazing developer community. Get inspired!',
-        image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=600&fit=crop&crop=center',
-        clickUrl: '/showcase/developer-spotlight',
-        isActive: true
-      },
-      {
-        _id: 'poster3',
-        title: 'Innovation Challenge',
-        description: 'Join our monthly innovation challenge and showcase your creative solutions.',
-        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop&crop=center',
-        clickUrl: '/showcase/innovation-challenge',
-        isActive: true
-      }
-    ];
+    // Import here to avoid circular dependency
+    const ShowcaseBanner = (await import('../models/ShowcaseBanner.js')).default;
+    
+    const banners = await ShowcaseBanner.find({ isActive: true })
+      .sort({ order: 1, createdAt: -1 })
+      .limit(5);
 
     res.json({
       success: true,
-      posters: posters.filter(poster => poster.isActive)
+      posters: banners // Keep the same format for frontend compatibility
     });
   } catch (error) {
-    console.error('Error fetching posters:', error);
+    console.error('Error fetching banners:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch posters'
+      message: 'Failed to fetch banners'
     });
   }
 };
 
-// Get sponsored banners
+// Get sponsored banners (carousel banners for showcase page)
 export const getSponsoredBanners = async (req, res) => {
   try {
     const now = new Date();
@@ -156,10 +136,14 @@ export const getSponsoredBanners = async (req, res) => {
     const banners = await SponsoredBanner.find({
       isActive: true,
       startDate: { $lte: now },
-      endDate: { $gte: now }
+      $or: [
+        { endDate: { $exists: false } },
+        { endDate: null },
+        { endDate: { $gte: now } }
+      ]
     })
     .sort({ priority: -1, createdAt: -1 })
-    .limit(3) // Only show top 3 sponsored banners
+    .limit(5) // Show up to 5 carousel banners
     .lean();
 
     // Increment impressions
