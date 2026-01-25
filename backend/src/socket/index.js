@@ -18,14 +18,7 @@ export default function initSocket(io) {
                    socket.handshake.query?.token ||
                    socket.handshake.headers?.authorization?.replace('Bearer ', '');
       
-      console.log('🔐 Socket authentication attempt:', {
-        hasToken: !!token,
-        origin: socket.handshake.headers.origin,
-        userAgent: socket.handshake.headers['user-agent']?.substring(0, 50)
-      });
-      
       if (!token) {
-        console.warn('❌ Socket auth failed: No token provided');
         return next(new Error('Authentication error: No token provided'));
       }
       
@@ -34,11 +27,8 @@ export default function initSocket(io) {
       const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
-        console.warn('❌ Socket auth failed: User not found for ID:', decoded.id);
         return next(new Error('Authentication error: User not found'));
       }
-      
-      console.log('✅ Socket authenticated for user:', user.name, `(${user._id})`);
       
       // Attach user data to socket
       socket.user = user;
@@ -67,13 +57,11 @@ export default function initSocket(io) {
     
     // Handle general events
     socket.on('ping', () => {
-      console.log('📤 Ping received from', user.name);
       socket.emit('pong', { timestamp: new Date().toISOString() });
     });
 
     // Test message handler for debugging
     socket.on('test:message', (data) => {
-      console.log('📧 Test message received from', user.name, ':', data);
       socket.emit('test:response', { 
         message: 'Test message received successfully',
         originalData: data,
@@ -122,6 +110,4 @@ export default function initSocket(io) {
   io.engine.on('connection_error', (err) => {
     console.error('Socket.IO connection error:', err);
   });
-  
-  console.log('✅ Enhanced Socket.IO messaging service initialized');
 }
