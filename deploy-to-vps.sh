@@ -47,9 +47,17 @@ run_vps "cd $VPS_PROJECT_PATH && git fetch origin && git reset --hard origin/mai
 
 echo -e "\n${YELLOW}⚡ Phase 3: Update Nginx Configuration${NC}"
 
-# Backup and update nginx config
-run_vps "cp /etc/nginx/sites-available/cenopie.com /etc/nginx/sites-available/cenopie.com.backup.$(date +%Y%m%d_%H%M%S)"
-run_vps "cp $VPS_PROJECT_PATH/nginx-config.conf /etc/nginx/sites-available/cenopie.com"
+# Check nginx config location and update
+echo "🔍 Checking nginx configuration..."
+run_vps "ls -la /etc/nginx/sites-available/ | head -5"
+run_vps "ls -la /etc/nginx/conf.d/ | head -5"
+
+# Find and backup existing config
+run_vps "find /etc/nginx -name '*cenopie*' -o -name 'default' | head -5"
+
+# Copy nginx config to the correct location
+echo "📝 Updating nginx configuration..."
+run_vps "cp $VPS_PROJECT_PATH/nginx-config.conf /etc/nginx/conf.d/cenopie.conf"
 run_vps "nginx -t"
 
 echo -e "\n${YELLOW}⚡ Phase 4: Install Dependencies and Build${NC}"
