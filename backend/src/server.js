@@ -17,6 +17,7 @@ import { setupSwagger } from './utils/swagger.js';
 
 const PORT = process.env.PORT || 5000;
 const WORKER_ID = process.env.pm_id || cluster.worker?.id || 0;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Ultra-performance optimizations
 process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || Math.max(4, os.cpus().length).toString();
@@ -27,7 +28,9 @@ if (global.gc) {
     const memUsage = process.memoryUsage();
     if (memUsage.rss > 700 * 1024 * 1024) { // 700MB threshold
       global.gc();
-      console.log(`🧹 GC triggered - Memory: ${Math.round(memUsage.rss / 1024 / 1024)}MB → ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+      if (!IS_PRODUCTION) {
+        console.log(`🧹 GC triggered - Memory: ${Math.round(memUsage.rss / 1024 / 1024)}MB → ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+      }
     }
   }, 30000);
 }
@@ -45,7 +48,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('warning', (warning) => {
   if (!['MaxListenersExceededWarning', 'DeprecationWarning'].includes(warning.name)) {
-    console.warn('⚠️ Process warning:', warning.name, warning.message);
+    if (!IS_PRODUCTION) {
+      console.warn('⚠️ Process warning:', warning.name, warning.message);
+    }
   }
 });
 
@@ -53,18 +58,24 @@ let server;
 let io;
 
 async function gracefulShutdown(signal) {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  if (!IS_PRODUCTION) {
+    console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  }
   
   if (server) {
     server.close(() => {
-      console.log('✅ HTTP server closed');
+      if (!IS_PRODUCTION) {
+        console.log('✅ HTTP server closed');
+      }
       process.exit(0);
     });
   }
   
   // Force exit after 10 seconds
   setTimeout(() => {
-    console.log('⏰ Force exit after timeout');
+    if (!IS_PRODUCTION) {
+      console.log('⏰ Force exit after timeout');
+    }
     process.exit(1);
   }, 10000);
 }
@@ -77,30 +88,43 @@ process.on('SIGINT', gracefulShutdown);
 async function startServer() {
   try {
     const startTime = Date.now();
-    console.log(`🚀 Starting Cenopie Backend Server (Worker ${WORKER_ID})...`);
-    console.log(`📊 Node.js: ${process.version}, Platform: ${process.platform}`);
+    
+    if (!IS_PRODUCTION) {
+      console.log(`🚀 Starting Cenopie Backend Server (Worker ${WORKER_ID})...`);
+      console.log(`📊 Node.js: ${process.version}, Platform: ${process.platform}`);
+    }
 
     // Import app after environment setup
     const { default: app } = await import('./app.js');
 
     // Initialize ultra-performance monitoring
-    console.log('📊 Initializing performance monitoring...');
+    if (!IS_PRODUCTION) {
+      console.log('📊 Initializing performance monitoring...');
+    }
     app.use(ultraMonitor.requestMonitor());
 
     // Setup Swagger documentation
-    console.log('📚 Setting up API documentation...');
+    if (!IS_PRODUCTION) {
+      console.log('📚 Setting up API documentation...');
+    }
     setupSwagger(app);
 
     // Ultra-fast MongoDB connection with latest options
-    console.log('🍃 Connecting to MongoDB...');
+    if (!IS_PRODUCTION) {
+      console.log('🍃 Connecting to MongoDB...');
+    }
     await connectDB();
 
     // Enhanced Redis connection with error handling
-    console.log('🗄️ Setting up Redis connection...');
+    if (!IS_PRODUCTION) {
+      console.log('🗄️ Setting up Redis connection...');
+    }
     let pubClient, subClient;
     
     if (process.env.REDIS_DISABLED === 'true') {
-      console.log('⚠️ Redis disabled - using in-memory adapter');
+      if (!IS_PRODUCTION) {
+        console.log('⚠️ Redis disabled - using in-memory adapter');
+      }
     } else {
       try {
         if (redisClient && !redisClient.isOpen) {
@@ -116,17 +140,23 @@ async function startServer() {
             pubClient.connect(),
             subClient.connect()
           ]);
-          console.log('✅ Redis clustering enabled');
+          if (!IS_PRODUCTION) {
+            console.log('✅ Redis clustering enabled');
+          }
         }
       } catch (error) {
-        console.warn('⚠️ Redis connection failed:', error.message);
-        console.log('📝 Continuing without Redis clustering');
+        if (!IS_PRODUCTION) {
+          console.warn('⚠️ Redis connection failed:', error.message);
+          console.log('📝 Continuing without Redis clustering');
+        }
         pubClient = subClient = null;
       }
     }
 
     // Configure Cloudinary with latest settings
-    console.log('☁️ Configuring Cloudinary...');
+    if (!IS_PRODUCTION) {
+      console.log('☁️ Configuring Cloudinary...');
+    }
     configCloudinary();
 
     // Create HTTP server with latest Node.js features
@@ -139,7 +169,9 @@ async function startServer() {
     server.timeout = 120000;
 
     // Initialize Socket.IO with latest configuration
-    console.log('🔌 Initializing Socket.IO...');
+    if (!IS_PRODUCTION) {
+      console.log('🔌 Initializing Socket.IO...');
+    }
     io = new Server(server, {
       cors: {
         origin: [
@@ -167,9 +199,13 @@ async function startServer() {
     if (pubClient && subClient) {
       try {
         io.adapter(createAdapter(pubClient, subClient));
-        console.log('✅ Socket.IO Redis adapter configured');
+        if (!IS_PRODUCTION) {
+          console.log('✅ Socket.IO Redis adapter configured');
+        }
       } catch (error) {
-        console.warn('⚠️ Redis adapter setup failed:', error.message);
+        if (!IS_PRODUCTION) {
+          console.warn('⚠️ Redis adapter setup failed:', error.message);
+        }
       }
     }
 
@@ -179,14 +215,19 @@ async function startServer() {
     // Start server
     server.listen(PORT, () => {
       const bootTime = Date.now() - startTime;
-      console.log(`\n🎉 Cenopie Backend Server Started Successfully!`);
-      console.log(`🌐 Server: http://localhost:${PORT}`);
-      console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`⚡ Boot time: ${bootTime}ms`);
-      console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
-      console.log(`👷 Worker: ${WORKER_ID}`);
-      console.log(`🔌 Socket.IO: ${pubClient ? 'Clustered' : 'Standalone'}`);
+      
+      if (IS_PRODUCTION) {
+        console.log(`✅ Cenopie Backend Server Started - Port: ${PORT} - Environment: ${process.env.NODE_ENV || 'development'}`);
+      } else {
+        console.log(`\n🎉 Cenopie Backend Server Started Successfully!`);
+        console.log(`🌐 Server: http://localhost:${PORT}`);
+        console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+        console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`⚡ Boot time: ${bootTime}ms`);
+        console.log(`💾 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+        console.log(`👷 Worker: ${WORKER_ID}`);
+        console.log(`🔌 Socket.IO: ${pubClient ? 'Clustered' : 'Standalone'}`);
+      }
     });
 
     // Enhanced error handling for server
@@ -200,7 +241,9 @@ async function startServer() {
     });
 
     server.on('clientError', (err, socket) => {
-      console.warn('⚠️ Client error:', err.message);
+      if (!IS_PRODUCTION) {
+        console.warn('⚠️ Client error:', err.message);
+      }
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
     });
 

@@ -6,11 +6,19 @@ import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Configure multer for memory storage
+// Configure multer for memory storage with Multer 2.x compatibility
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  fileFilter: (req, file, cb) => {
+    // Add basic file validation for Multer 2.x
+    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Only video and image files are allowed'));
+    }
+  }
 });
 
 // Test endpoint

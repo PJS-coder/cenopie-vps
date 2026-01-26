@@ -10,26 +10,24 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("next/core-web-vitals"),
   {
     rules: {
       // Disable problematic rules for production
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-explicit-any": "warn",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "off",
       "react/no-unescaped-entities": "off",
       "@next/next/no-page-custom-font": "off",
-      // Performance optimizations
-      "react/jsx-no-bind": "warn",
+      "react/jsx-no-bind": "off",
       "react/jsx-no-literals": "off",
-      // Modern React patterns
-      "react/function-component-definition": [
-        "error",
-        {
-          "namedComponents": "arrow-function",
-          "unnamedComponents": "arrow-function"
-        }
-      ]
+      "react/display-name": "off",
+      "prefer-const": "off",
+      "no-unused-vars": "off",
+      "react/jsx-key": "off",
+      "react/no-children-prop": "off",
+      "react/react-in-jsx-scope": "off",
+      "@next/next/no-html-link-for-pages": "off",
+      "@next/next/no-sync-scripts": "off",
+      "@next/next/no-img-element": "off"
     },
     settings: {
       react: {

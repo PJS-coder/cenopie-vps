@@ -8,7 +8,8 @@ const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
     cb(null, true);
   } else {
-    cb(new Error('Only image and video files are allowed'), false);
+    // Multer 2.x expects Error objects for rejections
+    cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Only image and video files are allowed'), false);
   }
 };
 

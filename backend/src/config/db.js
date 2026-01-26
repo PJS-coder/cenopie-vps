@@ -4,7 +4,11 @@ import logger from './logger.js';
 const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/canopie';
-    console.log('🔗 Connecting to MongoDB:', mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+    const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+    
+    if (!IS_PRODUCTION) {
+      console.log('🔗 Connecting to MongoDB:', mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+    }
     
     // Enhanced connection options for high concurrency
     const options = {
@@ -26,8 +30,13 @@ const connectDB = async () => {
 
     const conn = await mongoose.connect(mongoUri, options);
     
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📊 MongoDB Pool Status - Current: ${conn.connection.readyState}, Pool Size: ${conn.connection.db.serverConfig?.s?.pool?.totalConnectionCount || 'N/A'}`);
+    if (IS_PRODUCTION) {
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    } else {
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+      console.log(`📊 MongoDB Pool Status - Current: ${conn.connection.readyState}, Pool Size: ${conn.connection.db.serverConfig?.s?.pool?.totalConnectionCount || 'N/A'}`);
+    }
+    
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
     
     // Connection event handlers
@@ -37,17 +46,21 @@ const connectDB = async () => {
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected');
+      if (!IS_PRODUCTION) {
+        console.warn('⚠️ MongoDB disconnected');
+      }
       logger.warn('MongoDB disconnected');
     });
     
     mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+      if (!IS_PRODUCTION) {
+        console.log('🔄 MongoDB reconnected');
+      }
       logger.info('MongoDB reconnected');
     });
     
     // Log connection pool stats periodically
-    if (process.env.NODE_ENV === 'production') {
+    if (IS_PRODUCTION) {
       setInterval(() => {
         const stats = {
           readyState: mongoose.connection.readyState,
@@ -61,7 +74,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
     
-    if (error.message.includes('ECONNREFUSED')) {
+    if (error.message.includes('ECONNREFUSED') && !IS_PRODUCTION) {
       console.log('💡 MongoDB is not running. Please start MongoDB:');
       console.log('   • macOS: brew services start mongodb-community');
       console.log('   • Linux: sudo systemctl start mongod');

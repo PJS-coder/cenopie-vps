@@ -6,6 +6,7 @@ import { createClient } from 'redis';
 import logger from '../config/logger.js';
 
 let ioInstance = null;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Ultra-performance message queue for reliability
 class UltraMessageQueue {
@@ -30,7 +31,9 @@ class UltraMessageQueue {
       });
       
       await this.client.connect();
-      console.log('✅ Ultra message queue connected to Redis');
+      if (!IS_PRODUCTION) {
+        console.log('✅ Ultra message queue connected to Redis');
+      }
       
       // Start processing messages
       this.startProcessing();
@@ -44,7 +47,9 @@ class UltraMessageQueue {
     if (this.isProcessing || !this.client) return;
     this.isProcessing = true;
     
-    console.log('🚀 Starting ultra-fast message queue processing...');
+    if (!IS_PRODUCTION) {
+      console.log('🚀 Starting ultra-fast message queue processing...');
+    }
     
     while (this.isProcessing) {
       try {
@@ -97,7 +102,9 @@ class UltraMessageQueue {
       try {
         const { default: MessageModel } = await import('../models/MessageNew.js');
         await MessageModel.bulkWrite(operations, { ordered: false });
-        console.log(`⚡ Processed ${operations.length} messages in batch`);
+        if (!IS_PRODUCTION) {
+          console.log(`⚡ Processed ${operations.length} messages in batch`);
+        }
       } catch (error) {
         console.error('❌ Batch message processing error:', error);
       }
@@ -147,7 +154,9 @@ export function getIO() {
 export default function initSocket(io) {
   ioInstance = io;
   
-  console.log('🚀 Initializing ultra-performance Socket.IO...');
+  if (!IS_PRODUCTION) {
+    console.log('🚀 Initializing ultra-performance Socket.IO...');
+  }
   
   // Connection statistics
   let connectionStats = {
@@ -159,23 +168,25 @@ export default function initSocket(io) {
     lastMessageTime: Date.now()
   };
   
-  // Monitor performance every 10 seconds
-  setInterval(() => {
-    const now = Date.now();
-    const timeDiff = (now - connectionStats.lastMessageTime) / 1000;
-    connectionStats.messagesPerSecond = timeDiff > 0 ? 
-      connectionStats.messageCount / timeDiff : 0;
-    
-    console.log(`📊 Socket.IO Performance:`);
-    console.log(`├─ Active Connections: ${connectionStats.active}`);
-    console.log(`├─ Peak Connections: ${connectionStats.peak}`);
-    console.log(`├─ Messages/Second: ${connectionStats.messagesPerSecond.toFixed(2)}`);
-    console.log(`└─ Total Messages: ${connectionStats.messageCount}`);
-    
-    // Reset counters
-    connectionStats.messageCount = 0;
-    connectionStats.lastMessageTime = now;
-  }, 10000);
+  // Monitor performance every 10 seconds (only in development)
+  if (!IS_PRODUCTION) {
+    setInterval(() => {
+      const now = Date.now();
+      const timeDiff = (now - connectionStats.lastMessageTime) / 1000;
+      connectionStats.messagesPerSecond = timeDiff > 0 ? 
+        connectionStats.messageCount / timeDiff : 0;
+      
+      console.log(`📊 Socket.IO Performance:`);
+      console.log(`├─ Active Connections: ${connectionStats.active}`);
+      console.log(`├─ Peak Connections: ${connectionStats.peak}`);
+      console.log(`├─ Messages/Second: ${connectionStats.messagesPerSecond.toFixed(2)}`);
+      console.log(`└─ Total Messages: ${connectionStats.messageCount}`);
+      
+      // Reset counters
+      connectionStats.messageCount = 0;
+      connectionStats.lastMessageTime = now;
+    }, 10000);
+  }
   
   // Ultra-fast authentication middleware
   io.use(async (socket, next) => {
@@ -207,7 +218,9 @@ export default function initSocket(io) {
       
       next();
     } catch (error) {
-      console.error('❌ Socket authentication error:', error.message);
+      if (!IS_PRODUCTION) {
+        console.error('❌ Socket authentication error:', error.message);
+      }
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -221,7 +234,9 @@ export default function initSocket(io) {
     const userId = socket.userId;
     const user = socket.user;
     
-    console.log(`🔌 Ultra-fast connection: ${user.name} (${userId}) - Socket: ${socket.id}`);
+    if (!IS_PRODUCTION) {
+      console.log(`🔌 Ultra-fast connection: ${user.name} (${userId}) - Socket: ${socket.id}`);
+    }
     
     // Limit listeners per socket for performance
     socket.setMaxListeners(25);
@@ -286,7 +301,9 @@ export default function initSocket(io) {
         userId: userId
       });
       
-      console.log(`👥 User ${userId} joined conversation ${data.conversationId}`);
+      if (!IS_PRODUCTION) {
+        console.log(`👥 User ${userId} joined conversation ${data.conversationId}`);
+      }
     });
     
     // Ultra-fast conversation leaving
@@ -327,7 +344,9 @@ export default function initSocket(io) {
     
     // Handle errors with detailed logging
     socket.on('error', (error) => {
-      console.error(`❌ Socket error for user ${userId}:`, error);
+      if (!IS_PRODUCTION) {
+        console.error(`❌ Socket error for user ${userId}:`, error);
+      }
       
       // Send error details to client for debugging
       socket.emit('socket:error', {
@@ -341,7 +360,9 @@ export default function initSocket(io) {
     socket.on('disconnect', (reason) => {
       connectionStats.active--;
       
-      console.log(`🔌 Ultra-fast disconnect: ${user.name} (${userId}) - Reason: ${reason}`);
+      if (!IS_PRODUCTION) {
+        console.log(`🔌 Ultra-fast disconnect: ${user.name} (${userId}) - Reason: ${reason}`);
+      }
       
       // Broadcast offline status efficiently
       socket.broadcast.emit('user:presence_update', {
@@ -401,14 +422,20 @@ export default function initSocket(io) {
     console.error('❌ Socket.IO global error:', error);
   });
   
-  console.log('✅ Ultra-performance Socket.IO initialization complete');
+  if (!IS_PRODUCTION) {
+    console.log('✅ Ultra-performance Socket.IO initialization complete');
+  }
   
   // Cleanup on process exit
   process.on('SIGTERM', () => {
-    console.log('🔄 Gracefully closing ultra-performance Socket.IO...');
+    if (!IS_PRODUCTION) {
+      console.log('🔄 Gracefully closing ultra-performance Socket.IO...');
+    }
     ultraMessageQueue.stop();
     io.close(() => {
-      console.log('✅ Ultra-performance Socket.IO closed');
+      if (!IS_PRODUCTION) {
+        console.log('✅ Ultra-performance Socket.IO closed');
+      }
     });
   });
   

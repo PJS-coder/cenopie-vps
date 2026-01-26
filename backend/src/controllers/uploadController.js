@@ -21,7 +21,7 @@ const storage = new CloudinaryStorage({
   },
 });
 
-// Configure multer
+// Configure multer with Multer 2.x syntax
 const upload = multer({
   storage: storage,
   limits: {
@@ -49,18 +49,45 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images, documents, audio, and video files are allowed.'));
+      // Use MulterError for better error handling in Multer 2.x
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Invalid file type. Only images, documents, audio, and video files are allowed.'));
     }
   }
 });
 
-// Upload message attachment
+// Upload message attachment with Multer 2.x error handling
 export const uploadMessageAttachment = async (req, res) => {
   try {
-    // Use multer middleware
-    upload.single('file')(req, res, async (err) => {
+    // Use multer middleware with promise-based approach for Multer 2.x
+    const uploadSingle = upload.single('file');
+    
+    uploadSingle(req, res, async (err) => {
       if (err) {
         console.error('Upload error:', err);
+        
+        // Handle different types of Multer errors
+        if (err instanceof multer.MulterError) {
+          let message = 'File upload failed';
+          switch (err.code) {
+            case 'LIMIT_FILE_SIZE':
+              message = 'File too large. Maximum size is 50MB';
+              break;
+            case 'LIMIT_UNEXPECTED_FILE':
+              message = err.message || 'Unexpected file type';
+              break;
+            case 'LIMIT_FILE_COUNT':
+              message = 'Too many files';
+              break;
+            default:
+              message = err.message || 'File upload failed';
+          }
+          return res.status(400).json({
+            success: false,
+            message: message,
+            code: err.code
+          });
+        }
+        
         return res.status(400).json({
           success: false,
           message: err.message || 'File upload failed'
@@ -145,11 +172,21 @@ export const uploadMessageAttachment = async (req, res) => {
   }
 };
 
-// Upload profile image (existing functionality)
+// Upload profile image with Multer 2.x error handling
 export const uploadProfileImage = async (req, res) => {
   try {
-    upload.single('image')(req, res, async (err) => {
+    const uploadSingle = upload.single('image');
+    
+    uploadSingle(req, res, async (err) => {
       if (err) {
+        if (err instanceof multer.MulterError) {
+          return res.status(400).json({
+            success: false,
+            message: err.message || 'Image upload failed',
+            code: err.code
+          });
+        }
+        
         return res.status(400).json({
           success: false,
           message: err.message || 'Image upload failed'
