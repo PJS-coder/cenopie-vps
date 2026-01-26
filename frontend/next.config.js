@@ -1,15 +1,33 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Ultra-performance optimizations
+  // Latest Next.js optimizations
   experimental: {
-    // Enable all performance features
+    // Enable latest performance features
     optimizeCss: true,
-    optimizePackageImports: ['@heroicons/react', '@radix-ui/react-icons', 'lucide-react'],
-    // Enable partial prerendering for ultra-fast loading
-    ppr: false, // Disable for now as it's still experimental
+    optimizePackageImports: [
+      '@heroicons/react',
+      '@radix-ui/react-icons',
+      'lucide-react',
+      'framer-motion'
+    ],
+    // Enable partial prerendering (latest feature)
+    ppr: 'incremental',
+    // Enable React compiler (latest)
+    reactCompiler: true,
+    // Enable server components external packages
+    serverComponentsExternalPackages: ['mongoose', 'bcrypt'],
+    // Enable turbo mode
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
 
-  // Ultra-fast image optimization
+  // Latest image optimization
   images: {
     remotePatterns: [
       {
@@ -31,7 +49,8 @@ const nextConfig = {
     minimumCacheTTL: 31536000, // 1 year cache
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    // Enable advanced optimizations
+    // Latest quality settings
+    quality: 85,
     unoptimized: false,
   },
 
