@@ -103,11 +103,11 @@ async function startServer() {
     }
     app.use(ultraMonitor.requestMonitor());
 
-    // Setup Swagger documentation
+    // Setup Swagger documentation (development only)
     if (!IS_PRODUCTION) {
       console.log('📚 Setting up API documentation...');
+      setupSwagger(app);
     }
-    setupSwagger(app);
 
     // Ultra-fast MongoDB connection with latest options
     if (!IS_PRODUCTION) {

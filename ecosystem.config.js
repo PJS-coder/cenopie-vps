@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 5000,  // Updated to match server.js
+        PORT: 5000,  // Match server.js default
         UV_THREADPOOL_SIZE: 16,
         NODE_OPTIONS: '--max-old-space-size=1024 --optimize-for-size'
       },

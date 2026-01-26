@@ -37,7 +37,20 @@ const options = {
 
 let specs;
 try {
-  specs = swaggerJsdoc(options);
+  // Only initialize swagger in development
+  if (process.env.NODE_ENV !== 'production') {
+    specs = swaggerJsdoc(options);
+  } else {
+    specs = {
+      openapi: '3.0.0',
+      info: {
+        title: 'Cenopie API',
+        version: '1.0.0',
+        description: 'API documentation disabled in production',
+      },
+      paths: {},
+    };
+  }
 } catch (error) {
   console.warn('Swagger initialization failed:', error.message);
   specs = {
@@ -52,6 +65,12 @@ try {
 }
 
 export function setupSwagger(app) {
+  // Disable swagger in production to prevent crashes
+  if (process.env.NODE_ENV === 'production') {
+    console.log('📚 Swagger disabled in production');
+    return;
+  }
+  
   try {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
       explorer: true,
