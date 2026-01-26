@@ -50,6 +50,7 @@ app.set('trust proxy', process.env.TRUST_PROXY || 1);
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://127.0.0.1:3000',
   'https://cenopie.com',
   'https://www.cenopie.com', // Add this line for production
   'https://cenopie-cpanel-vercel.vercel.app',

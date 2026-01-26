@@ -36,8 +36,8 @@ const useSocket = () => {
       socketRef.current.close();
     }
 
-    // Initialize socket connection with cPanel-optimized configuration
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
+    // Initialize socket connection with environment-specific configuration
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     console.log('🔌 Connecting to Socket.IO server at:', apiUrl);
     console.log('🔧 Environment:', process.env.NODE_ENV);
     console.log('🔑 Auth token available:', !!token);

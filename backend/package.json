@@ -10,7 +10,9 @@
   "scripts": {
     "start": "node src/server.js",
     "start:prod": "node start-production.js",
+    "start:local": "NODE_ENV=development node src/server.js",
     "dev": "nodemon src/server.js",
+    "dev:local": "NODE_ENV=development nodemon src/server.js",
     "cpanel": "node cpanel-start.js",
     "lint": "eslint .",
     "single": "node src/server.js",
