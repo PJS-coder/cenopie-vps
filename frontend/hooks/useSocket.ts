@@ -111,6 +111,18 @@ const useSocket = () => {
         userId,
         socketExists: !!socketRef.current
       });
+      
+      // Log specific error types for debugging
+      if ((error as any).type === 'TransportError') {
+        console.error('🚫 Transport Error - likely nginx/proxy issue');
+        console.error('🔧 Check nginx configuration for Socket.IO proxy');
+      }
+      
+      if (error.message?.includes('400')) {
+        console.error('🚫 HTTP 400 Error - likely authentication or CORS issue');
+        console.error('🔧 Check backend CORS settings and authentication middleware');
+      }
+      
       setIsConnected(false);
       setConnectionError(error.message || 'Connection failed');
       

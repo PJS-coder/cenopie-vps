@@ -213,10 +213,11 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req, res) => {
-    // Skip rate limiting for health checks and static assets
+    // Skip rate limiting for health checks, static assets, and Socket.IO
     if (req.path === '/health' || 
         req.path === '/api/health' ||
-        req.path.startsWith('/api/docs') ||
+        req.path === '/api/docs' ||
+        req.path.startsWith('/socket.io/') ||
         req.method === 'OPTIONS') {
       return true;
     }
