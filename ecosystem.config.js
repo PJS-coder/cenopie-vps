@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'cenopie-backend',
-      cwd: '/var/www/cenopie/cenopie-cpanel-vercel/backend',
+      cwd: '/var/www/cenopie-vps/backend',
       script: 'src/server.js',
       instances: 'max',  // Use all available cores
       exec_mode: 'cluster',
@@ -50,7 +50,7 @@ module.exports = {
     },
     {
       name: 'cenopie-frontend',
-      cwd: '/var/www/cenopie/cenopie-cpanel-vercel/frontend',
+      cwd: '/var/www/cenopie-vps/frontend',
       script: 'server.js',
       instances: 2,  // Frontend needs fewer instances
       exec_mode: 'cluster',

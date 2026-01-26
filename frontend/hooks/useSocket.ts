@@ -46,22 +46,27 @@ const useSocket = () => {
 
     const socket = io(apiUrl, {
       auth: { token },
-      transports: ['polling'], // Use only polling for cPanel compatibility
+      query: { token }, // Add query parameter fallback for token
+      transports: ['websocket', 'polling'], // Enable both transports for better reliability
       reconnection: true,
-      reconnectionAttempts: 5, // Increased attempts
-      reconnectionDelay: 1000, // Faster initial reconnect
-      reconnectionDelayMax: 5000, // Reduced max delay
-      timeout: 10000, // Faster timeout
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000, // Increased timeout for initial connection
       forceNew: true,
-      // cPanel-specific options
-      upgrade: false, // Don't try to upgrade to websocket
+      // Allow transport upgrades for better performance
+      upgrade: true,
       rememberUpgrade: false,
       autoConnect: true,
-      // Force polling only - no websocket attempts
-      tryAllTransports: false,
-      // Additional performance options
+      // Enable all transports for fallback
+      tryAllTransports: true,
+      // Additional reliability options
       closeOnBeforeunload: false,
       withCredentials: true,
+      // Add extra headers for authentication
+      extraHeaders: {
+        'Authorization': `Bearer ${token}`
+      }
     });
 
     socketRef.current = socket;

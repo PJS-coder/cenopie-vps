@@ -188,14 +188,29 @@ export default function initSocket(io) {
     }, 10000);
   }
   
-  // Ultra-fast authentication middleware
+  // Ultra-fast authentication middleware with improved error handling
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth?.token || 
-                   socket.handshake.query?.token ||
-                   socket.handshake.headers?.authorization?.replace('Bearer ', '');
+      // Try multiple token sources for maximum compatibility
+      let token = socket.handshake.auth?.token || 
+                  socket.handshake.query?.token ||
+                  socket.handshake.headers?.authorization?.replace('Bearer ', '') ||
+                  socket.handshake.headers?.authorization;
+      
+      // Clean up token if it has Bearer prefix
+      if (token && token.startsWith('Bearer ')) {
+        token = token.replace('Bearer ', '');
+      }
       
       if (!token) {
+        console.error('❌ Socket auth failed: No token provided', {
+          hasAuth: !!socket.handshake.auth,
+          hasQuery: !!socket.handshake.query,
+          hasAuthHeader: !!socket.handshake.headers?.authorization,
+          authKeys: Object.keys(socket.handshake.auth || {}),
+          queryKeys: Object.keys(socket.handshake.query || {}),
+          headers: Object.keys(socket.handshake.headers || {})
+        });
         return next(new Error('Authentication error: No token provided'));
       }
       
@@ -204,6 +219,7 @@ export default function initSocket(io) {
       const user = await User.findById(decoded.id).select('-password').lean(); // Use lean for performance
       
       if (!user) {
+        console.error('❌ Socket auth failed: User not found', { userId: decoded.id });
         return next(new Error('Authentication error: User not found'));
       }
       
@@ -216,12 +232,33 @@ export default function initSocket(io) {
       // Join user to their personal room for direct messaging
       socket.join(`user:${socket.userId}`);
       
+      if (!IS_PRODUCTION) {
+        console.log('✅ Socket authenticated successfully:', {
+          userId: socket.userId,
+          userName: socket.userName,
+          socketId: socket.id
+        });
+      }
+      
       next();
     } catch (error) {
-      if (!IS_PRODUCTION) {
-        console.error('❌ Socket authentication error:', error.message);
+      console.error('❌ Socket authentication error:', {
+        message: error.message,
+        name: error.name,
+        hasToken: !!socket.handshake.auth?.token,
+        hasQuery: !!socket.handshake.query?.token,
+        hasAuthHeader: !!socket.handshake.headers?.authorization,
+        socketId: socket.id
+      });
+      
+      // Provide more specific error messages
+      if (error.name === 'JsonWebTokenError') {
+        return next(new Error('Authentication error: Invalid token format'));
+      } else if (error.name === 'TokenExpiredError') {
+        return next(new Error('Authentication error: Token expired'));
+      } else {
+        return next(new Error('Authentication error: Invalid token'));
       }
-      next(new Error('Authentication error: Invalid token'));
     }
   });
 
