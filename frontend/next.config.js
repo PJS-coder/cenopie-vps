@@ -5,20 +5,8 @@ const nextConfig = {
     // Enable all performance features
     optimizeCss: true,
     optimizePackageImports: ['@heroicons/react', '@radix-ui/react-icons', 'lucide-react'],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-    // Enable server components optimization
-    serverComponentsExternalPackages: ['mongoose', 'bcrypt'],
     // Enable partial prerendering for ultra-fast loading
     ppr: false, // Disable for now as it's still experimental
-    // Enable React compiler for better performance
-    reactCompiler: false, // Disable for now as it's still experimental
   },
 
   // Ultra-fast image optimization
@@ -43,8 +31,6 @@ const nextConfig = {
     minimumCacheTTL: 31536000, // 1 year cache
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    // Optimize for performance
-    quality: 85, // Good balance between quality and size
     // Enable advanced optimizations
     unoptimized: false,
   },
@@ -155,8 +141,7 @@ const nextConfig = {
     return config;
   },
 
-  // Ultra-fast compilation
-  swcMinify: true, // Use SWC for ultra-fast minification
+  // Ultra-fast compilation - removed deprecated swcMinify
   
   // Ultra-performance headers
   async headers() {
@@ -263,9 +248,6 @@ const nextConfig = {
   // Ultra-performance output
   output: 'standalone', // Optimize for deployment
   
-  // Ultra-fast development
-  fastRefresh: true,
-  
   // Ultra-performance static optimization
   trailingSlash: false,
   
@@ -276,11 +258,6 @@ const nextConfig = {
   env: {
     CUSTOM_KEY: 'ultra-performance-mode',
     BUILD_TIME: new Date().toISOString(),
-  },
-
-  // Ultra-fast ESLint (disable during build for speed)
-  eslint: {
-    ignoreDuringBuilds: false, // Keep enabled for code quality
   },
 
   // Ultra-fast TypeScript
