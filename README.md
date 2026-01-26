@@ -28,71 +28,59 @@
 - **TypeScript** for type safety
 - **Ultra-performance caching** and optimization
 
-## 🚀 Quick Deployment
+## 🚀 VPS Deployment
 
 ### Prerequisites
-- Ubuntu VPS (5GB RAM, 5 cores, 80GB storage)
-- Domain name (e.g., cenopie.com)
-- Node.js 18+
+- Ubuntu 20.04+ VPS (2GB RAM minimum)
+- Domain name (optional)
+- Root or sudo access
 
-### 1. Environment Setup
+### Quick Deployment
 ```bash
-# Clone repository
-git clone <your-repo-url>
-cd cenopie-production
+# 1. Clean up any old deployment
+chmod +x vps-deploy/cleanup-old-deployment.sh
+sudo ./vps-deploy/cleanup-old-deployment.sh
 
-# Setup environment variables
-chmod +x setup-env.sh
-./setup-env.sh
+# 2. Run automated deployment
+chmod +x vps-deploy/deploy.sh
+sudo ./vps-deploy/deploy.sh
+
+# 3. Configure environment variables
+sudo nano /opt/cenopie/backend/.env.production
+sudo nano /opt/cenopie/frontend/.env.production
+
+# 4. Check deployment status
+chmod +x vps-deploy/check-status.sh
+./vps-deploy/check-status.sh
 ```
 
-### 2. Ultra-Performance Deployment
-```bash
-# Deploy with maximum performance optimizations
-chmod +x ultra-deploy.sh
-sudo ./ultra-deploy.sh
-```
-
-### 3. Database Optimization
-```bash
-# Optimize database for ultra-performance
-node backend/scripts/ultra-db-optimize.js
-```
-
-### 4. Performance Testing
-```bash
-# Run comprehensive performance tests
-chmod +x scripts/performance-test.sh
-./scripts/performance-test.sh
-```
+### Manual Configuration
+See detailed instructions in `vps-deploy/README.md`
 
 ## 📊 Monitoring & Management
 
-### Real-time Monitoring
+### Check Status
 ```bash
-# View performance metrics
-pm2 monit
+# Quick status check
+./vps-deploy/check-status.sh
 
-# Check logs
+# View PM2 processes
+pm2 status
+
+# View logs
 pm2 logs
-
-# System resources
-htop
 ```
 
-### Performance Commands
+### Management Commands
 ```bash
 # Restart services
 pm2 restart all
 
-# Check Nginx status
+# Check Nginx
 sudo nginx -t && sudo systemctl status nginx
 
-# Monitor database
-mongo cenopie --eval "db.stats()"
-
-# Check Redis performance
-redis-cli info stats
+# Update application
+cd /opt/cenopie && git pull && pm2 restart all
 ```
 
 ## 🔧 Configuration

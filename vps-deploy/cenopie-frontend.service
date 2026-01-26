@@ -9,7 +9,7 @@ User=USER_PLACEHOLDER
 WorkingDirectory=/opt/cenopie/frontend
 Environment=NODE_ENV=production
 Environment=PORT=3000
-ExecStart=/usr/bin/node server.js
+ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10
 StandardOutput=syslog

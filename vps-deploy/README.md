@@ -2,25 +2,27 @@
 
 Complete guide to deploy Cenopie on Ubuntu VPS with production-ready configuration.
 
-## 🚀 Quick Deployment
+## 🚀 Quick Fresh Deployment
 
 ```bash
-# 1. Clone and setup
+# 1. Clean up old deployment (if exists)
+chmod +x vps-deploy/cleanup-old-deployment.sh
+sudo ./vps-deploy/cleanup-old-deployment.sh
+
+# 2. Clone and setup
 git clone <your-repo-url> cenopie
 cd cenopie
 
-# 2. Run automated deployment
+# 3. Run automated deployment
 chmod +x vps-deploy/deploy.sh
 sudo ./vps-deploy/deploy.sh
 
-# 3. Configure environment
+# 4. Configure environment
 sudo nano /opt/cenopie/backend/.env.production
 sudo nano /opt/cenopie/frontend/.env.production
 
-# 4. Start services
-sudo systemctl start cenopie-backend
-sudo systemctl start cenopie-frontend
-sudo systemctl enable cenopie-backend cenopie-frontend
+# 5. Start services
+sudo -u $USER pm2 restart all
 ```
 
 ## 📋 Prerequisites
@@ -97,7 +99,7 @@ nano .env.production
 ```bash
 cd /opt/cenopie/frontend
 npm install
-npm run build:prod
+npm run build
 cp .env.production.example .env.production
 # Edit environment variables
 nano .env.production
@@ -203,7 +205,7 @@ sudo tail -f /var/log/nginx/error.log
 cd /opt/cenopie
 git pull origin main
 cd backend && npm install --production
-cd ../frontend && npm install && npm run build:prod
+cd ../frontend && npm install && npm run build
 pm2 restart all
 ```
 

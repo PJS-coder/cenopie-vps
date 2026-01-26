@@ -43,7 +43,8 @@ module.exports = {
     },
     {
       name: 'cenopie-frontend',
-      script: 'server.js',
+      script: 'npm',
+      args: 'start',
       cwd: '/opt/cenopie/frontend',
       instances: 1,
       exec_mode: 'fork',
@@ -89,7 +90,7 @@ module.exports = {
       ref: 'origin/main',
       repo: 'https://github.com/your-username/cenopie.git',
       path: '/opt/cenopie',
-      'post-deploy': 'cd backend && npm install --production && cd ../frontend && npm install && npm run build:prod && pm2 reload ecosystem.config.js --env production',
+      'post-deploy': 'cd backend && npm install --production && cd ../frontend && npm install && npm run build && pm2 reload ecosystem.config.js --env production',
       'pre-setup': 'apt update && apt install git -y'
     }
   }

@@ -104,7 +104,7 @@ sudo -u $ACTUAL_USER npm install --production
 print_info "📦 Installing frontend dependencies and building..."
 cd $APP_DIR/frontend
 sudo -u $ACTUAL_USER npm install
-sudo -u $ACTUAL_USER npm run build:prod
+sudo -u $ACTUAL_USER npm run build
 
 # Create environment files from templates
 print_info "📝 Creating environment files..."
