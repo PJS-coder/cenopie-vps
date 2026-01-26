@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { initUltraMessageSocket } from './messageSocket.js';
+import { initMessageSocket } from './messageSocket.js';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import logger from '../config/logger.js';
@@ -227,7 +227,7 @@ export default function initSocket(io) {
     socket.setMaxListeners(25);
     
     // Initialize ultra-performance message handlers
-    initUltraMessageSocket(io, socket, ultraMessageQueue);
+    initMessageSocket(io, socket, ultraMessageQueue);
     
     // Ultra-fast ping/pong for connection health
     socket.on('ping', () => {

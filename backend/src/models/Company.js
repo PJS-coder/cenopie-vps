@@ -107,7 +107,7 @@ const companySchema = new mongoose.Schema({
 companySchema.index({ name: 'text', description: 'text' });
 companySchema.index({ industry: 1 });
 companySchema.index({ size: 1 });
-companySchema.index({ email: 1 });
+// companySchema.index({ email: 1 }); // Removed duplicate - email already has unique index
 companySchema.index({ status: 1 });
 
 export default mongoose.model('Company', companySchema, 'companies_v2');

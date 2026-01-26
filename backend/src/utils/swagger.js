@@ -1,4 +1,5 @@
-import swaggerJsdoc from 'swagger-jsdoc';
+// Swagger temporarily disabled due to deprecation warnings
+// import swaggerJsdoc from 'swagger-jsdoc';
 
 const options = {
   definition: {
@@ -18,5 +19,6 @@ const options = {
   apis: ['./src/routes/*.js', './src/controllers/*.js'], // files containing annotations as above
 };
 
-const specs = swaggerJsdoc(options);
+// const specs = swaggerJsdoc(options);
+const specs = {}; // Temporarily disabled
 export default specs;
