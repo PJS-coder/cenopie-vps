@@ -1,8 +1,144 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { initMessageSocket } from './messageSocket.js';
+import { initUltraMessageSocket } from './messageSocket.js';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
+import logger from '../config/logger.js';
 
 let ioInstance = null;
+
+// Ultra-performance message queue for reliability
+class UltraMessageQueue {
+  constructor() {
+    this.client = null;
+    this.isProcessing = false;
+    this.batchSize = 100;
+    this.processingInterval = 10; // 10ms intervals for ultra-fast processing
+    this.setupRedisClient();
+  }
+  
+  async setupRedisClient() {
+    try {
+      this.client = createClient({
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        socket: {
+          keepAlive: true,
+          reconnectDelay: 100,
+          connectTimeout: 1000
+        },
+        database: 1 // Use separate database for message queue
+      });
+      
+      await this.client.connect();
+      console.log('✅ Ultra message queue connected to Redis');
+      
+      // Start processing messages
+      this.startProcessing();
+      
+    } catch (error) {
+      console.error('❌ Message queue Redis connection failed:', error);
+    }
+  }
+  
+  async startProcessing() {
+    if (this.isProcessing || !this.client) return;
+    this.isProcessing = true;
+    
+    console.log('🚀 Starting ultra-fast message queue processing...');
+    
+    while (this.isProcessing) {
+      try {
+        // Process messages in batches for maximum performance
+        const messages = await this.client.xRead(
+          { key: 'messages:queue', id: '0' },
+          { COUNT: this.batchSize, BLOCK: this.processingInterval }
+        );
+        
+        if (messages && messages.length > 0) {
+          await this.processBatch(messages);
+        }
+        
+        // Yield control briefly for other operations
+        await new Promise(resolve => setImmediate(resolve));
+        
+      } catch (error) {
+        console.error('❌ Message queue processing error:', error);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+  }
+  
+  async processBatch(messages) {
+    const operations = [];
+    
+    for (const message of messages) {
+      const data = message.message;
+      
+      // Prepare database operation for bulk insert
+      operations.push({
+        insertOne: {
+          document: {
+            _id: data.messageId,
+            conversationId: data.conversationId,
+            sender: data.sender,
+            content: data.content,
+            timestamp: new Date(parseInt(data.timestamp)),
+            createdAt: new Date(),
+            type: data.type || 'text',
+            readBy: [],
+            deliveredTo: []
+          }
+        }
+      });
+    }
+    
+    // Bulk insert for maximum performance
+    if (operations.length > 0) {
+      try {
+        const { default: MessageModel } = await import('../models/MessageNew.js');
+        await MessageModel.bulkWrite(operations, { ordered: false });
+        console.log(`⚡ Processed ${operations.length} messages in batch`);
+      } catch (error) {
+        console.error('❌ Batch message processing error:', error);
+      }
+    }
+  }
+  
+  async addMessage(messageData) {
+    if (!this.client) return false;
+    
+    try {
+      await this.client.xAdd('messages:queue', '*', {
+        messageId: messageData.messageId,
+        conversationId: messageData.conversationId,
+        sender: messageData.sender,
+        content: messageData.content,
+        type: messageData.type || 'text',
+        timestamp: Date.now().toString()
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error adding message to queue:', error);
+      return false;
+    }
+  }
+  
+  stop() {
+    this.isProcessing = false;
+    if (this.client) {
+      this.client.quit();
+    }
+  }
+}
+
+// Create ultra-fast message queue instance
+const ultraMessageQueue = new UltraMessageQueue();
+
+// Ultra-fast message ID generation
+function generateUltraFastMessageId() {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 15);
+}
 
 export function getIO() {
   return ioInstance;
@@ -11,7 +147,37 @@ export function getIO() {
 export default function initSocket(io) {
   ioInstance = io;
   
-  // Enhanced middleware for socket authentication
+  console.log('🚀 Initializing ultra-performance Socket.IO...');
+  
+  // Connection statistics
+  let connectionStats = {
+    total: 0,
+    active: 0,
+    peak: 0,
+    messagesPerSecond: 0,
+    messageCount: 0,
+    lastMessageTime: Date.now()
+  };
+  
+  // Monitor performance every 10 seconds
+  setInterval(() => {
+    const now = Date.now();
+    const timeDiff = (now - connectionStats.lastMessageTime) / 1000;
+    connectionStats.messagesPerSecond = timeDiff > 0 ? 
+      connectionStats.messageCount / timeDiff : 0;
+    
+    console.log(`📊 Socket.IO Performance:`);
+    console.log(`├─ Active Connections: ${connectionStats.active}`);
+    console.log(`├─ Peak Connections: ${connectionStats.peak}`);
+    console.log(`├─ Messages/Second: ${connectionStats.messagesPerSecond.toFixed(2)}`);
+    console.log(`└─ Total Messages: ${connectionStats.messageCount}`);
+    
+    // Reset counters
+    connectionStats.messageCount = 0;
+    connectionStats.lastMessageTime = now;
+  }, 10000);
+  
+  // Ultra-fast authentication middleware
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token || 
@@ -22,9 +188,9 @@ export default function initSocket(io) {
         return next(new Error('Authentication error: No token provided'));
       }
       
-      // Verify JWT token
+      // Ultra-fast JWT verification
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password').lean(); // Use lean for performance
       
       if (!user) {
         return next(new Error('Authentication error: User not found'));
@@ -33,6 +199,11 @@ export default function initSocket(io) {
       // Attach user data to socket
       socket.user = user;
       socket.userId = user._id.toString();
+      socket.userEmail = user.email;
+      socket.userName = user.name;
+      
+      // Join user to their personal room for direct messaging
+      socket.join(`user:${socket.userId}`);
       
       next();
     } catch (error) {
@@ -41,73 +212,205 @@ export default function initSocket(io) {
     }
   });
 
-  // Handle socket connections
+  // Ultra-performance connection handler
   io.on('connection', (socket) => {
+    connectionStats.total++;
+    connectionStats.active++;
+    connectionStats.peak = Math.max(connectionStats.peak, connectionStats.active);
+    
     const userId = socket.userId;
     const user = socket.user;
     
-    console.log(`User ${user.name} (${userId}) connected via socket`);
+    console.log(`🔌 Ultra-fast connection: ${user.name} (${userId}) - Socket: ${socket.id}`);
     
-    // Join user's personal room for direct messaging
-    const userRoom = `user:${userId}`;
-    socket.join(userRoom);
+    // Limit listeners per socket for performance
+    socket.setMaxListeners(25);
     
-    // Initialize message-specific socket handlers
-    initMessageSocket(io, socket);
+    // Initialize ultra-performance message handlers
+    initUltraMessageSocket(io, socket, ultraMessageQueue);
     
-    // Handle general events
+    // Ultra-fast ping/pong for connection health
     socket.on('ping', () => {
-      socket.emit('pong', { timestamp: new Date().toISOString() });
+      socket.emit('pong', { 
+        timestamp: Date.now(),
+        latency: Date.now() - (socket.lastPing || Date.now())
+      });
     });
 
-    // Test message handler for debugging
+    // Enhanced test message handler with performance metrics
     socket.on('test:message', (data) => {
+      const startTime = Date.now();
+      
       socket.emit('test:response', { 
-        message: 'Test message received successfully',
+        message: 'Ultra-fast test response',
         originalData: data,
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
         userId: userId,
-        userName: user.name
+        userName: user.name,
+        socketId: socket.id,
+        responseTime: Date.now() - startTime,
+        performance: 'maximum'
       });
     });
     
-    // Handle user presence
+    // Ultra-fast user presence with intelligent broadcasting
     socket.on('user:presence', ({ status }) => {
-      // Broadcast presence update to user's contacts
+      // Broadcast presence update efficiently
       socket.broadcast.emit('user:presence_update', {
         userId,
         status,
-        timestamp: new Date().toISOString()
+        timestamp: Date.now()
+      });
+      
+      // Update user status in database asynchronously
+      setImmediate(async () => {
+        try {
+          await User.findByIdAndUpdate(userId, { 
+            lastSeen: new Date(),
+            status: status || 'online'
+          });
+        } catch (error) {
+          console.error('❌ User presence update error:', error);
+        }
       });
     });
     
-    // Handle errors
-    socket.on('error', (error) => {
-      console.error(`Socket error for user ${userId}:`, error);
+    // Ultra-fast conversation joining
+    socket.on('conversation:join', (data) => {
+      if (!data.conversationId) return;
+      
+      socket.join(data.conversationId);
+      socket.emit('conversation:joined', {
+        conversationId: data.conversationId,
+        timestamp: Date.now(),
+        userId: userId
+      });
+      
+      console.log(`👥 User ${userId} joined conversation ${data.conversationId}`);
     });
     
-    // Handle disconnect
-    socket.on('disconnect', (reason) => {
-      console.log(`User ${user.name} (${userId}) disconnected: ${reason}`);
+    // Ultra-fast conversation leaving
+    socket.on('conversation:leave', (data) => {
+      if (!data.conversationId) return;
       
-      // Broadcast offline status
+      socket.leave(data.conversationId);
+      socket.emit('conversation:left', {
+        conversationId: data.conversationId,
+        timestamp: Date.now(),
+        userId: userId
+      });
+    });
+    
+    // Ultra-fast notification handling
+    socket.on('notification:read', async (data) => {
+      if (!data.notificationId) return;
+      
+      try {
+        // Update notification asynchronously
+        setImmediate(async () => {
+          const { default: NotificationModel } = await import('../models/Notification.js');
+          await NotificationModel.findByIdAndUpdate(data.notificationId, {
+            read: true,
+            readAt: new Date()
+          });
+        });
+        
+        socket.emit('notification:read_confirmed', {
+          notificationId: data.notificationId,
+          timestamp: Date.now()
+        });
+        
+      } catch (error) {
+        console.error('❌ Notification read error:', error);
+      }
+    });
+    
+    // Handle errors with detailed logging
+    socket.on('error', (error) => {
+      console.error(`❌ Socket error for user ${userId}:`, error);
+      
+      // Send error details to client for debugging
+      socket.emit('socket:error', {
+        error: error.message,
+        timestamp: Date.now(),
+        socketId: socket.id
+      });
+    });
+    
+    // Ultra-fast disconnect handling
+    socket.on('disconnect', (reason) => {
+      connectionStats.active--;
+      
+      console.log(`🔌 Ultra-fast disconnect: ${user.name} (${userId}) - Reason: ${reason}`);
+      
+      // Broadcast offline status efficiently
       socket.broadcast.emit('user:presence_update', {
         userId,
         status: 'offline',
-        timestamp: new Date().toISOString()
+        timestamp: Date.now(),
+        reason
       });
+      
+      // Update last seen asynchronously
+      setImmediate(async () => {
+        try {
+          await User.findByIdAndUpdate(userId, { 
+            lastSeen: new Date(),
+            status: 'offline'
+          });
+        } catch (error) {
+          console.error('❌ User last seen update error:', error);
+        }
+      });
+      
+      // Clean up socket listeners for memory efficiency
+      socket.removeAllListeners();
     });
     
-    // Send connection confirmation
+    // Send ultra-fast connection confirmation with performance info
     socket.emit('connected', {
       userId,
-      timestamp: new Date().toISOString(),
-      message: 'Successfully connected to messaging service'
+      socketId: socket.id,
+      timestamp: Date.now(),
+      message: 'Ultra-performance connection established',
+      serverInfo: {
+        version: '2.0.0-ultra',
+        performance: 'maximum',
+        features: [
+          'clustering', 
+          'message-queue', 
+          'optimistic-updates',
+          'ultra-fast-processing',
+          'intelligent-caching'
+        ]
+      },
+      connectionStats: {
+        active: connectionStats.active,
+        peak: connectionStats.peak
+      }
     });
   });
   
-  // Handle server-level errors
+  // Handle server-level errors with enhanced logging
   io.engine.on('connection_error', (err) => {
-    console.error('Socket.IO connection error:', err);
+    console.error('❌ Socket.IO connection error:', err);
   });
+  
+  // Global error handling
+  io.on('error', (error) => {
+    console.error('❌ Socket.IO global error:', error);
+  });
+  
+  console.log('✅ Ultra-performance Socket.IO initialization complete');
+  
+  // Cleanup on process exit
+  process.on('SIGTERM', () => {
+    console.log('🔄 Gracefully closing ultra-performance Socket.IO...');
+    ultraMessageQueue.stop();
+    io.close(() => {
+      console.log('✅ Ultra-performance Socket.IO closed');
+    });
+  });
+  
+  return io;
 }

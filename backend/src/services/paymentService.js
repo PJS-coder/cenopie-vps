@@ -164,20 +164,24 @@ export const createPayment = async (userId, planId, email) => {
 
 // Handle successful payment
 export const handleSuccessfulPayment = async (userId, planId, paymentDetails) => {
-  // Update user subscription in database
-  // This should be implemented based on your User model
   console.log('✅ Payment successful:', { userId, planId, paymentDetails });
   
-  // TODO: Update user's subscription status in database
-  // await User.findByIdAndUpdate(userId, {
-  //   subscription: {
-  //     plan: planId,
-  //     status: 'active',
-  //     startDate: new Date(),
-  //     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-  //     paymentId: paymentDetails.paymentId
-  //   }
-  // });
+  // Update user's subscription status in database
+  try {
+    const { default: User } = await import('../models/User.js');
+    await User.findByIdAndUpdate(userId, {
+      subscription: {
+        plan: planId,
+        status: 'active',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        paymentId: paymentDetails.paymentId
+      }
+    });
+    console.log('✅ User subscription updated successfully');
+  } catch (error) {
+    console.error('❌ Failed to update user subscription:', error);
+  }
 
   return { success: true };
 };
