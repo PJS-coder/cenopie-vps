@@ -8,6 +8,10 @@ interface UseNewsReturn {
   refreshNews: () => Promise<void>;
 }
 
+// Simple cache to prevent unnecessary API calls
+let newsCache: { data: NewsArticle[]; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsReturn => {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,10 +22,20 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
       setLoading(true);
       setError(null);
       
+      // Check cache first
+      if (newsCache && Date.now() - newsCache.timestamp < CACHE_DURATION) {
+        setNews(newsCache.data);
+        setLoading(false);
+        return;
+      }
+      
       const response = await newsApi.getAllNews(1, limit);
       
       if (response.data?.news) {
-        setNews(response.data.news);
+        const newsData = response.data.news;
+        setNews(newsData);
+        // Update cache
+        newsCache = { data: newsData, timestamp: Date.now() };
       } else {
         setNews([]);
       }
@@ -35,18 +49,23 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
   };
 
   const refreshNews = async () => {
+    // Clear cache on manual refresh
+    newsCache = null;
     await fetchNews();
   };
 
   useEffect(() => {
     if (enabled) {
       fetchNews();
+    } else {
+      setLoading(false);
     }
   }, [enabled, limit]);
 
   // Listen for news updates from other parts of the app
   useEffect(() => {
     const handleNewsUpdate = () => {
+      newsCache = null; // Clear cache
       fetchNews();
     };
 

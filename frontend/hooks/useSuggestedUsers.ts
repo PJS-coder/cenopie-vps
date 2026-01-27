@@ -11,6 +11,10 @@ export interface SuggestedUser {
   connected: boolean;
 }
 
+// Simple cache to prevent unnecessary API calls
+let suggestedUsersCache: { data: SuggestedUser[]; timestamp: number } | null = null;
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
 export const useSuggestedUsers = (enabled: boolean = true) => {
   const [users, setUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +24,14 @@ export const useSuggestedUsers = (enabled: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Check cache first
+      if (suggestedUsersCache && Date.now() - suggestedUsersCache.timestamp < CACHE_DURATION) {
+        setUsers(suggestedUsersCache.data);
+        setLoading(false);
+        return;
+      }
+      
       const response = await profileApi.getSuggestedUsers();
       
       // Handle different response formats
@@ -40,6 +52,8 @@ export const useSuggestedUsers = (enabled: boolean = true) => {
       );
       
       setUsers(validUsers);
+      // Update cache
+      suggestedUsersCache = { data: validUsers, timestamp: Date.now() };
     } catch (err) {
       console.error('Suggested users fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch suggested users');
@@ -52,6 +66,8 @@ export const useSuggestedUsers = (enabled: boolean = true) => {
   useEffect(() => {
     if (enabled) {
       fetchSuggestedUsers();
+    } else {
+      setLoading(false);
     }
   }, [enabled]);
 

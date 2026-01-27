@@ -118,10 +118,10 @@ export default function ConversationList({
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="mb-4">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Messages</h1>
+      {/* Header - Mobile optimized */}
+      <div className="p-3 md:p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="mb-3 md:mb-4">
+          <h1 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Messages</h1>
         </div>
         
         {/* Search */}
@@ -132,7 +132,7 @@ export default function ConversationList({
             placeholder="Search conversations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+            className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 h-9 md:h-10"
           />
         </div>
       </div>
@@ -140,14 +140,14 @@ export default function ConversationList({
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
         {sortedConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-              <ChatBubbleLeftRightIcon className="w-8 h-8 text-gray-400" />
+          <div className="flex flex-col items-center justify-center h-full p-6 md:p-8 text-center">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3 md:mb-4">
+              <ChatBubbleLeftRightIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-2">
               {searchTerm ? 'No conversations found' : 'No conversations yet'}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-sm">
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-4 max-w-sm px-4">
               {searchTerm 
                 ? 'Try adjusting your search terms'
                 : 'Start a conversation by messaging someone from their profile'
@@ -160,60 +160,60 @@ export default function ConversationList({
               <div
                 key={conversation._id}
                 onClick={() => onSelectConversation(conversation)}
-                className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                className={`p-3 md:p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors active:bg-gray-100 dark:active:bg-gray-600 ${
                   selectedConversationId === conversation._id 
                     ? 'bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-500' 
                     : ''
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="relative">
-                    <Avatar className="w-12 h-12">
+                  {/* Avatar - Mobile optimized */}
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-10 h-10 md:w-12 md:h-12">
                       <AvatarImage 
                         src={getConversationAvatar(conversation)} 
                         alt={getConversationName(conversation)}
                       />
-                      <AvatarFallback className="bg-[#0BC0DF] text-white font-medium">
+                      <AvatarFallback className="bg-[#0BC0DF] text-white font-medium text-sm">
                         {getConversationInitials(conversation)}
                       </AvatarFallback>
                     </Avatar>
                     
                     {/* Online status indicator for direct conversations */}
                     {conversation.type === 'direct' && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                     )}
                   </div>
 
-                  {/* Content */}
+                  {/* Content - Mobile optimized */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate text-sm md:text-base">
                           {getConversationName(conversation)}
                         </h3>
                         {isVerified(conversation) && (
                           <VerificationBadge isVerified={true} size="sm" />
                         )}
                         {conversation.type === 'group' && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs hidden md:inline-flex">
                             {conversation.participantCount}
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {formatLastMessageTime(conversation.lastActivity)}
                         </span>
                         {conversation.unreadCount > 0 && (
-                          <Badge className="bg-red-500 hover:bg-red-600 text-white min-w-[20px] h-5 text-xs flex items-center justify-center">
+                          <Badge className="bg-red-500 hover:bg-red-600 text-white min-w-[18px] h-4 md:min-w-[20px] md:h-5 text-xs flex items-center justify-center">
                             {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
                           </Badge>
                         )}
                       </div>
                     </div>
                     
-                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate">
                       {conversation.lastMessage?.content || 'No messages yet'}
                     </p>
                   </div>

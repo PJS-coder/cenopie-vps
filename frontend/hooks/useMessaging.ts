@@ -23,7 +23,7 @@ export function useMessaging() {
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   
-  const { socket, isConnected, sendMessage: socketSendMessage } = useSocket();
+  const { socket, isConnected, sendMessage: socketSendMessage, hasConnectedOnce, isReconnecting, connectionError } = useSocket();
   const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   const messageCache = useRef<Record<string, Message[]>>({});
 
@@ -107,7 +107,7 @@ export function useMessaging() {
   const sendMessage = useCallback(async (data: SendMessageData) => {
     try {
       // Generate client ID for deduplication
-      const clientId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const clientId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       const messageData = { ...data, clientId };
       
       // Get current user info
@@ -154,32 +154,7 @@ export function useMessaging() {
       if (socket && isConnected) {
         const socketSent = socketSendMessage(messageData);
         if (socketSent) {
-          // Socket sent successfully - API call in background for reliability
-          messageApi.sendMessage(messageData).then(response => {
-            const actualMessage = response.data;
-            // Update temp message with actual message data (but keep it in same position)
-            setMessages(prev => ({
-              ...prev,
-              [data.conversationId]: prev[data.conversationId]?.map(msg => {
-                if (msg._id === tempMessage._id) {
-                  return { ...actualMessage, _id: actualMessage._id }; // Use real ID
-                }
-                return msg;
-              }) || [actualMessage]
-            }));
-          }).catch(err => {
-            console.warn('Background API call failed (socket succeeded):', err);
-            // Mark message as failed but keep it visible
-            setMessages(prev => ({
-              ...prev,
-              [data.conversationId]: prev[data.conversationId]?.map(msg => {
-                if (msg._id === tempMessage._id) {
-                  return { ...msg, status: 'failed' as const };
-                }
-                return msg;
-              }) || []
-            }));
-          });
+          // Socket sent successfully - wait for confirmation before API call
           return tempMessage; // Return immediately for better UX
         }
       }
@@ -400,30 +375,28 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const { message, clientId } = customEvent.detail;
       
-      // Don't replace temp messages - they should already be updated by the API response
-      // This prevents the flicker effect
+      // Replace temp message with actual message from socket confirmation
       setMessages(prev => {
         const conversationMessages = prev[message.conversationId] || [];
         
-        // Check if message already exists (from API response)
-        const messageExists = conversationMessages.some(msg => msg._id === message._id);
-        if (messageExists) {
-          return prev;
+        // Find and replace temp message with same clientId
+        const updatedMessages = conversationMessages.map(msg => {
+          if (msg._id.startsWith('temp-') && clientId && msg._id.includes(clientId.split('-')[1])) {
+            return { ...message, _id: message._id }; // Use real message
+          }
+          return msg;
+        });
+        
+        // If no temp message found, add the message (shouldn't happen normally)
+        const hasMessage = updatedMessages.some(msg => msg._id === message._id);
+        if (!hasMessage) {
+          updatedMessages.push(message);
         }
         
-        // Only add if no temp or real message exists
-        const hasTempMessage = conversationMessages.some(msg => 
-          msg._id.startsWith('temp-') && clientId && msg._id.includes(clientId)
-        );
-        
-        if (!hasTempMessage) {
-          return {
-            ...prev,
-            [message.conversationId]: [...conversationMessages, message]
-          };
-        }
-        
-        return prev;
+        return {
+          ...prev,
+          [message.conversationId]: updatedMessages
+        };
       });
     };
 
@@ -514,9 +487,30 @@ export function useMessaging() {
       });
     };
 
+    // Handle message failures
+    const handleMessageFailed = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { clientId, error } = customEvent.detail;
+      
+      // Mark temp message as failed
+      setMessages(prev => {
+        const updatedMessages = { ...prev };
+        Object.keys(updatedMessages).forEach(conversationId => {
+          updatedMessages[conversationId] = updatedMessages[conversationId].map(msg => {
+            if (msg._id.startsWith('temp-') && clientId && msg._id.includes(clientId.split('-')[1])) {
+              return { ...msg, status: 'failed' as const, error };
+            }
+            return msg;
+          });
+        });
+        return updatedMessages;
+      });
+    };
+
     // Register event listeners
     window.addEventListener('socket:message:received', handleNewMessage);
     window.addEventListener('socket:message:sent', handleMessageSent);
+    window.addEventListener('socket:message:failed', handleMessageFailed);
     window.addEventListener('socket:typing:start', handleTypingStart);
     window.addEventListener('socket:typing:stop', handleTypingStop);
     window.addEventListener('socket:user:status_update', handleUserStatusUpdate);
@@ -527,6 +521,7 @@ export function useMessaging() {
     return () => {
       window.removeEventListener('socket:message:received', handleNewMessage);
       window.removeEventListener('socket:message:sent', handleMessageSent);
+      window.removeEventListener('socket:message:failed', handleMessageFailed);
       window.removeEventListener('socket:typing:start', handleTypingStart);
       window.removeEventListener('socket:typing:stop', handleTypingStop);
       window.removeEventListener('socket:user:status_update', handleUserStatusUpdate);
@@ -564,6 +559,9 @@ export function useMessaging() {
     userStatuses,
     unreadCounts,
     isConnected,
+    hasConnectedOnce,
+    isReconnecting,
+    connectionError,
     
     // Actions
     loadConversations,

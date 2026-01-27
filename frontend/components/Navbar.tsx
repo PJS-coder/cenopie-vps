@@ -496,49 +496,52 @@ export default function Navbar() {
       </header>
 
       {/* Mobile Bottom Navigation - 5 Items */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t dark:bg-black/95 dark:border-gray-800">
-        <nav className="bottom-nav-5-items px-1 py-2 safe-area-pb">
-          {bottomNav.map((n) => (
-            n.disabled ? (
-              <div 
-                key={n.href} 
-                className="bottom-nav-item text-gray-400 cursor-not-allowed opacity-60"
-              >
-                <div className="relative mb-1">
-                  <n.icon className="w-5 h-5" />
+      {/* Hide mobile bottom navigation on messages page */}
+      {!pathname.startsWith('/messages') && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t dark:bg-black/95 dark:border-gray-800">
+          <nav className="bottom-nav-5-items px-1 py-2 safe-area-pb">
+            {bottomNav.map((n) => (
+              n.disabled ? (
+                <div 
+                  key={n.href} 
+                  className="bottom-nav-item text-gray-400 cursor-not-allowed opacity-60"
+                >
+                  <div className="relative mb-1">
+                    <n.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs truncate text-center">{n.label}</span>
+                  <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 px-1 py-0.5 rounded text-center mt-0.5">Soon</span>
                 </div>
-                <span className="text-xs truncate text-center">{n.label}</span>
-                <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 px-1 py-0.5 rounded text-center mt-0.5">Soon</span>
-              </div>
-            ) : (
-              <Link 
-                key={n.href} 
-                href={n.href as any} 
-                className={`bottom-nav-item rounded-lg transition-colors ${
-                  pathname === n.href ? 'text-brand' : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <div className="relative mb-1">
-                  <n.icon className="w-5 h-5" />
-                  {(n.href === '/interviews' || n.href === '/showcase') && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    </div>
-                  )}
-                  {n.href === '/notifications' && unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
-                      {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs truncate text-center">{n.label}</span>
-              </Link>
-            )
-          ))}
-        </nav>
-      </div>
+              ) : (
+                <Link 
+                  key={n.href} 
+                  href={n.href as any} 
+                  className={`bottom-nav-item rounded-lg transition-colors ${
+                    pathname === n.href ? 'text-brand' : 'text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <div className="relative mb-1">
+                    <n.icon className="w-5 h-5" />
+                    {(n.href === '/interviews' || n.href === '/showcase') && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </div>
+                    )}
+                    {n.href === '/notifications' && unreadNotificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
+                        {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs truncate text-center">{n.label}</span>
+                </Link>
+              )
+            ))}
+          </nav>
+        </div>
+      )}
 
       {/* Mobile Search Overlay */}
       <MobileSearchOverlay 

@@ -16,7 +16,7 @@ class UltraCache {
     // Cache statistics
     this.stats = {
       l1Hits: 0,
-      l2Hits: 0,
+      l2Hits: 0, 
       misses: 0,
       sets: 0,
       evictions: 0

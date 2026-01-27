@@ -14,7 +14,6 @@ import {
 import { useNews } from '@/hooks/useNews';
 import SimpleLoader from '@/components/SimpleLoader';
 import VerificationBadge from '@/components/VerificationBadge';
-import ConnectButton from '@/components/ConnectButton';
 import { profileApi } from '@/lib/api';
 import { useSuggestedUsers } from '@/hooks/useSuggestedUsers';
 import { useConnections } from '@/hooks/useConnections';
@@ -147,7 +146,7 @@ export default function NewsPage() {
             
             {/* Left Sidebar - Profile & Quick Actions */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <div className="lg:sticky lg:top-40 lg:mt-20 space-y-6">
+              <div className="lg:sticky lg:top-6 lg:mt-16 space-y-6">
                 {/* User Profile Banner Card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
                   {/* Banner Image */}
@@ -395,7 +394,7 @@ export default function NewsPage() {
 
             {/* Right Sidebar - People You May Know */}
             <div className="lg:col-span-1 order-3 lg:order-3">
-              <div className="lg:sticky lg:top-[160px] space-y-6">
+              <div className="lg:sticky lg:top-24 space-y-6">
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white">People You May Know</h3>

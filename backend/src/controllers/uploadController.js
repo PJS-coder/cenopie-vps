@@ -1,27 +1,12 @@
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import path from 'path';
 import sharp from 'sharp';
 
-// Configure Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    const folder = req.body.type === 'image' ? 'message-images' : 'message-files';
-    const allowedFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'mp3', 'mp4', 'webm'];
-    
-    return {
-      folder: folder,
-      allowed_formats: allowedFormats,
-      resource_type: file.mimetype.startsWith('video/') ? 'video' : 
-                    file.mimetype.startsWith('audio/') ? 'video' : 'auto',
-      public_id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    };
-  },
-});
+// Configure multer for memory storage (more compatible approach)
+const storage = multer.memoryStorage();
 
-// Configure multer with Multer 2.x syntax
+// Configure multer with file validation
 const upload = multer({
   storage: storage,
   limits: {
@@ -49,16 +34,37 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      // Use MulterError for better error handling in Multer 2.x
       cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Invalid file type. Only images, documents, audio, and video files are allowed.'));
     }
   }
 });
 
-// Upload message attachment with Multer 2.x error handling
+// Helper function to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'auto',
+        folder: 'message-attachments',
+        ...options
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+    
+    uploadStream.end(buffer);
+  });
+};
+
+// Upload message attachment with direct Cloudinary upload
 export const uploadMessageAttachment = async (req, res) => {
   try {
-    // Use multer middleware with promise-based approach for Multer 2.x
+    // Use multer middleware
     const uploadSingle = upload.single('file');
     
     uploadSingle(req, res, async (err) => {
@@ -104,63 +110,93 @@ export const uploadMessageAttachment = async (req, res) => {
       const file = req.file;
       const fileType = req.body.type || 'file';
 
-      let responseData = {
-        url: file.path,
-        filename: file.originalname,
-        size: file.size,
-        mimeType: file.mimetype,
-        type: fileType
-      };
-
-      // For images, get dimensions and create thumbnail
-      if (file.mimetype.startsWith('image/')) {
-        try {
-          // Get image metadata
-          const metadata = await sharp(file.buffer || file.path).metadata();
-          responseData.width = metadata.width;
-          responseData.height = metadata.height;
-
-          // Create thumbnail URL (Cloudinary auto-generates these)
-          const thumbnailUrl = file.path.replace('/upload/', '/upload/c_thumb,w_200,h_200/');
-          responseData.thumbnail = thumbnailUrl;
-        } catch (imageError) {
-          console.error('Error processing image:', imageError);
-          // Continue without thumbnail if processing fails
+      try {
+        // Determine resource type for Cloudinary
+        let resourceType = 'auto';
+        let folder = 'message-attachments';
+        
+        if (file.mimetype.startsWith('image/')) {
+          resourceType = 'image';
+          folder = 'message-images';
+        } else if (file.mimetype.startsWith('video/')) {
+          resourceType = 'video';
+          folder = 'message-videos';
+        } else if (file.mimetype.startsWith('audio/')) {
+          resourceType = 'video'; // Cloudinary uses 'video' for audio files
+          folder = 'message-audio';
         }
-      }
 
-      // For videos, extract duration and create thumbnail
-      if (file.mimetype.startsWith('video/')) {
-        try {
-          // Cloudinary provides video metadata
-          const videoInfo = await cloudinary.api.resource(file.public_id, { resource_type: 'video' });
-          responseData.duration = videoInfo.duration;
-          responseData.width = videoInfo.width;
-          responseData.height = videoInfo.height;
+        // Upload to Cloudinary
+        const uploadResult = await uploadToCloudinary(file.buffer, {
+          resource_type: resourceType,
+          folder: folder,
+          public_id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+        });
 
-          // Create video thumbnail
-          const thumbnailUrl = file.path.replace('/upload/', '/upload/so_0,c_thumb,w_200,h_200/').replace(/\.[^/.]+$/, '.jpg');
-          responseData.thumbnail = thumbnailUrl;
-        } catch (videoError) {
-          console.error('Error processing video:', videoError);
+        let responseData = {
+          url: uploadResult.secure_url,
+          filename: file.originalname,
+          size: file.size,
+          mimeType: file.mimetype,
+          type: fileType,
+          public_id: uploadResult.public_id
+        };
+
+        // For images, get dimensions and create thumbnail
+        if (file.mimetype.startsWith('image/')) {
+          try {
+            // Get image metadata using sharp
+            const metadata = await sharp(file.buffer).metadata();
+            responseData.width = metadata.width;
+            responseData.height = metadata.height;
+
+            // Create thumbnail URL using Cloudinary transformations
+            const thumbnailUrl = uploadResult.secure_url.replace('/upload/', '/upload/c_thumb,w_200,h_200/');
+            responseData.thumbnail = thumbnailUrl;
+          } catch (imageError) {
+            console.error('Error processing image:', imageError);
+            // Continue without thumbnail if processing fails
+          }
         }
-      }
 
-      // For audio files, extract duration
-      if (file.mimetype.startsWith('audio/')) {
-        try {
-          const audioInfo = await cloudinary.api.resource(file.public_id, { resource_type: 'video' });
-          responseData.duration = audioInfo.duration;
-        } catch (audioError) {
-          console.error('Error processing audio:', audioError);
+        // For videos, extract duration and create thumbnail
+        if (file.mimetype.startsWith('video/')) {
+          try {
+            // Cloudinary provides video metadata
+            responseData.duration = uploadResult.duration;
+            responseData.width = uploadResult.width;
+            responseData.height = uploadResult.height;
+
+            // Create video thumbnail using Cloudinary transformations
+            const thumbnailUrl = uploadResult.secure_url.replace('/upload/', '/upload/so_0,c_thumb,w_200,h_200/').replace(/\.[^/.]+$/, '.jpg');
+            responseData.thumbnail = thumbnailUrl;
+          } catch (videoError) {
+            console.error('Error processing video:', videoError);
+          }
         }
-      }
 
-      res.json({
-        success: true,
-        data: responseData,
-        message: 'File uploaded successfully'
-      });
+        // For audio files, extract duration
+        if (file.mimetype.startsWith('audio/')) {
+          try {
+            responseData.duration = uploadResult.duration;
+          } catch (audioError) {
+            console.error('Error processing audio:', audioError);
+          }
+        }
+
+        res.json({
+          success: true,
+          data: responseData,
+          message: 'File uploaded successfully'
+        });
+
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload error:', cloudinaryError);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to upload file to cloud storage'
+        });
+      }
     });
 
   } catch (error) {
@@ -172,7 +208,7 @@ export const uploadMessageAttachment = async (req, res) => {
   }
 };
 
-// Upload profile image with Multer 2.x error handling
+// Upload profile image with direct Cloudinary upload
 export const uploadProfileImage = async (req, res) => {
   try {
     const uploadSingle = upload.single('image');
@@ -200,14 +236,30 @@ export const uploadProfileImage = async (req, res) => {
         });
       }
 
-      res.json({
-        success: true,
-        data: {
-          url: req.file.path,
-          public_id: req.file.public_id
-        },
-        message: 'Image uploaded successfully'
-      });
+      try {
+        // Upload to Cloudinary
+        const uploadResult = await uploadToCloudinary(req.file.buffer, {
+          resource_type: 'image',
+          folder: 'profile-images',
+          public_id: `profile-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+        });
+
+        res.json({
+          success: true,
+          data: {
+            url: uploadResult.secure_url,
+            public_id: uploadResult.public_id
+          },
+          message: 'Image uploaded successfully'
+        });
+
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload error:', cloudinaryError);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to upload image to cloud storage'
+        });
+      }
     });
 
   } catch (error) {

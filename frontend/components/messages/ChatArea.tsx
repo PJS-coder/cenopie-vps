@@ -61,6 +61,7 @@ export default function ChatArea({
 }: ChatAreaProps) {
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -83,10 +84,12 @@ export default function ChatArea({
     
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    const isAtTop = scrollTop <= 10; // Small threshold for top detection
     
-    // Update scroll to bottom button visibility
-    setShowScrollToBottom(!isNearBottom);
+    // Update scroll to bottom button visibility with debouncing to prevent flickering
+    const shouldShowButton = !isNearBottom;
+    if (showScrollToBottom !== shouldShowButton) {
+      setShowScrollToBottom(shouldShowButton);
+    }
     
     // Track user scrolling
     isUserScrollingRef.current = true;
@@ -101,23 +104,9 @@ export default function ChatArea({
       isUserScrollingRef.current = false;
     }, 150);
     
-    // Load more messages when at top (with small threshold)
-    if (isAtTop && hasMoreMessages && !loading) {
-      // Store current scroll height to maintain position after loading
-      const currentScrollHeight = scrollHeight;
-      
-      onLoadMoreMessages();
-      
-      // Maintain scroll position after new messages load
-      setTimeout(() => {
-        if (messagesContainerRef.current) {
-          const newScrollHeight = messagesContainerRef.current.scrollHeight;
-          const heightDifference = newScrollHeight - currentScrollHeight;
-          messagesContainerRef.current.scrollTop = heightDifference + 10; // Small offset from top
-        }
-      }, 100);
-    }
-  }, [hasMoreMessages, loading, onLoadMoreMessages]);
+    // REMOVED: Automatic load more on scroll to prevent flickering
+    // Users must now manually click "Load older messages" button
+  }, [showScrollToBottom]);
 
   // Scroll to bottom when conversation changes
   useEffect(() => {
@@ -240,49 +229,49 @@ export default function ChatArea({
   };
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center gap-3">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 flex items-center justify-between p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[60px]">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {/* Back button (mobile) */}
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="md:hidden w-8 h-8 p-0"
+            className="md:hidden w-8 h-8 p-0 flex-shrink-0"
           >
             <ArrowLeftIcon className="w-4 h-4" />
           </Button>
 
           {/* Avatar */}
-          <div className="relative">
-            <Avatar className="w-10 h-10">
+          <div className="relative flex-shrink-0">
+            <Avatar className="w-8 h-8 md:w-10 md:h-10">
               <AvatarImage 
                 src={getConversationAvatar()} 
                 alt={getConversationName()}
               />
-              <AvatarFallback className="bg-[#0BC0DF] text-white">
+              <AvatarFallback className="bg-[#0BC0DF] text-white text-sm">
                 {getConversationName().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             
             {/* Status indicator */}
             {conversation.type === 'direct' && (
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 ${getStatusColor()} border-2 border-white dark:border-gray-800 rounded-full`}></div>
+              <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 md:w-3 md:h-3 ${getStatusColor()} border-2 border-white dark:border-gray-800 rounded-full`}></div>
             )}
           </div>
 
           {/* Name and status */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
-              <h2 className="font-semibold text-gray-900 dark:text-white truncate">
+              <h2 className="font-semibold text-gray-900 dark:text-white truncate text-sm md:text-base">
                 {getConversationName()}
               </h2>
               {isVerified() && (
                 <VerificationBadge isVerified={true} size="sm" />
               )}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate">
               {typingUsers.length > 0 ? (
                 <span className="text-[#0BC0DF]">
                   {typingUsers.length === 1 
@@ -298,34 +287,26 @@ export default function ChatArea({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={onSearch}
-            className="w-8 h-8 p-0"
+            className="w-8 h-8 p-0 hidden md:flex"
           >
             <MagnifyingGlassIcon className="w-4 h-4" />
           </Button>
-
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-8 h-8 p-0"
-              >
+              <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
                 <EllipsisVerticalIcon className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onSearch}>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={onSearch} className="md:hidden">
                 <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
                 Search in conversation
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <InformationCircleIcon className="w-4 h-4 mr-2" />
-                Conversation info
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onArchive}>
                 Archive conversation
@@ -338,90 +319,116 @@ export default function ChatArea({
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Scrollable Messages Area - Only vertical scrolling allowed */}
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto bg-white dark:bg-gray-900"
+        style={{ 
+          overscrollBehavior: 'none',
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
-        {/* Load more indicator - removed ref since we're not using intersection observer */}
+        {/* Load more button */}
         {hasMoreMessages && (
-          <div className="flex justify-center py-2">
-            {loading ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#0BC0DF] border-t-transparent"></div>
+          <div className="flex justify-center py-4">
+            {isLoadingMore ? (
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#0BC0DF] border-t-transparent"></div>
+                <span className="text-sm">Loading older messages...</span>
+              </div>
             ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onLoadMoreMessages}
-                className="text-[#0BC0DF]"
+                onClick={async () => {
+                  if (isLoadingMore) return;
+                  setIsLoadingMore(true);
+                  try {
+                    const currentScrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+                    await onLoadMoreMessages();
+                    setTimeout(() => {
+                      if (messagesContainerRef.current) {
+                        const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                        const heightDifference = newScrollHeight - currentScrollHeight;
+                        messagesContainerRef.current.scrollTop = heightDifference + 100;
+                      }
+                    }, 100);
+                  } catch (error) {
+                    console.error('Failed to load more messages:', error);
+                  } finally {
+                    setTimeout(() => setIsLoadingMore(false), 500);
+                  }
+                }}
+                className="text-[#0BC0DF] hover:bg-[#0BC0DF]/10 px-4 py-2"
+                disabled={isLoadingMore}
               >
-                Load more messages
+                Load older messages
               </Button>
             )}
           </div>
         )}
 
-        {/* Messages grouped by date */}
-        {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-          <div key={date}>
-            {/* Date header */}
-            <div className="flex justify-center mb-4">
-              <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  {formatDateHeader(date)}
-                </span>
+        {/* Messages */}
+        <div className="px-4 pb-4">
+          {Object.entries(groupedMessages).map(([date, dateMessages]) => (
+            <div key={date} className="mb-4">
+              {/* Date header */}
+              <div className="flex justify-center mb-3">
+                <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                    {formatDateHeader(date)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Messages for this date */}
+              <div className="space-y-0.5 md:space-y-1">
+                {dateMessages.map((message, index) => {
+                  const isOwn = message.sender._id === currentUserId;
+                  const prevMessage = index > 0 ? dateMessages[index - 1] : null;
+                  const nextMessage = index < dateMessages.length - 1 ? dateMessages[index + 1] : null;
+                  
+                  const showAvatar = !prevMessage || prevMessage.sender._id !== message.sender._id;
+                  const showTimestamp = !nextMessage || 
+                    nextMessage.sender._id !== message.sender._id ||
+                    new Date(nextMessage.createdAt).getTime() - new Date(message.createdAt).getTime() > 5 * 60 * 1000;
+
+                  return (
+                    <MessageBubble
+                      key={`${message._id}-${index}-${date}`}
+                      message={message}
+                      isOwn={isOwn}
+                      showAvatar={showAvatar}
+                      showTimestamp={showTimestamp}
+                      currentUserId={currentUserId}
+                      onReply={handleReply}
+                      onDelete={onDeleteMessage}
+                    />
+                  );
+                })}
               </div>
             </div>
+          ))}
 
-            {/* Messages for this date */}
-            <div className="space-y-2">
-              {dateMessages.map((message, index) => {
-                const isOwn = message.sender._id === currentUserId;
-                const prevMessage = index > 0 ? dateMessages[index - 1] : null;
-                const nextMessage = index < dateMessages.length - 1 ? dateMessages[index + 1] : null;
-                
-                // Show avatar if it's the first message from this sender or sender changed
-                const showAvatar = !prevMessage || prevMessage.sender._id !== message.sender._id;
-                
-                // Show timestamp if it's the last message from this sender or significant time gap
-                const showTimestamp = !nextMessage || 
-                  nextMessage.sender._id !== message.sender._id ||
-                  new Date(nextMessage.createdAt).getTime() - new Date(message.createdAt).getTime() > 5 * 60 * 1000; // 5 minutes
-
-                return (
-                  <MessageBubble
-                    key={`${message._id}-${index}-${date}`}
-                    message={message}
-                    isOwn={isOwn}
-                    showAvatar={showAvatar}
-                    showTimestamp={showTimestamp}
-                    currentUserId={currentUserId}
-                    onReply={handleReply}
-                    onDelete={onDeleteMessage}
-                  />
-                );
-              })}
+          {/* Typing indicator */}
+          {typingUsers.length > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <span className="text-sm text-gray-500">
+                {typingUsers.length === 1 
+                  ? `${typingUsers[0].userName} is typing...`
+                  : `${typingUsers.length} people are typing...`
+                }
+              </span>
             </div>
-          </div>
-        ))}
-
-        {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <div className="flex items-center gap-2 p-2">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            </div>
-            <span className="text-sm text-gray-500">
-              {typingUsers.length === 1 
-                ? `${typingUsers[0].userName} is typing...`
-                : `${typingUsers.length} people are typing...`
-              }
-            </span>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
@@ -429,7 +436,7 @@ export default function ChatArea({
 
       {/* Scroll to bottom button */}
       {showScrollToBottom && (
-        <div className="absolute bottom-24 lg:bottom-20 right-4">
+        <div className="absolute bottom-20 right-4 z-40">
           <Button
             onClick={() => scrollToBottom()}
             className="w-10 h-10 rounded-full bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white shadow-lg"
@@ -439,15 +446,17 @@ export default function ChatArea({
         </div>
       )}
 
-      {/* Message input */}
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        onTypingStart={onTypingStart}
-        onTypingStop={onTypingStop}
-        replyToMessage={replyToMessage}
-        onClearReply={handleClearReply}
-        disabled={false}
-      />
+      {/* Fixed Message Input */}
+      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          onTypingStart={onTypingStart}
+          onTypingStop={onTypingStop}
+          replyToMessage={replyToMessage}
+          onClearReply={handleClearReply}
+          disabled={false}
+        />
+      </div>
     </div>
   );
 }

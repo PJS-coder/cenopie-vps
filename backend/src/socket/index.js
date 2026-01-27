@@ -281,6 +281,27 @@ export default function initSocket(io) {
     // Initialize ultra-performance message handlers
     initMessageSocket(io, socket, ultraMessageQueue);
     
+    // Auto-join user's conversations
+    setImmediate(async () => {
+      try {
+        const { default: ConversationModel } = await import('../models/Conversation.js');
+        const conversations = await ConversationModel.find({
+          'participants.user': userId,
+          'participants.isActive': true
+        }).select('_id');
+        
+        conversations.forEach(conv => {
+          socket.join(`conversation:${conv._id}`);
+        });
+        
+        if (!IS_PRODUCTION) {
+          console.log(`👥 User ${userId} joined ${conversations.length} conversation rooms`);
+        }
+      } catch (error) {
+        console.error('❌ Error joining conversation rooms:', error);
+      }
+    });
+    
     // Ultra-fast ping/pong for connection health
     socket.on('ping', () => {
       socket.emit('pong', { 

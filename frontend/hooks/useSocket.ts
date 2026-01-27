@@ -7,6 +7,7 @@ const useSocket = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const [hasConnectedOnce, setHasConnectedOnce] = useState(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectSocket = useCallback(() => {
@@ -77,6 +78,7 @@ const useSocket = () => {
 
     socket.on('connect', () => {
       setIsConnected(true);
+      setHasConnectedOnce(true);
       setConnectionError(null);
       
       // Clear any reconnection timeout
@@ -155,6 +157,13 @@ const useSocket = () => {
       const errorMessage = typeof error === 'string' ? error : (error.message || error.error || 'Message error');
       setConnectionError(errorMessage);
       
+      // If there's a clientId, mark the corresponding temp message as failed
+      if (error.clientId) {
+        window.dispatchEvent(new CustomEvent('socket:message:failed', { 
+          detail: { clientId: error.clientId, error: errorMessage } 
+        }));
+      }
+      
       window.dispatchEvent(new CustomEvent('socket:message:error', { detail: error }));
     });
 
@@ -204,17 +213,34 @@ const useSocket = () => {
   }, []);
 
   useEffect(() => {
-    const socket = connectSocket();
+    // Only connect if we have a valid token
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userId = currentUser._id || currentUser.id;
+    
+    if (token && userId) {
+      // Small delay to prevent flash of reconnecting state
+      const connectTimeout = setTimeout(() => {
+        const socket = connectSocket();
+      }, 100);
 
-    // Cleanup
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+      // Cleanup
+      return () => {
+        clearTimeout(connectTimeout);
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        if (socketRef.current) {
+          socketRef.current.close();
+        }
+      };
+    } else {
+      // No valid credentials, don't attempt connection
+      // Only set error if we're not already authenticated
+      if (!hasConnectedOnce) {
+        setConnectionError('Authentication required');
       }
-      if (socket) {
-        socket.close();
-      }
-    };
+    }
   }, [connectSocket]);
 
   // Send message via socket
@@ -345,6 +371,8 @@ const useSocket = () => {
     typingUsers,
     forceReconnect,
     clearTokensAndReconnect,
+    hasConnectedOnce,
+    isReconnecting: hasConnectedOnce && !isConnected,
   };
 };
 

@@ -3,9 +3,10 @@ import logger from './logger.js';
 
 const connectDB = async () => {
   try {
-    // Force load production environment
+    // Force load production environment using ES module syntax
     if (process.env.NODE_ENV === 'production') {
-      require('dotenv').config({ path: '.env.production' });
+      const { config } = await import('dotenv');
+      config({ path: '.env.production' });
     }
     
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/canopie';

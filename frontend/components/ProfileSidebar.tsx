@@ -109,7 +109,7 @@ export default function ProfileSidebar({ userId, currentUserId }: ProfileSidebar
   }
 
   return (
-    <div className="lg:sticky lg:top-[80px] space-y-6">
+    <div className="lg:sticky lg:top-6 space-y-6">
       {/* User Profile Banner Card */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
         {/* Banner Image */}

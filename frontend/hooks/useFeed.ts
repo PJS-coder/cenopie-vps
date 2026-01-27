@@ -33,6 +33,10 @@ interface UseFeedProps {
   filter?: 'all' | 'following';
 }
 
+// Simple cache to prevent unnecessary API calls
+let feedCache: { [key: string]: { data: FeedPost[]; timestamp: number; page: number } } = {};
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for feed data
+
 export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   
-  // Removed console.log for better performance
+  const cacheKey = `feed-${filter}`;
   
   // Helper function to ensure posts array has unique IDs (simplified)
   const ensureUniquePosts = useCallback((postsArray: FeedPost[]): FeedPost[] => {
@@ -59,7 +63,6 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     setPosts(prev => {
       const updated = updater(prev);
       const deduplicated = ensureUniquePosts(updated);
-      // Posts updated for better performance
       return deduplicated;
     });
   }, [ensureUniquePosts]);
@@ -72,6 +75,15 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     try {
       setLoading(pageNum === 1);
       setError(null);
+      
+      // Check cache first for page 1
+      if (pageNum === 1 && !forceRefresh && feedCache[cacheKey] && 
+          Date.now() - feedCache[cacheKey].timestamp < CACHE_DURATION) {
+        setPosts(feedCache[cacheKey].data);
+        setHasMore(feedCache[cacheKey].data.length >= 10);
+        setLoading(false);
+        return;
+      }
       
       const response: any = await feedApi.getFeed(filter, pageNum);
       
@@ -100,6 +112,12 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         
         if (pageNum === 1) {
           setPosts(transformedPosts);
+          // Update cache
+          feedCache[cacheKey] = { 
+            data: transformedPosts, 
+            timestamp: Date.now(), 
+            page: 1 
+          };
         } else {
           setPosts(prev => [...prev, ...transformedPosts]);
         }
@@ -113,7 +131,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [filter, loading]);
+  }, [filter, loading, cacheKey]);
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
@@ -129,9 +147,11 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
       if (mediaType) postData.mediaType = mediaType;
       
       const response: any = await feedApi.createPost(postData);
-      // Post created successfully
       
       if (response.data) {
+        // Clear cache when new post is created
+        delete feedCache[cacheKey];
+        
         // Transform the new post to match our FeedPost interface
         const newPost = {
           id: response.data._id || response.data.id,
@@ -147,30 +167,20 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           isConnected: response.data.isConnected || false,
           authorId: response.data.author?._id || response.data.author?.id || response.data.authorId,
           profileImage: response.data.author?.profileImage || response.data.profileImage,
-          isLiked: response.data.isLiked || true, // The author of a post automatically likes it
-          isVerified: response.data.author?.isVerified || response.data.isVerified || false, // Add isVerified property
-          // Add repost information
+          isLiked: response.data.isLiked || true,
+          isVerified: response.data.author?.isVerified || response.data.isVerified || false,
           isRepost: response.data.isRepost || false,
           originalPost: response.data.originalPost || null
         };
         
-        console.log('New post to be added:', newPost);
-        console.log('Existing posts before adding new post:', posts);
-        
         // Add the new post to the beginning of the feed, ensuring no duplicates
         updatePostsSafely(prev => {
-          // Check if post already exists
           const existingIndex = prev.findIndex(post => post.id === newPost.id);
-          console.log('Existing post index:', existingIndex);
           if (existingIndex >= 0) {
-            // If it exists, replace it
-            console.log('Replacing existing post with ID:', newPost.id);
             const updatedPosts = [...prev];
             updatedPosts[existingIndex] = newPost;
             return updatedPosts;
           } else {
-            // If it doesn't exist, add it to the beginning
-            console.log('Adding new post with ID:', newPost.id);
             return [newPost, ...prev];
           }
         });
@@ -396,6 +406,14 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     setHasMore(true);
     setError(null);
     
+    // Check cache first
+    if (feedCache[cacheKey] && Date.now() - feedCache[cacheKey].timestamp < CACHE_DURATION) {
+      setPosts(feedCache[cacheKey].data);
+      setHasMore(feedCache[cacheKey].data.length >= 10);
+      setLoading(false);
+      return;
+    }
+    
     // Fetch new data immediately
     const fetchData = async () => {
       try {
@@ -430,6 +448,13 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
             
             setPosts(transformedPosts);
             setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
+            
+            // Update cache
+            feedCache[cacheKey] = { 
+              data: transformedPosts, 
+              timestamp: Date.now(), 
+              page: 1 
+            };
           } else {
             setPosts([]);
             setHasMore(false);
@@ -448,7 +473,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     };
     
     fetchData();
-  }, [filter]);
+  }, [filter, cacheKey]);
   
   return {
     posts,

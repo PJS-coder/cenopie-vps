@@ -96,7 +96,7 @@ export default function MessageInput({
   }, [message, replyToMessage, onSendMessage, onClearReply, onTypingStop]);
 
   return (
-    <div className={`bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 lg:mb-0 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Reply preview */}
       {replyToMessage && (
         <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -114,7 +114,7 @@ export default function MessageInput({
                 size="sm"
                 variant="ghost"
                 onClick={onClearReply}
-                className="w-6 h-6 p-0"
+                className="w-6 h-6 p-0 flex-shrink-0"
               >
                 <XMarkIcon className="w-4 h-4" />
               </Button>
@@ -123,8 +123,8 @@ export default function MessageInput({
         </div>
       )}
 
-      {/* Input area */}
-      <div className="p-3 pb-safe lg:pb-3">
+      {/* Input area - Clean layout without overlapping */}
+      <div className="px-3 py-2 safe-area-bottom">
         <div className="flex items-end gap-2">
           {/* Message input */}
           <div className="flex-1">
@@ -136,15 +136,15 @@ export default function MessageInput({
               onKeyPress={handleKeyPress}
               placeholder={placeholder}
               disabled={disabled}
-              className="resize-none border-gray-200 dark:border-gray-600 focus:ring-[#0BC0DF] focus:border-[#0BC0DF]"
+              className="resize-none border-gray-200 dark:border-gray-600 focus:ring-[#0BC0DF] focus:border-[#0BC0DF] h-10 md:h-10"
             />
           </div>
 
-          {/* Send button */}
+          {/* Send button - Mobile optimized */}
           <Button
             onClick={handleSendMessage}
             disabled={disabled || !message.trim()}
-            className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white w-8 h-8 p-0"
+            className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white w-10 h-10 p-0 flex-shrink-0"
           >
             <PaperAirplaneIcon className="w-4 h-4" />
           </Button>

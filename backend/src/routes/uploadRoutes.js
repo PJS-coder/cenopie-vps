@@ -3,6 +3,7 @@ import multer from 'multer';
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { protect } from '../middlewares/authMiddleware.js';
+import { uploadMessageAttachment, uploadProfileImage, deleteFile } from '../controllers/uploadController.js';
 
 const router = express.Router();
 
@@ -25,6 +26,15 @@ const upload = multer({
 router.get('/test', (req, res) => {
   res.json({ message: 'Upload route is working!' });
 });
+
+// Upload message attachment
+router.post('/message-attachment', protect, uploadMessageAttachment);
+
+// Upload profile image
+router.post('/profile-image', protect, uploadProfileImage);
+
+// Delete file
+router.delete('/file', protect, deleteFile);
 
 // Upload interview video
 router.post('/interview-video', protect, upload.single('video'), async (req, res) => {

@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 import { config } from 'dotenv';
 config();
 
@@ -141,7 +142,6 @@ export const verifyRazorpaySignature = (orderId, paymentId, signature) => {
     throw new Error('Razorpay not configured');
   }
 
-  const crypto = require('crypto');
   const text = `${orderId}|${paymentId}`;
   const generated_signature = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)

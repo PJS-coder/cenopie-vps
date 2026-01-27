@@ -14,7 +14,7 @@ export default function PeopleYouMayKnow({ currentUserId }: PeopleYouMayKnowProp
   const { users: suggestedUsers, loading: suggestedUsersLoading, error: suggestedUsersError } = useSuggestedUsers();
 
   return (
-    <div className="lg:sticky lg:top-[80px] space-y-6">
+    <div className="lg:sticky lg:top-6 space-y-6">
       {/* People You May Know */}
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 dark:border-gray-700">

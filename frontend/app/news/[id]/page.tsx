@@ -215,7 +215,7 @@ export default function NewsArticlePage() {
             
             {/* Left Sidebar - Profile & Quick Actions */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <div className="lg:sticky lg:top-[140px] space-y-6">
+              <div className="lg:sticky lg:top-[72px] space-y-6">
                 {/* User Profile Banner Card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
                   {/* Banner Image */}
@@ -413,7 +413,7 @@ export default function NewsArticlePage() {
 
             {/* Right Sidebar - People You May Know */}
             <div className="lg:col-span-1 order-3 lg:order-3">
-              <div className="lg:sticky lg:top-[140px] space-y-6">
+              <div className="lg:sticky lg:top-[72px] space-y-6">
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white">People You May Know</h3>

@@ -23,6 +23,8 @@ export default function MessagesPage() {
     loading,
     error,
     isConnected,
+    isReconnecting,
+    connectionError,
     loadMessages,
     sendMessage,
     startTyping,
@@ -247,67 +249,77 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="fixed inset-0 top-14 sm:top-16 bg-gray-50 dark:bg-gray-900">
-      <div className="w-full h-full flex justify-center">
-        <div className="w-full lg:w-[1200px] flex flex-1 overflow-hidden mobile-safe-container">
-          {/* Conversation List */}
-          <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-gray-200 dark:border-gray-700`}>
-            <ConversationList
-              conversations={conversations}
-              selectedConversationId={selectedConversation?._id}
-              onSelectConversation={handleSelectConversation}
-              loading={loading}
-              className="w-full"
-            />
-          </div>
+    <div className="messages-page-lock bg-white dark:bg-gray-900">
+      {/* Mobile-first responsive container */}
+      <div className="flex h-full overflow-hidden">
+        {/* Conversation List - Full width on mobile, sidebar on desktop */}
+        <div className={`${
+          selectedConversation 
+            ? 'hidden md:flex md:w-80' 
+            : 'flex w-full md:w-80'
+        } border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 no-overscroll`}>
+          <ConversationList
+            conversations={conversations}
+            selectedConversationId={selectedConversation?._id}
+            onSelectConversation={handleSelectConversation}
+            loading={loading}
+            className="w-full"
+          />
+        </div>
 
-          {/* Chat Area */}
-          <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-1`}>
-            {selectedConversation ? (
-              <ChatArea
-                conversation={selectedConversation}
-                messages={getConversationMessages(selectedConversation._id)}
-                currentUserId={currentUserId}
-                typingUsers={getTypingUsersForConversation(selectedConversation._id)}
-                userStatus={selectedConversation.type === 'direct' ? getUserStatus(selectedConversation.otherParticipant?._id || '') : undefined}
-                onSendMessage={handleSendMessage}
-                onLoadMoreMessages={handleLoadMoreMessages}
-                onTypingStart={handleTypingStart}
-                onTypingStop={handleTypingStop}
-                onBack={handleBack}
-                onSearch={handleSearch}
-                onArchive={handleArchive}
-                onDelete={handleDelete}
-                onDeleteMessage={handleDeleteMessage}
-                loading={loadingMessages}
-                hasMoreMessages={hasMoreMessages}
-                className="w-full"
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ChatBubbleLeftRightIcon className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Select a conversation
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Choose a conversation from the sidebar to start messaging
-                  </p>
+        {/* Chat Area - Full width on mobile when conversation selected */}
+        <div className={`${
+          selectedConversation 
+            ? 'flex w-full md:flex-1' 
+            : 'hidden md:flex md:flex-1'
+        } flex-col overflow-hidden no-overscroll`}>
+          {selectedConversation ? (
+            <ChatArea
+              conversation={selectedConversation}
+              messages={getConversationMessages(selectedConversation._id)}
+              currentUserId={currentUserId}
+              typingUsers={getTypingUsersForConversation(selectedConversation._id)}
+              userStatus={selectedConversation.type === 'direct' ? getUserStatus(selectedConversation.otherParticipant?._id || '') : undefined}
+              onSendMessage={handleSendMessage}
+              onLoadMoreMessages={handleLoadMoreMessages}
+              onTypingStart={handleTypingStart}
+              onTypingStop={handleTypingStop}
+              onBack={handleBack}
+              onSearch={handleSearch}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+              onDeleteMessage={handleDeleteMessage}
+              hasMoreMessages={hasMoreMessages}
+              className="flex-1"
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800 p-8">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ChatBubbleLeftRightIcon className="w-8 h-8 text-gray-400" />
                 </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Select a conversation
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Choose a conversation from the sidebar to start messaging
+                </p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Connection status indicator */}
-      {!isConnected && (
-        <div className="fixed bottom-20 lg:bottom-4 left-4 bg-red-500 text-white px-3 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2">
+      {/* Connection status indicator - Mobile optimized positioning */}
+      {(isReconnecting || connectionError) && (
+        <div className={`fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:bottom-4 px-3 py-2 rounded-lg shadow-lg z-50 ${
+          connectionError ? 'bg-red-500' : 'bg-yellow-500'
+        } text-white safe-area-bottom`}>
+          <div className="flex items-center gap-2 justify-center md:justify-start">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-sm">Reconnecting...</span>
+            <span className="text-sm">
+              {connectionError ? 'Connection failed' : 'Reconnecting...'}
+            </span>
           </div>
         </div>
       )}

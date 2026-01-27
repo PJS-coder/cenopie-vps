@@ -140,114 +140,117 @@ export default function MessageBubble({
   };
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group ${className}`}>
-      <div className={`flex gap-2 max-w-[70%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-        {/* Avatar */}
-        {showAvatar && !isOwn && (
-          <div className="flex-shrink-0">
-            <Avatar className="w-8 h-8">
-              <AvatarImage 
-                src={message.sender.profileImage} 
-                alt={message.sender.name}
-              />
-              <AvatarFallback className="bg-[#0BC0DF] text-white text-xs">
-                {message.sender.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        )}
-
-        {/* Message Content */}
-        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-          {/* Sender name for non-own messages */}
-          {!isOwn && showAvatar && (
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                {message.sender.name}
-              </span>
-              {message.sender.isVerified && (
-                <VerificationBadge isVerified={true} size="sm" />
-              )}
+    <div className={`flex w-full px-2 py-0.5 md:py-1 group ${className}`}>
+      <div className={`flex w-full ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className={`flex gap-2 max-w-[75%] sm:max-w-[65%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+          {/* Avatar - only for received messages */}
+          {showAvatar && !isOwn && (
+            <div className="flex-shrink-0 self-end">
+              <Avatar className="w-7 h-7">
+                <AvatarImage 
+                  src={message.sender.profileImage} 
+                  alt={message.sender.name}
+                />
+                <AvatarFallback className="bg-[#0BC0DF] text-white text-xs">
+                  {message.sender.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
             </div>
           )}
 
-          {/* Message bubble */}
-          <div
-            className={`relative rounded-2xl px-4 py-2 ${
-              isOwn
-                ? 'bg-[#0BC0DF] text-white rounded-br-md'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-md'
-            }`}
-          >
-            {renderReplyTo()}
-            
-            {message.content && (
-              <p className="text-sm whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-            )}
-            
-            {renderAttachments()}
-          </div>
-
-          {/* Timestamp and status */}
-          {showTimestamp && (
-            <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {formatTime(message.createdAt)}
-                {message.edited && ' (edited)'}
-              </span>
-              {isOwn && (
-                <div className="flex items-center" title={getMessageStatus()}>
-                  {getStatusIcon()}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Message actions - only three dots menu */}
-        <div className={`flex-shrink-0 flex items-start pt-2 opacity-0 group-hover:opacity-100 transition-opacity ${
-          isOwn 
-            ? 'order-first mr-2' // For own messages: buttons on left side
-            : 'ml-2'             // For received messages: buttons on right side
-        }`}>
-          <div className="flex items-center gap-1">
-            {/* More actions - only three dots menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-8 h-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"
-                >
-                  <EllipsisHorizontalIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align={isOwn ? 'start' : 'end'}>
-                {onReply && (
-                  <DropdownMenuItem onClick={() => onReply(message)}>
-                    <ArrowUturnLeftIcon className="w-4 h-4 mr-2" />
-                    Reply
-                  </DropdownMenuItem>
+          {/* Message Content Container */}
+          <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} relative`}>
+            {/* Sender name for received messages */}
+            {!isOwn && showAvatar && (
+              <div className="flex items-center gap-1 mb-1 px-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {message.sender.name}
+                </span>
+                {message.sender.isVerified && (
+                  <VerificationBadge isVerified={true} size="sm" />
                 )}
-                {isOwn && onDelete && (
-                  <>
-                    <DropdownMenuItem onClick={() => onDelete(message._id, false)}>
-                      <TrashIcon className="w-4 h-4 mr-2" />
-                      Delete for me
-                    </DropdownMenuItem>
-                    {canDeleteForEveryone() && (
-                      <DropdownMenuItem onClick={() => onDelete(message._id, true)}>
-                        <TrashIcon className="w-4 h-4 mr-2" />
-                        Delete for everyone
+              </div>
+            )}
+
+            {/* Message bubble with hover actions */}
+            <div className={`relative group/message ${isOwn ? 'flex flex-row-reverse items-center gap-1' : 'flex items-center gap-1'}`}>
+              {/* Message bubble */}
+              <div
+                className={`relative px-3 py-2 max-w-full ${
+                  isOwn
+                    ? 'bg-[#0BC0DF] text-white rounded-2xl rounded-br-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md'
+                }`}
+              >
+                {renderReplyTo()}
+                
+                {message.content && (
+                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                    {message.content}
+                  </p>
+                )}
+                
+                {renderAttachments()}
+              </div>
+
+              {/* Message actions - Three dots menu */}
+              <div className="opacity-0 group-hover/message:opacity-100 transition-opacity duration-200 flex-shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-6 h-6 p-0 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"
+                    >
+                      <EllipsisHorizontalIcon className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align={isOwn ? 'start' : 'end'} className="w-48">
+                    {onReply && (
+                      <DropdownMenuItem onClick={() => onReply(message)}>
+                        <ArrowUturnLeftIcon className="w-4 h-4 mr-2" />
+                        Reply
                       </DropdownMenuItem>
                     )}
-                  </>
+                    {isOwn && onDelete && (
+                      <>
+                        <DropdownMenuItem onClick={() => onDelete(message._id, false)}>
+                          <TrashIcon className="w-4 h-4 mr-2" />
+                          Delete for me
+                        </DropdownMenuItem>
+                        {canDeleteForEveryone() && (
+                          <DropdownMenuItem onClick={() => onDelete(message._id, true)}>
+                            <TrashIcon className="w-4 h-4 mr-2" />
+                            Delete for everyone
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Timestamp and status */}
+            {showTimestamp && (
+              <div className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatTime(message.createdAt)}
+                  {message.edited && ' (edited)'}
+                </span>
+                {isOwn && (
+                  <div className="flex items-center ml-1" title={getMessageStatus()}>
+                    {getStatusIcon()}
+                  </div>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            )}
           </div>
+
+          {/* Spacer for sent messages to maintain consistent spacing */}
+          {isOwn && showAvatar && (
+            <div className="w-7 flex-shrink-0"></div>
+          )}
         </div>
       </div>
     </div>

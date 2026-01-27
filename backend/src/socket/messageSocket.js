@@ -9,6 +9,30 @@ const typingUsers = new Map();
 // Track online users
 const onlineUsers = new Map();
 
+// Rate limiting for socket messages
+const messageRateLimit = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX = 30; // 30 messages per minute
+
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const userLimit = messageRateLimit.get(userId) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+  
+  if (now > userLimit.resetTime) {
+    // Reset the rate limit window
+    userLimit.count = 0;
+    userLimit.resetTime = now + RATE_LIMIT_WINDOW;
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_MAX) {
+    return false; // Rate limit exceeded
+  }
+  
+  userLimit.count++;
+  messageRateLimit.set(userId, userLimit);
+  return true;
+}
+
 export function initMessageSocket(io, socket) {
   const userId = socket.userId;
   const user = socket.user;
@@ -77,6 +101,15 @@ export function initMessageSocket(io, socket) {
   // Handle message sending
   socket.on('message:send', async (data) => {
     try {
+      // Check rate limit
+      if (!checkRateLimit(userId)) {
+        socket.emit('message:error', { 
+          error: 'Rate limit exceeded. Please slow down.',
+          clientId: data.clientId 
+        });
+        return;
+      }
+
       const { conversationId, content, type = MESSAGE_TYPE.TEXT, replyTo, attachments, clientId } = data;
 
       // Validation
@@ -207,6 +240,8 @@ export function initMessageSocket(io, socket) {
         const participantId = participant.user.toString();
         if (participantId !== userId) {
           io.to(`user:${participantId}`).emit('message:received', messagePayload);
+          // Also emit to conversation room
+          io.to(`conversation:${conversationId}`).emit('message:received', messagePayload);
         }
       });
 

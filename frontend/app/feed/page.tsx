@@ -223,7 +223,7 @@ export default function FeedPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left Sidebar */}
             <div className="lg:col-span-1 order-1">
-              <div className="lg:sticky lg:top-[80px] space-y-6">
+              <div className="lg:sticky lg:top-[72px] space-y-6">
                 {/* User Profile Card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="relative h-24 w-full cursor-pointer" onClick={() => {
@@ -559,7 +559,7 @@ export default function FeedPage() {
               </div>
 
               {/* Sticky Container for People You May Know */}
-              <div className="lg:sticky lg:top-[80px] space-y-6">
+              <div className="lg:sticky lg:top-[72px] space-y-6">
                 {/* People You May Know */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
