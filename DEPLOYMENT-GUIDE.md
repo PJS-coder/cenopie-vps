@@ -24,7 +24,7 @@ Complete guide to deploy Cenopie on Ubuntu VPS with cenopie.com domain.
 
 ### Backend Environment Files
 
-#### `/var/www/cenopie/backend/.env.production`
+#### `/var/www/cenopie-vps/backend/.env.production`
 ```bash
 # Production Environment Variables
 NODE_ENV=production
@@ -70,7 +70,7 @@ EMAIL_FROM=Cenopie <noreply@cenopie.com>
 
 ### Frontend Environment Files
 
-#### `/var/www/cenopie/frontend/.env.production`
+#### `/var/www/cenopie-vps/frontend/.env.production`
 ```bash
 # Production Environment Variables for Frontend
 NODE_ENV=production
@@ -117,9 +117,9 @@ NEXT_PUBLIC_VERBOSE_LOGGING=false
 
 1. **Clone your repository**:
    ```bash
-   sudo mkdir -p /var/www/cenopie
-   sudo chown $USER:$USER /var/www/cenopie
-   cd /var/www/cenopie
+   sudo mkdir -p /var/www/cenopie-vps
+   sudo chown $USER:$USER /var/www/cenopie-vps
+   cd /var/www/cenopie-vps
    
    # Upload your code (choose one method):
    
@@ -128,22 +128,22 @@ NEXT_PUBLIC_VERBOSE_LOGGING=false
    
    # Method 2: SCP from local machine
    # From your local machine:
-   # scp -r ./Cenopie-production-main/* your-username@your-vps-ip:/var/www/cenopie/
+   # scp -r ./Cenopie-production-main/* your-username@your-vps-ip:/var/www/cenopie-vps/
    
    # Method 3: Upload via FTP/SFTP client
    ```
 
 2. **Set correct permissions**:
    ```bash
-   sudo chown -R $USER:$USER /var/www/cenopie
-   chmod +x /var/www/cenopie/deploy-production.sh
+   sudo chown -R $USER:$USER /var/www/cenopie-vps
+   chmod +x /var/www/cenopie-vps/deploy-production.sh
    ```
 
 ### Step 3: Run Deployment Script
 
 1. **Navigate to project directory**:
    ```bash
-   cd /var/www/cenopie
+   cd /var/www/cenopie-vps
    ```
 
 2. **Run the deployment script**:
@@ -205,12 +205,12 @@ sudo ufw status
 Set up automated MongoDB backups:
 ```bash
 # Make backup script executable
-chmod +x /var/www/cenopie/scripts/backup-mongodb.sh
+chmod +x /var/www/cenopie-vps/scripts/backup-mongodb.sh
 
 # Add to crontab for daily backups at 2 AM
 crontab -e
 # Add this line:
-0 2 * * * /var/www/cenopie/scripts/backup-mongodb.sh
+0 2 * * * /var/www/cenopie-vps/scripts/backup-mongodb.sh
 ```
 
 ## 📊 Monitoring & Management
@@ -238,8 +238,8 @@ df -h                        # Disk usage
 free -h                      # Memory usage
 
 # Log Files
-tail -f /var/www/cenopie/logs/backend-combined.log
-tail -f /var/www/cenopie/logs/frontend-combined.log
+tail -f /var/www/cenopie-vps/logs/backend-combined.log
+tail -f /var/www/cenopie-vps/logs/frontend-combined.log
 tail -f /var/log/nginx/access.log
 tail -f /var/log/nginx/error.log
 ```
@@ -264,7 +264,7 @@ tail -f /var/log/nginx/error.log
 
 1. **Pull latest changes**:
    ```bash
-   cd /var/www/cenopie
+   cd /var/www/cenopie-vps
    git pull origin main
    ```
 
@@ -288,8 +288,8 @@ tail -f /var/log/nginx/error.log
 
 1. **Edit production environment files**:
    ```bash
-   nano /var/www/cenopie/backend/.env.production
-   nano /var/www/cenopie/frontend/.env.production
+   nano /var/www/cenopie-vps/backend/.env.production
+   nano /var/www/cenopie-vps/frontend/.env.production
    ```
 
 2. **Restart applications**:
@@ -333,7 +333,7 @@ tail -f /var/log/nginx/error.log
 
 ### Log Locations
 
-- **Application Logs**: `/var/www/cenopie/logs/`
+- **Application Logs**: `/var/www/cenopie-vps/logs/`
 - **Nginx Logs**: `/var/log/nginx/`
 - **System Logs**: `/var/log/syslog`
 - **PM2 Logs**: `~/.pm2/logs/`

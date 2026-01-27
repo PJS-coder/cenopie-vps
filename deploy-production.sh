@@ -1,156 +1,129 @@
 #!/bin/bash
 
-# Cenopie Production Deployment Script for Ubuntu VPS
-# Domain: cenopie.com
-# Version: 2.0
+# Cenopie Production Deployment Script with Cloudflare SSL
+# This script deploys the Cenopie application to production with clean setup
 
 set -e  # Exit on any error
 
-echo "🚀 Starting Cenopie Production Deployment..."
-echo "📅 $(date)"
-echo "🌐 Target Domain: cenopie.com"
-echo "🖥️  Target Directory: /var/www/cenopie"
+echo "🚀 Starting Cenopie Clean Production Deployment with Cloudflare SSL..."
 
-# Check if running as root
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+PROJECT_DIR="/var/www/cenopie-vps"
+BACKEND_DIR="$PROJECT_DIR/backend"
+FRONTEND_DIR="$PROJECT_DIR/frontend"
+NGINX_CONFIG="/etc/nginx/sites-available/cenopie.com"
+DOMAIN="cenopie.com"
+SSL_DIR="/etc/ssl/cloudflare"
+
+# Function to print colored output
+print_status() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_step() {
+    echo -e "${BLUE}[STEP]${NC} $1"
+}
+
+# Check if running as root or with sudo
 if [[ $EUID -eq 0 ]]; then
-   echo "❌ This script should not be run as root for security reasons"
-   echo "💡 Run as: ./deploy-production.sh"
-   exit 1
+    print_error "This script should not be run as root. Please run as cenopie user with sudo privileges."
+    exit 1
 fi
 
-# Update system packages
-echo "📦 Updating system packages..."
-sudo apt update && sudo apt upgrade -y
+# Step 1: Clean up existing processes
+print_step "1. Cleaning up existing processes..."
+pm2 kill || print_warning "No PM2 processes to kill"
+sudo pkill -9 node || print_warning "No node processes to kill"
+sudo systemctl stop nginx || print_warning "Nginx already stopped"
 
-# Install essential packages
-echo "📥 Installing essential packages..."
-sudo apt install -y curl wget git unzip software-properties-common
+# Step 2: Clean up old configurations
+print_step "2. Cleaning up old configurations..."
+sudo rm -f /etc/nginx/sites-enabled/cenopie*
+sudo rm -f /etc/nginx/sites-available/cenopie*
+sudo rm -rf /etc/letsencrypt || print_warning "No Let's Encrypt certificates to remove"
 
-# Install Node.js 18+ LTS
-if ! command -v node &> /dev/null; then
-    echo "📥 Installing Node.js 18 LTS..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    echo "✅ Node.js $(node --version) installed"
-else
-    echo "✅ Node.js $(node --version) already installed"
-fi
+# Step 3: Update code from repository
+print_step "3. Updating code from repository..."
+cd "$PROJECT_DIR"
+git fetch origin
+git reset --hard origin/main
+git clean -fd
 
-# Install PM2 globally
-if ! command -v pm2 &> /dev/null; then
-    echo "📥 Installing PM2..."
-    sudo npm install -g pm2
-    echo "✅ PM2 installed"
-else
-    echo "✅ PM2 already installed"
-fi
+# Step 4: Install Backend Dependencies
+print_step "4. Installing backend dependencies..."
+cd "$BACKEND_DIR"
+rm -rf node_modules package-lock.json
+npm install
 
-# Install Nginx
-if ! command -v nginx &> /dev/null; then
-    echo "📥 Installing Nginx..."
-    sudo apt install -y nginx
-    echo "✅ Nginx installed"
-else
-    echo "✅ Nginx already installed"
-fi
-
-# Create application directory
-APP_DIR="/var/www/cenopie"
-if [ ! -d "$APP_DIR" ]; then
-    echo "📁 Creating application directory..."
-    sudo mkdir -p $APP_DIR
-    sudo chown $USER:$USER $APP_DIR
-    echo "✅ Directory created: $APP_DIR"
-fi
-
-# Navigate to application directory
-cd $APP_DIR
-
-# Install dependencies
-echo "📦 Installing backend dependencies..."
-cd backend
-npm ci --only=production
-echo "✅ Backend dependencies installed"
-
-echo "📦 Installing frontend dependencies..."
-cd ../frontend
-npm ci --only=production
-echo "✅ Frontend dependencies installed"
-
-# Build frontend for production
-echo "🔨 Building frontend for production..."
+# Step 5: Install Frontend Dependencies and Build
+print_step "5. Installing frontend dependencies and building..."
+cd "$FRONTEND_DIR"
+rm -rf node_modules package-lock.json .next
+npm install
 npm run build
-echo "✅ Frontend build completed"
 
-# Create logs directory
-cd $APP_DIR
-mkdir -p logs
-echo "✅ Logs directory created"
+# Step 6: Set up environment files
+print_step "6. Setting up environment files..."
+cd "$BACKEND_DIR"
+if [ ! -f .env.production ]; then
+    cp .env.example .env.production
+    print_warning "Created .env.production from template. Please update with production values."
+fi
 
-# Create PM2 ecosystem configuration
-echo "⚙️ Creating PM2 ecosystem configuration..."
-cat > ecosystem.config.js << 'EOF'
-module.exports = {
-  apps: [
-    {
-      name: 'cenopie-backend',
-      script: './backend/src/server.js',
-      cwd: '/var/www/cenopie',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 4000
-      },
-      instances: 'max',
-      exec_mode: 'cluster',
-      max_memory_restart: '1G',
-      error_file: './logs/backend-error.log',
-      out_file: './logs/backend-out.log',
-      log_file: './logs/backend-combined.log',
-      time: true,
-      autorestart: true,
-      watch: false,
-      max_restarts: 10,
-      min_uptime: '10s'
-    },
-    {
-      name: 'cenopie-frontend',
-      script: 'npm',
-      args: 'start',
-      cwd: '/var/www/cenopie/frontend',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3000
-      },
-      instances: 1,
-      max_memory_restart: '1G',
-      error_file: './logs/frontend-error.log',
-      out_file: './logs/frontend-out.log',
-      log_file: './logs/frontend-combined.log',
-      time: true,
-      autorestart: true,
-      watch: false,
-      max_restarts: 10,
-      min_uptime: '10s'
-    }
-  ]
-};
-EOF
-echo "✅ PM2 configuration created"
+cd "$FRONTEND_DIR"
+if [ ! -f .env.production ]; then
+    cp .env.local.example .env.production
+    print_warning "Created frontend .env.production from template. Please update with production values."
+fi
 
-# Create Nginx configuration with rate limiting and security
-echo "🌐 Configuring Nginx..."
-sudo tee /etc/nginx/sites-available/cenopie.com > /dev/null << 'EOF'
-# Rate limiting zones
+# Step 7: Set up Cloudflare SSL directory
+print_step "7. Setting up Cloudflare SSL directory..."
+sudo mkdir -p "$SSL_DIR"
+sudo chown root:root "$SSL_DIR"
+sudo chmod 755 "$SSL_DIR"
+
+if [ ! -f "$SSL_DIR/cenopie.com.pem" ] || [ ! -f "$SSL_DIR/cenopie.com.key" ]; then
+    print_warning "Cloudflare SSL certificates not found!"
+    print_warning "Please add your Cloudflare Origin certificates:"
+    print_warning "1. Go to Cloudflare Dashboard → SSL/TLS → Origin Server"
+    print_warning "2. Create certificate and save to:"
+    print_warning "   Certificate: sudo nano $SSL_DIR/cenopie.com.pem"
+    print_warning "   Private Key: sudo nano $SSL_DIR/cenopie.com.key"
+    print_warning "3. Set permissions: sudo chmod 600 $SSL_DIR/cenopie.com.key"
+    print_warning "4. Set permissions: sudo chmod 644 $SSL_DIR/cenopie.com.pem"
+fi
+
+# Step 8: Create Cloudflare-optimized nginx configuration
+print_step "8. Creating Cloudflare-optimized nginx configuration..."
+sudo tee "$NGINX_CONFIG" > /dev/null << 'EOF'
+# Cloudflare-optimized Nginx configuration for Cenopie
+
+# Rate limiting
 limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
 
-# Upstream servers for load balancing
+# Upstream servers
 upstream frontend {
-    server 127.0.0.1:3000;
+    server 127.0.0.1:3000 max_fails=3 fail_timeout=30s;
 }
 
 upstream backend {
-    server 127.0.0.1:4000;
+    server 127.0.0.1:4000 max_fails=3 fail_timeout=30s;
 }
 
 # HTTP to HTTPS redirect
@@ -160,22 +133,46 @@ server {
     return 301 https://$server_name$request_uri;
 }
 
-# HTTPS server
+# HTTPS server with Cloudflare Origin SSL
 server {
     listen 443 ssl http2;
     server_name cenopie.com www.cenopie.com;
     
-    # SSL configuration (will be configured by Certbot)
-    ssl_certificate /etc/letsencrypt/live/cenopie.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cenopie.com/privkey.pem;
+    # Cloudflare Origin SSL certificates
+    ssl_certificate /etc/ssl/cloudflare/cenopie.com.pem;
+    ssl_certificate_key /etc/ssl/cloudflare/cenopie.com.key;
+    
+    # SSL optimization
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    
+    # Trust Cloudflare IPs
+    set_real_ip_from 173.245.48.0/20;
+    set_real_ip_from 103.21.244.0/22;
+    set_real_ip_from 103.22.200.0/22;
+    set_real_ip_from 103.31.4.0/22;
+    set_real_ip_from 141.101.64.0/18;
+    set_real_ip_from 108.162.192.0/18;
+    set_real_ip_from 190.93.240.0/20;
+    set_real_ip_from 188.114.96.0/20;
+    set_real_ip_from 197.234.240.0/22;
+    set_real_ip_from 198.41.128.0/17;
+    set_real_ip_from 162.158.0.0/15;
+    set_real_ip_from 104.16.0.0/13;
+    set_real_ip_from 104.24.0.0/14;
+    set_real_ip_from 172.64.0.0/13;
+    set_real_ip_from 131.0.72.0/22;
+    real_ip_header CF-Connecting-IP;
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
     
     # Gzip compression
     gzip on;
@@ -194,10 +191,10 @@ server {
         application/atom+xml
         image/svg+xml;
     
-    # Client max body size for file uploads
+    # Client settings
     client_max_body_size 10M;
     
-    # Frontend (Next.js)
+    # Frontend
     location / {
         proxy_pass http://frontend;
         proxy_http_version 1.1;
@@ -209,32 +206,22 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 86400;
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
     }
     
     # Backend API with rate limiting
     location /api/ {
         limit_req zone=api burst=20 nodelay;
-        
         proxy_pass http://backend;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 86400;
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
     }
     
-    # Login endpoint with stricter rate limiting
+    # Login with stricter rate limiting
     location /api/auth/login {
         limit_req zone=login burst=3 nodelay;
-        
         proxy_pass http://backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -243,7 +230,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     
-    # Socket.IO
+    # Socket.IO WebSocket connections
     location /socket.io/ {
         proxy_pass http://backend;
         proxy_http_version 1.1;
@@ -258,118 +245,96 @@ server {
     }
     
     # Static files caching
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         proxy_pass http://frontend;
     }
+    
+    # Health check
+    location /health {
+        proxy_pass http://backend/api/health;
+        access_log off;
+    }
 }
 EOF
 
-# Enable the site and disable default
-sudo ln -sf /etc/nginx/sites-available/cenopie.com /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test Nginx configuration
-echo "🧪 Testing Nginx configuration..."
+# Enable site
+sudo ln -sf "$NGINX_CONFIG" /etc/nginx/sites-enabled/
 sudo nginx -t
 
-# Install Certbot for SSL
-if ! command -v certbot &> /dev/null; then
-    echo "📥 Installing Certbot..."
-    sudo apt install -y certbot python3-certbot-nginx
-fi
+# Step 9: Set proper permissions
+print_step "9. Setting proper permissions..."
+sudo chown -R cenopie:cenopie "$PROJECT_DIR"
+sudo chmod -R 755 "$PROJECT_DIR"
 
-# Obtain SSL certificate
-echo "🔒 Obtaining SSL certificate..."
-sudo certbot --nginx -d cenopie.com -d www.cenopie.com --non-interactive --agree-tos --email admin@cenopie.com
+# Step 10: Start services
+print_step "10. Starting services..."
 
-# Start applications with PM2
-echo "🚀 Starting applications..."
-pm2 start ecosystem.config.js
+# Start backend
+cd "$BACKEND_DIR"
+NODE_ENV=production pm2 start src/server.js --name "cenopie-backend"
+
+# Start frontend
+cd "$FRONTEND_DIR"
+NODE_ENV=production pm2 start npm --name "cenopie-frontend" -- run start
+
+# Save PM2 configuration
 pm2 save
 pm2 startup
 
-# Restart and enable Nginx
-sudo systemctl restart nginx
+# Start nginx
+sudo systemctl start nginx
 sudo systemctl enable nginx
 
-# Setup log rotation
-echo "📝 Setting up log rotation..."
-sudo tee /etc/logrotate.d/cenopie > /dev/null << 'EOF'
-/var/www/cenopie/logs/*.log {
-    daily
-    missingok
-    rotate 52
-    compress
-    delaycompress
-    notifempty
-    create 644 www-data www-data
-    postrotate
-        pm2 reloadLogs
-    endscript
-}
-EOF
+# Step 11: Health checks
+print_step "11. Performing health checks..."
+sleep 10
 
-# Setup firewall
-echo "🔥 Configuring firewall..."
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw --force enable
+# Check backend
+if curl -f -s http://localhost:4000/api/health > /dev/null; then
+    print_status "✅ Backend health check passed"
+else
+    print_error "❌ Backend health check failed"
+    pm2 logs cenopie-backend --lines 10
+fi
 
-# Create monitoring script
-echo "📊 Creating monitoring script..."
-cat > monitor.sh << 'EOF'
-#!/bin/bash
-# Cenopie monitoring script
+# Check frontend
+if curl -f -s http://localhost:3000 > /dev/null; then
+    print_status "✅ Frontend health check passed"
+else
+    print_error "❌ Frontend health check failed"
+    pm2 logs cenopie-frontend --lines 10
+fi
 
-echo "=== Cenopie System Status ==="
-echo "Date: $(date)"
-echo ""
+# Check nginx
+if curl -f -s http://localhost > /dev/null; then
+    print_status "✅ Nginx health check passed"
+else
+    print_error "❌ Nginx health check failed"
+    sudo systemctl status nginx
+fi
 
-echo "=== PM2 Status ==="
+# Final status
+print_step "12. Deployment Summary"
+print_status "🎉 Cenopie Clean Deployment Completed!"
+print_status ""
+print_status "Application Status:"
 pm2 status
+print_status ""
+print_status "Services:"
+print_status "Frontend: https://$DOMAIN"
+print_status "Backend API: https://$DOMAIN/api"
+print_status "Health Check: https://$DOMAIN/health"
 
 echo ""
-echo "=== Nginx Status ==="
-sudo systemctl status nginx --no-pager -l
-
-echo ""
-echo "=== Disk Usage ==="
-df -h
-
-echo ""
-echo "=== Memory Usage ==="
-free -h
-
-echo ""
-echo "=== Recent Logs ==="
-echo "Backend logs (last 10 lines):"
-tail -n 10 /var/www/cenopie/logs/backend-combined.log
-
-echo ""
-echo "Frontend logs (last 10 lines):"
-tail -n 10 /var/www/cenopie/logs/frontend-combined.log
-EOF
-
-chmod +x monitor.sh
-
-echo ""
-echo "✅ Cenopie production deployment completed successfully!"
-echo ""
-echo "🌐 Your website is now available at: https://cenopie.com"
-echo ""
-echo "📊 Useful commands:"
-echo "  - Check status: pm2 status"
-echo "  - View logs: pm2 logs"
-echo "  - Restart apps: pm2 restart all"
-echo "  - Monitor system: ./monitor.sh"
-echo "  - Nginx status: sudo systemctl status nginx"
-echo ""
-echo "📝 Log files are located in: /var/www/cenopie/logs/"
-echo "⚙️ PM2 configuration: /var/www/cenopie/ecosystem.config.js"
-echo "🌐 Nginx configuration: /etc/nginx/sites-available/cenopie.com"
-echo ""
-echo "🔒 SSL certificate will auto-renew via Certbot"
-echo "🔥 Firewall is configured to allow HTTP, HTTPS, and SSH"
+print_warning "⚠️  IMPORTANT: Complete these steps in Cloudflare Dashboard:"
+print_warning "1. DNS → Set A records to Proxied (🟠 orange cloud)"
+print_warning "2. SSL/TLS → Overview → Set to 'Full (strict)'"
+print_warning "3. SSL/TLS → Edge Certificates → Enable 'Always Use HTTPS'"
+print_warning ""
+print_warning "📋 Next Steps:"
+print_warning "1. Add Cloudflare Origin certificates to $SSL_DIR/"
+print_warning "2. Update environment variables in .env.production files"
+print_warning "3. Test HTTPS: curl -I https://$DOMAIN"
+print_warning "4. Monitor logs: pm2 logs"

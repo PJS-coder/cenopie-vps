@@ -16,7 +16,7 @@ Wants=network.target
 Type=simple
 User=cenopie
 Group=cenopie
-WorkingDirectory=/var/www/cenopie/backend
+WorkingDirectory=/var/www/cenopie-vps/backend
 Environment=NODE_ENV=production
 Environment=PORT=4000
 ExecStart=/usr/bin/node src/server.js
@@ -55,7 +55,7 @@ Requires=cenopie-backend.service
 Type=simple
 User=cenopie
 Group=cenopie
-WorkingDirectory=/var/www/cenopie/frontend
+WorkingDirectory=/var/www/cenopie-vps/frontend
 Environment=NODE_ENV=production
 Environment=PORT=3000
 ExecStart=/usr/bin/npm start

@@ -14,7 +14,7 @@ To enable registration later, change `ALLOW_REGISTRATION=false` to `ALLOW_REGIST
 ## 📁 File Structure
 
 ```
-/var/www/cenopie/
+/var/www/cenopie-vps/
 ├── backend/
 │   ├── .env.production      # Production backend config
 │   ├── .env.local          # Development backend config
