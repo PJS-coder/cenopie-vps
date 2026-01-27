@@ -5,7 +5,7 @@ import { BriefcaseIcon, MapPinIcon, ClockIcon, CheckIcon } from '@heroicons/reac
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import VerificationBadge from './VerificationBadge';
-import { createApplication } from '@/lib/databaseService';
+import { jobApi } from '@/lib/api';
 import { ApplicationData } from '@/lib/types';
 import { useToastContext } from '@/components/ToastProvider';
 
@@ -93,7 +93,7 @@ export default function JobCardWithApply({ job, showApplyButton = true }: JobCar
       };
 
       // Submit application
-      await createApplication(applicationData);
+      await jobApi.applyToJob(job.id);
       
       setHasApplied(true);
       toast.success('Application submitted successfully!');

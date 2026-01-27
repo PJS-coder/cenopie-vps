@@ -11,7 +11,7 @@ import {
   BriefcaseIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
-import { fetchCompanyById, fetchJobsByCompanyId, createApplication } from '@/lib/databaseService';
+import { companyApi, jobApi } from '@/lib/api';
 import { CompanyData, JobPosting, ApplicationData } from '@/lib/types';
 import VerificationBadge from '@/components/VerificationBadge';
 import { Button } from '@/components/ui/button';
@@ -46,13 +46,29 @@ export default function CompanyProfilePage() {
         }
         
         // Fetch company data
-        const companyData = await fetchCompanyById(companyId);
-        setCompany(companyData);
+        const response = await companyApi.getCompanyById(companyId);
+        if (response.data) {
+          // Convert Company type to CompanyData type
+          const companyData = {
+            ...response.data,
+            id: (response.data as any)._id || (response.data as any).id || companyId
+          };
+          setCompany(companyData as any);
+        }
         
         // Fetch jobs for this company
         setJobsLoading(true);
-        const companyJobs = await fetchJobsByCompanyId(companyId);
-        setJobs(companyJobs);
+        const jobsResponse = await jobApi.getCompanyJobs(companyId);
+        if (jobsResponse.data) {
+          // Convert Job[] to JobPosting[]
+          const jobPostings = jobsResponse.data.map((job: any) => ({
+            ...job,
+            id: job._id || job.id,
+            department: job.department || 'General',
+            views: job.views || 0
+          }));
+          setJobs(jobPostings);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load company profile');
@@ -111,7 +127,7 @@ export default function CompanyProfilePage() {
         updatedAt: new Date().toISOString(),
       };
       
-      await createApplication(applicationData);
+      await jobApi.applyToJob(selectedJobId);
       toast.success('Your application has been submitted successfully!');
     } catch (error) {
       console.error('Error submitting application:', error);

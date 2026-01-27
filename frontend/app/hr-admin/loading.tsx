@@ -1,7 +1,35 @@
 'use client';
 
 import React from 'react';
-import { TableSkeleton } from '@/components/OptimizedLoader';
+
+// Simple table skeleton component
+function TableSkeleton({ rows = 8, columns = 6 }) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden animate-pulse">
+      {/* Table Header */}
+      <div className="border-b border-gray-200 dark:border-gray-700 p-4">
+        <div className="grid grid-cols-6 gap-4">
+          {[...Array(columns)].map((_, i) => (
+            <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Table Rows */}
+      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        {[...Array(rows)].map((_, i) => (
+          <div key={i} className="p-4">
+            <div className="grid grid-cols-6 gap-4">
+              {[...Array(columns)].map((_, j) => (
+                <div key={j} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function HRAdminLoading() {
   return (

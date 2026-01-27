@@ -11,7 +11,7 @@ import VerificationBadge from '@/components/VerificationBadge';
 import SimpleLoader from '@/components/SimpleLoader';
 import { useConnections, useConnectionRequests } from '@/hooks/useConnections';
 import { profileApi } from '@/lib/api';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 
 interface CurrentUser {
   _id: string;

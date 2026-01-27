@@ -50,7 +50,6 @@ export const useUserPosts = (userId: string) => {
 
   const loadMore = async () => {
     // Since API doesn't support pagination, this is a no-op
-    console.log('Load more not supported by current API');
   };
 
   useEffect(() => {

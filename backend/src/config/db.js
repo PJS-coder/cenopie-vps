@@ -3,12 +3,15 @@ import logger from './logger.js';
 
 const connectDB = async () => {
   try {
+    // Force load production environment
+    if (process.env.NODE_ENV === 'production') {
+      require('dotenv').config({ path: '.env.production' });
+    }
+    
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/canopie';
     const IS_PRODUCTION = process.env.NODE_ENV === 'production';
     
-    if (!IS_PRODUCTION) {
-      console.log('🔗 Connecting to MongoDB:', mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
-    }
+    console.log('🔗 Connecting to MongoDB:', mongoUri.includes('mongodb+srv') ? 'Atlas Database' : 'Local Database');
     
     // Enhanced connection options for high concurrency
     const options = {

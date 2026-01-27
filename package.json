@@ -1,0 +1,21 @@
+{
+  "name": "cenopie-production",
+  "version": "1.0.0",
+  "description": "Cenopie Social Networking Platform - Production Ready",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "start": "cd backend && NODE_ENV=production node src/server.js",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "build": "cd frontend && npm run build",
+    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "deploy": "./deploy-production.sh",
+    "monitor": "./monitor.sh",
+    "backup": "./scripts/backup-mongodb.sh"
+  },
+  "keywords": ["social-network", "nodejs", "nextjs", "mongodb"],
+  "author": "Cenopie Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}

@@ -1,5 +1,13 @@
 import dotenv from 'dotenv';
-dotenv.config();
+
+// Load environment variables based on NODE_ENV
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' });
+} else {
+  // Try to load .env.local first, then fall back to .env
+  dotenv.config({ path: '.env.local' });
+  dotenv.config(); // This will load .env if .env.local doesn't exist
+}
 
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -12,10 +20,10 @@ import connectDB from './config/db.js';
 import redisClient from './config/redis.js';
 import { configCloudinary } from './config/cloudinary.js';
 import initSocket from './socket/index.js';
-import ultraMonitor from './utils/ultra-monitor.js';
+
 import { setupSwagger } from './utils/swagger.js';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 const WORKER_ID = process.env.pm_id || cluster.worker?.id || 0;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -96,12 +104,6 @@ async function startServer() {
 
     // Import app after environment setup
     const { default: app } = await import('./app.js');
-
-    // Initialize ultra-performance monitoring
-    if (!IS_PRODUCTION) {
-      console.log('📊 Initializing performance monitoring...');
-    }
-    app.use(ultraMonitor.requestMonitor());
 
     // Setup Swagger documentation (development only)
     if (!IS_PRODUCTION) {

@@ -13,7 +13,7 @@ import {
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { isPasskeyAuthenticated } from '@/lib/passkeyAuth';
-import { fetchAllUsers, verifyUserInDB } from '@/lib/databaseService';
+import { profileApi } from '@/lib/api';
 import { type CompanyData, type UserData } from '@/lib/types';
 import VerificationBadge from '@/components/VerificationBadge';
 
@@ -199,7 +199,14 @@ export default function SecureAdminDashboard() {
       }
       
       // Load users from existing API
-      const allUsers = await fetchAllUsers();
+      const response = await profileApi.getSuggestedUsers();
+      const suggestedUsers = response.data || [];
+      // Convert SuggestedUser[] to UserData[]
+      const allUsers = suggestedUsers.map((user: any) => ({
+        ...user,
+        email: user.email || 'N/A',
+        joinedAt: user.joinedAt || new Date().toISOString()
+      }));
       console.log('Loaded users:', Array.isArray(allUsers) ? allUsers.length : 'Invalid data');
       const usersArray = Array.isArray(allUsers) ? allUsers : [];
       setUsers(usersArray);
@@ -468,7 +475,8 @@ export default function SecureAdminDashboard() {
     if (confirm('Are you sure you want to grant verification to this user?')) {
       try {
         console.log('Attempting to verify user with ID:', userId);
-        await verifyUserInDB(userId, true);
+        // TODO: Implement user verification API
+        console.log('User verification not implemented yet');
         loadData();
       } catch (error) {
         console.error('Error verifying user:', error);
@@ -481,7 +489,8 @@ export default function SecureAdminDashboard() {
   const handleUserUnverify = async (userId: string) => {
     if (confirm('Are you sure you want to remove verification from this user?')) {
       try {
-        await verifyUserInDB(userId, false);
+        // TODO: Implement user verification removal API
+        console.log('User verification removal not implemented yet');
         loadData();
       } catch (error) {
         console.error('Error unverifying user:', error);

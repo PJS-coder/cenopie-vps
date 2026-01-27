@@ -74,7 +74,6 @@ export default function ConnectButton({
       if ((data.userId === currentUserId && data.targetUserId === userId) ||
           (data.userId === userId && data.targetUserId === currentUserId)) {
         
-        console.log(`🔄 Socket Update: Connection between ${currentUserId} and ${userId} changed to "${data.status}"`);
         setStatus(data.status as typeof status);
         
         if (data.connectionId) {

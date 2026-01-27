@@ -11,7 +11,7 @@ import {
   EyeIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 import { useToastContext } from '@/components/ToastProvider';
 
 interface Application {
@@ -179,7 +179,7 @@ export default function ApplicationsPage() {
   };
 
   if (loading) {
-    return <OptimizedLoader variant="page" />;
+    return <CenopieLoader />;
   }
 
   return (

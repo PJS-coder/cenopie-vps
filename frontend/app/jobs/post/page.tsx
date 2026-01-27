@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BriefcaseIcon, MapPinIcon, ClockIcon, CurrencyDollarIcon, UsersIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { v4 as uuidv4 } from 'uuid';
 import { type JobPosting, type CompanyData, type UserData } from '@/lib/types';
-import { getUserCompanyFromDB } from '@/lib/databaseService';
-import { createJob, createCompany } from '@/lib/databaseService';
+import { companyApi, jobApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 
 export default function PostJobPage() {
@@ -43,19 +42,24 @@ export default function PostJobPage() {
         
         // Load user company
         const loadUserCompany = async () => {
-          const userCompany = await getUserCompanyFromDB(user.id);
+          const response = await companyApi.getMyCompanies();
+          const companies = response.data || [];
+          const userCompany = companies.length > 0 ? companies[0] : null;
           
           if (!userCompany) {
             router.push('/company/create');
             return;
           }
           
-          if (!userCompany.isApproved) {
+          if (!(userCompany as any).isApproved) {
             router.push('/company');
             return;
           }
           
-          setCompany(userCompany);
+          setCompany({
+            ...userCompany,
+            id: (userCompany as any)._id || (userCompany as any).id
+          } as any);
         };
         
         loadUserCompany();
@@ -88,11 +92,10 @@ export default function PostJobPage() {
         companyDescription: company.description
       };
 
-      // Save to MongoDB database
+      // Save to database
       try {
-        await createJob(jobData);
-        await createCompany(company);
-        console.log('Job posted to MongoDB database:', jobData.title);
+        await jobApi.createJob(jobData as any);
+        console.log('Job posted successfully:', jobData.title);
       } catch (error) {
         console.error('Error saving to database:', error);
         alert('Failed to post job. Please try again.');

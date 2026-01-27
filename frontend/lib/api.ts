@@ -1,5 +1,5 @@
 // API service for handling requests to the backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export interface ApiResponse<T> {
   data?: T;
@@ -161,7 +161,7 @@ const performAuthenticatedRequest = async <T = any>(
     },
   };
   
-  console.log('Request headers being sent:', defaultConfig.headers);
+  // Debug logging removed for production
   
   const finalConfig = {
     ...defaultConfig,
@@ -208,9 +208,9 @@ const performAuthenticatedRequest = async <T = any>(
           return Promise.reject(new Error(`Server is busy. Please try again in a few moments.`));
         }
         
+        // Rate limited - retry with exponential backoff
         const retryAfter = response.headers.get('Retry-After');
-        const retryTime = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(1000 * Math.pow(2, retries), 10000); // Exponential backoff, max 10 seconds
-        console.log(`Rate limited. Retry ${retries}/${maxRetries} after ${retryTime}ms`);
+        const retryTime = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(1000 * Math.pow(2, retries), 10000);
         
         // Wait for the specified time before retrying
         await new Promise(resolve => setTimeout(resolve, retryTime));
@@ -261,25 +261,17 @@ const performAuthenticatedRequest = async <T = any>(
       }
       
       if (!response.ok) {
-        // Log response info for debugging
-        console.log('Non-OK response received:');
-        console.log('  Response object:', response);
-        console.log('  Status:', response.status);
-        console.log('  Status text:', response.statusText);
-        console.log('  Headers:', response.headers ? [...response.headers.entries()] : 'No headers available');
+        // Handle error response
+        let errorData: any = null;
+        let errorDetails = '';
         
         // Try to get error details from response
-        let errorDetails = '';
-        let errorData: Record<string, unknown> = {};
         
         try {
           errorData = await response.json();
-          console.log('Error response parsed as JSON:', errorData);
         } catch (jsonError: any) {
-          console.log('Failed to parse error response as JSON:', jsonError.message);
           try {
             errorDetails = await response.text();
-            console.log('Error response as text (first 200 chars):', errorDetails.substring(0, 200));
           // Check if the response contains multipart boundaries
           if (errorDetails.includes('------WebKitFormBoundary')) {
             console.error('Received multipart form data instead of JSON. This suggests a server configuration issue.');
@@ -316,13 +308,8 @@ const performAuthenticatedRequest = async <T = any>(
         throw new Error(errorMessage || 'An unknown error occurred');
       }
       
-      // Log response info for debugging
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers ? [...response.headers.entries()] : 'No headers available');
-      
       // Check content type to determine how to parse the response
       const contentType = response.headers ? response.headers.get('content-type') : null;
-      console.log('Response content-type:', contentType);
       
       // If it's JSON, parse it normally
       if (contentType && contentType.includes('application/json')) {
@@ -333,28 +320,21 @@ const performAuthenticatedRequest = async <T = any>(
       
       // If it's not JSON but we expected JSON, try to parse it anyway
       const text = await response.text();
-      console.log('Response text (first 500 chars):', text.substring(0, 500));
       
       // Check if response contains multipart boundaries
       if (text.includes('------WebKitFormBoundary')) {
-        console.error('Received multipart form data instead of JSON!');
         throw new Error('Server configuration error: Received form data instead of JSON response');
       }
       
       // Try to parse as JSON anyway
       try {
         const data = JSON.parse(text);
-        console.log('Parsed response data:', data);
         return data;
       } catch (parseError) {
-        console.error('Failed to parse response as JSON:', parseError);
         throw new Error('Invalid response format received from server.');
       }
     } catch (error) {
-      // Log the full error for debugging
-      console.error('Error in authenticatedRequest:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error keys:', error instanceof Object ? Object.keys(error) : 'Not an object');
+      // Handle request errors
       
       // Check if this is a JSON parsing error
       if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
@@ -370,7 +350,6 @@ const performAuthenticatedRequest = async <T = any>(
       if (retries < maxRetries) {
         retries++;
         const retryTime = Math.min(1000 * Math.pow(2, retries), 5000); // Exponential backoff, max 5 seconds
-        console.log(`Request failed. Retry ${retries}/${maxRetries} after ${retryTime}ms`);
         await new Promise(resolve => setTimeout(resolve, retryTime));
         continue;
       }
@@ -645,14 +624,13 @@ export const feedApi = {
     body: JSON.stringify(postData),
   }),
   likePost: async (postId: string): Promise<ApiResponse<Post>> => {
-    console.log('feedApi.likePost called with postId:', postId);
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/posts/${postId}/like`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/posts/${postId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -667,7 +645,6 @@ export const feedApi = {
       }
 
       const data = await response.json();
-      console.log('Like API response:', data);
       return data;
     } catch (error) {
       console.error('Error in likePost API:', error);
@@ -747,12 +724,8 @@ interface ChatResponse {
 export const messagesApi = {
   // Get list of conversations
   getChats: async (): Promise<ApiResponse<ChatResponse[]>> => {
-    console.log('=== DEBUG: getChats called ===');
     try {
       const result = await authenticatedRequest('/api/messages/chats');
-      console.log('getChats result:', result);
-      console.log('getChats result data:', result.data);
-      console.log('getChats result data length:', Array.isArray(result.data) ? result.data.length : 'Not an array');
       return result as unknown as Promise<ApiResponse<ChatResponse[]>>;
     } catch (error) {
       console.error('getChats error:', error);
@@ -762,9 +735,6 @@ export const messagesApi = {
   
   // Get messages for a specific conversation
   getMessages: async (userId: string): Promise<ApiResponse<Message[]>> => {
-    console.log('=== DEBUG: getMessages called ===');
-    console.log('userId:', userId);
-    
     // Validate userId before making the request
     if (!userId) {
       console.error('Validation failed: User ID is required');
@@ -779,7 +749,6 @@ export const messagesApi = {
     
     try {
       const result = await authenticatedRequest(`/api/messages/${userId}`);
-      console.log('getMessages result for userId', userId, ':', result);
       return result as unknown as Promise<ApiResponse<Message[]>>;
     } catch (error) {
       console.error('getMessages error for userId', userId, ':', error);
@@ -833,9 +802,6 @@ export const messagesApi = {
   },
   
   sendMessage: async (to: string, text: string): Promise<ApiResponse<Message>> => {
-    console.log('=== DEBUG: sendMessage called ===');
-    console.log('Input parameters:', { to, text });
-    
     if (!to || !text) {
       console.error('Validation failed: Recipient and message text are required');
       return Promise.reject(new Error('Recipient and message text are required'));
@@ -860,10 +826,8 @@ export const messagesApi = {
 
     // Prepare the request data
     const requestData = { to, text: trimmedText };
-    console.log('Prepared request data:', requestData);
 
     try {
-      console.log('Making API request to /api/messages');
       const response = await authenticatedRequest<Message>('/api/messages', {
         method: 'POST',
         headers: { 
@@ -872,8 +836,6 @@ export const messagesApi = {
         body: JSON.stringify(requestData),
       });
       
-      console.log('API Response received:', response);
-
       if (!response) {
         console.error('No response received from server');
         return Promise.reject(new Error('No response received from server'));
@@ -1186,7 +1148,7 @@ export const companyApi = {
   
   // Get public company profile (no auth required)
   getPublicCompanyProfile: async (companyId: string): Promise<ApiResponse<Company>> => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/companies/${companyId}/public`);
+    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/public`);
     if (!response.ok) {
       throw new Error('Company not found');
     }

@@ -197,7 +197,6 @@ export default function MessagesPage() {
 
   const handleDeleteMessage = (messageId: string, deleteForEveryone?: boolean) => {
     // TODO: Implement message deletion
-    console.log('Delete message:', messageId, deleteForEveryone);
   };
 
   if (!currentUserId) {

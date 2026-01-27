@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import io, { Socket } from 'socket.io-client';
-import logger from '@/lib/logger';
+// Removed unused logger import
 
 const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
@@ -18,16 +18,25 @@ const useSocket = () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     const userId = currentUser._id || currentUser.id;
 
-    console.log('🔧 Connection attempt details:', {
-      hasToken: !!token,
-      hasUserId: !!userId,
-      tokenLength: token?.length || 0,
-      userIdValue: userId || 'none'
-    });
+    // Validate token format before attempting connection
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      setConnectionError('No valid authentication token found');
+      return;
+    }
 
-    if (!token || !userId) {
+    if (!userId) {
       setConnectionError('User not authenticated');
-      console.warn('❌ Cannot connect socket: missing token or userId', { token: !!token, userId: !!userId });
+      return;
+    }
+
+    // Basic JWT format validation (should have 3 parts separated by dots)
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      setConnectionError('Invalid token format');
+      // Clear invalid token
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
       return;
     }
 
@@ -37,14 +46,9 @@ const useSocket = () => {
     }
 
     // Initialize socket connection with environment-specific configuration
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    console.log('🔌 Connecting to Socket.IO server at:', apiUrl);
-    console.log('🔧 Environment:', process.env.NODE_ENV);
-    console.log('🔑 Auth token available:', !!token);
-    console.log('👤 User ID available:', !!userId);
-    console.log('🌐 API URL from env:', process.env.NEXT_PUBLIC_API_URL);
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
-    const socket = io(apiUrl, {
+    const socket = io(socketUrl, {
       auth: { token },
       query: { token }, // Add query parameter fallback for token
       transports: ['websocket', 'polling'], // Enable both transports for better reliability
@@ -72,7 +76,6 @@ const useSocket = () => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ Socket.IO connected successfully (polling mode)');
       setIsConnected(true);
       setConnectionError(null);
       
@@ -84,7 +87,6 @@ const useSocket = () => {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('❌ Socket.IO disconnected:', reason);
       setIsConnected(false);
       
       // Auto-reconnect after a delay if not a manual disconnect
@@ -97,46 +99,29 @@ const useSocket = () => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Socket.IO connection error:', error);
-      console.error('❌ Error details:', {
-        message: error.message || 'No message',
-        description: (error as any).description || 'No description',
-        context: (error as any).context || 'No context',
-        type: (error as any).type || 'No type',
-        stack: error.stack || 'No stack'
-      });
-      console.error('❌ Connection attempt details:', {
-        apiUrl,
-        hasToken: !!token,
-        userId,
-        socketExists: !!socketRef.current
-      });
-      
-      // Log specific error types for debugging
-      if ((error as any).type === 'TransportError') {
-        console.error('🚫 Transport Error - likely nginx/proxy issue');
-        console.error('🔧 Check nginx configuration for Socket.IO proxy');
-      }
-      
-      if (error.message?.includes('400')) {
-        console.error('🚫 HTTP 400 Error - likely authentication or CORS issue');
-        console.error('🔧 Check backend CORS settings and authentication middleware');
+      // Handle authentication errors specifically
+      if (error.message?.includes('Authentication error') || 
+          error.message?.includes('Invalid token') ||
+          error.message?.includes('jwt') ||
+          error.message?.includes('Token expired')) {
+        // Clear invalid tokens
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        setConnectionError('Authentication failed - please log in again');
+        
+        // Disconnect socket to prevent reconnection attempts
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+        return;
       }
       
       setIsConnected(false);
       setConnectionError(error.message || 'Connection failed');
-      
-      // Don't attempt reconnection on auth errors
-      if (error.message && error.message.includes('Authentication')) {
-        console.log('🚫 Authentication error - stopping reconnection attempts');
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-        }
-      }
     });
 
     socket.on('reconnect', (attemptNumber) => {
-      console.log(`✅ Socket.IO reconnected after ${attemptNumber} attempts`);
       setIsConnected(true);
       setConnectionError(null);
     });
@@ -148,12 +133,10 @@ const useSocket = () => {
 
     // Message events
     socket.on('message:received', (data) => {
-      console.log('📨 Message received via socket:', data);
       window.dispatchEvent(new CustomEvent('socket:message:received', { detail: data }));
     });
 
     socket.on('message:sent', (data) => {
-      console.log('📤 Message sent confirmation via socket:', data);
       window.dispatchEvent(new CustomEvent('socket:message:sent', { detail: data }));
     });
 
@@ -177,18 +160,15 @@ const useSocket = () => {
 
     // Read receipt events
     socket.on('message:read_receipt', (data) => {
-      console.log('📖 Read receipt received:', data);
       window.dispatchEvent(new CustomEvent('socket:message:read_receipt', { detail: data }));
     });
 
     socket.on('conversation:read_receipt', (data) => {
-      console.log('📖 Conversation read receipt received:', data);
       window.dispatchEvent(new CustomEvent('socket:conversation:read_receipt', { detail: data }));
     });
 
     // Typing events
     socket.on('typing:start', (data) => {
-      console.log('⌨️ Typing started:', data);
       setTypingUsers(prev => ({
         ...prev,
         [`${data.conversationId}:${data.userId}`]: data.userName
@@ -197,7 +177,6 @@ const useSocket = () => {
     });
 
     socket.on('typing:stop', (data) => {
-      console.log('⌨️ Typing stopped:', data);
       setTypingUsers(prev => {
         const newTyping = { ...prev };
         delete newTyping[`${data.conversationId}:${data.userId}`];
@@ -208,13 +187,11 @@ const useSocket = () => {
 
     // User status events
     socket.on('user:status_update', (data) => {
-      console.log('👤 User status update:', data);
       window.dispatchEvent(new CustomEvent('socket:user:status_update', { detail: data }));
     });
 
     // Message reaction events
     socket.on('message:reaction', (data) => {
-      console.log('😀 Message reaction:', data);
       window.dispatchEvent(new CustomEvent('socket:message:reaction', { detail: data }));
     });
 
@@ -249,28 +226,17 @@ const useSocket = () => {
     attachments?: any[];
     clientId?: string;
   }) => {
-    console.log('📤 Attempting to send message via socket:', {
-      conversationId: data.conversationId,
-      hasContent: !!data.content,
-      hasAttachments: !!(data.attachments && data.attachments.length > 0),
-      type: data.type,
-      clientId: data.clientId
-    });
-
     if (!data.conversationId || (!data.content && (!data.attachments || data.attachments.length === 0))) {
-      console.warn('❌ Cannot send message: missing required data');
       return false;
     }
     if (typeof window === 'undefined') return false;
     
     const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!token) {
-      console.warn('❌ Cannot send message: no auth token');
       return false;
     }
     
     if (socketRef.current && socketRef.current.connected) {
-      console.log('📤 Sending message via socket:', { ...data, content: data.content?.substring(0, 50) + '...' });
       socketRef.current.emit('message:send', data);
       return true;
     } else {
@@ -348,9 +314,23 @@ const useSocket = () => {
 
   // Force reconnect function
   const forceReconnect = useCallback(() => {
-    console.log('🔄 Force reconnecting socket...');
     connectSocket();
   }, [connectSocket]);
+
+  // Clear tokens and reset connection
+  const clearTokensAndReconnect = useCallback(() => {
+    console.log('🧹 Clearing tokens and resetting connection...');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
+    setConnectionError(null);
+    setIsConnected(false);
+    
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  }, []);
 
   return {
     socket: socketRef.current,
@@ -364,6 +344,7 @@ const useSocket = () => {
     updateUserStatus,
     typingUsers,
     forceReconnect,
+    clearTokensAndReconnect,
   };
 };
 

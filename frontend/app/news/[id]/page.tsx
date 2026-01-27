@@ -11,7 +11,7 @@ import {
   UserGroupIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 import ConnectButton from '@/components/ConnectButton';
 import { newsApi, profileApi } from '@/lib/api';
@@ -178,7 +178,7 @@ export default function NewsArticlePage() {
   };
 
   if (loading) {
-    return <OptimizedLoader variant="page" />;
+    return <CenopieLoader />;
   }
 
   if (error || !article) {

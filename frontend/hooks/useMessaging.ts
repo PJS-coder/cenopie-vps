@@ -64,9 +64,6 @@ export function useMessaging() {
       });
       setUnreadCounts(counts);
       
-      console.log('🔔 Total unread messages:', totalUnread);
-      console.log('📈 Unread counts by conversation:', counts);
-      
       // Use setTimeout to ensure event is dispatched after render cycle
       setTimeout(() => {
         console.log('📡 Dispatching unreadCountUpdate event with count:', totalUnread);
@@ -346,7 +343,6 @@ export function useMessaging() {
       
       // Skip if this is our own message (already handled by optimistic update)
       if (message.sender._id === currentUserId) {
-        console.log('Skipping own message from socket to prevent duplicates:', message._id);
         return;
       }
       
@@ -356,7 +352,6 @@ export function useMessaging() {
         const messageExists = existingMessages.some(msg => msg._id === message._id);
         
         if (messageExists) {
-          console.log('Message already exists, skipping:', message._id);
           return prev;
         }
         
@@ -405,8 +400,6 @@ export function useMessaging() {
       const customEvent = event as CustomEvent;
       const { message, clientId } = customEvent.detail;
       
-      console.log('📤 Message sent confirmation received:', { messageId: message._id, clientId });
-      
       // Don't replace temp messages - they should already be updated by the API response
       // This prevents the flicker effect
       setMessages(prev => {
@@ -415,7 +408,6 @@ export function useMessaging() {
         // Check if message already exists (from API response)
         const messageExists = conversationMessages.some(msg => msg._id === message._id);
         if (messageExists) {
-          console.log('Message already exists from API response, skipping socket update');
           return prev;
         }
         
@@ -551,8 +543,6 @@ export function useMessaging() {
   // Debug: Log unread counts when they change
   useEffect(() => {
     const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
-    console.log('🔔 Total unread messages:', totalUnread);
-    console.log('📊 Unread counts by conversation:', unreadCounts);
   }, [unreadCounts]);
 
   // Cleanup typing timeouts on unmount

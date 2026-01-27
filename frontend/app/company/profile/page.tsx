@@ -13,7 +13,7 @@ import {
   UsersIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 
 interface Company {
@@ -365,7 +365,7 @@ export default function CompanyProfilePage() {
   };
 
   if (loading) {
-    return <OptimizedLoader variant="page" />;
+    return <CenopieLoader />;
   }
 
   if (!company) {

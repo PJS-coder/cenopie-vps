@@ -9,10 +9,14 @@ import { mediaApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import VerificationBadge from '@/components/VerificationBadge';
 import CenopieLoader from '@/components/CenopieLoader';
-import { LazyPostCard, LazyCustomVideoPlayer } from '@/components/LazyFeedComponents';
 import PostCard from '@/components/PostCard';
+import CustomVideoPlayer from '@/components/CustomVideoPlayer';
 import { useToastContext } from '@/components/ToastProvider';
-import { useOptimizedFeed } from '@/hooks/useOptimizedFeed';
+import { useFeed } from '@/hooks/useFeed';
+import { useAuth } from '@/context/AuthContext';
+import { useNews } from '@/hooks/useNews';
+import { useSuggestedUsers } from '@/hooks/useSuggestedUsers';
+import { useConnections } from '@/hooks/useConnections';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -20,13 +24,47 @@ export default function FeedPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'following'>('all');
   const [showTrending, setShowTrending] = useState(false);
   
-  // Use optimized feed hook for better performance
-  const feedData = useOptimizedFeed(activeFilter);
+  // Use auth context
+  const { isAuthenticated } = useAuth();
+  
+  // Get current user from localStorage (temporary solution)
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        setCurrentUser(JSON.parse(userData));
+      }
+      setUserLoading(false);
+    }
+  }, []);
+  
+  // Use feed hook
+  const feedData = useFeed({ filter: activeFilter });
   const {
-    posts, loading, error, fetchFeed, loadMore, hasMore, createPost, likePost, repostPost, deletePost, commentOnPost, deleteComment,
-    currentUser, userLoading, suggestedUsers, suggestedUsersLoading, suggestedUsersError, connections, connectionsLoading,
-    news, newsLoading, newsError, refreshNews, getUserInitials, isPostSaved
+    posts, loading, error, fetchFeed, loadMore, hasMore, createPost, likePost, repostPost, deletePost, commentOnPost, deleteComment
   } = feedData;
+
+  // Use news hook
+  const { news, loading: newsLoading, error: newsError } = useNews();
+  
+  // Use suggested users hook
+  const { users: suggestedUsers, loading: suggestedUsersLoading, error: suggestedUsersError } = useSuggestedUsers();
+  
+  // Use connections hook
+  const { connections, loading: connectionsLoading } = useConnections();
+
+  // Helper function to get user initials
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  // Helper function to check if post is saved (placeholder)
+  const isPostSaved = (postId: string) => {
+    return false; // Implement saved posts logic if needed
+  };
 
   const [postContent, setPostContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -308,7 +346,7 @@ export default function FeedPage() {
                       <div className="mt-2">
                         <div className="relative group bg-gray-50 dark:bg-gray-800">
                           {selectedFiles[0]?.type.startsWith('video/') ? (
-                            <LazyCustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain" />
+                            <CustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain" />
                           ) : (
                             <Image src={previewUrls[0]} alt="Preview" className="w-full h-auto max-h-[300px] object-contain" width={400} height={300} />
                           )}

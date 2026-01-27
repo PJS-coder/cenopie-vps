@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BuildingOfficeIcon, CloudArrowUpIcon, GlobeAltIcon, MapPinIcon, UsersIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { getUserId, type CompanyData } from '@/lib/types';
-import { getUserCompanyFromDB } from '@/lib/databaseService';
-import { updateCompany } from '@/lib/databaseService';
+import { companyApi } from '@/lib/api';
 
 export default function EditCompanyPage() {
   const router = useRouter();
@@ -38,7 +37,9 @@ export default function EditCompanyPage() {
     const loadCompanyData = async () => {
       try {
         const userId = getUserId();
-        const company = await getUserCompanyFromDB(userId);
+        const response = await companyApi.getMyCompanies();
+        const companies = response.data || [];
+        const company = companies.length > 0 ? companies[0] : null;
 
         if (!company) {
           router.push('/company/auth/register');
@@ -46,28 +47,28 @@ export default function EditCompanyPage() {
         }
 
         setFormData({
-          id: company.id,
-          name: company.name,
-          website: company.website || '',
-          industry: company.industry || '',
-          size: company.size || '',
-          businessType: company.businessType || '',
-          description: company.description || '',
-          founded: company.founded || '',
-          headquarters: company.headquarters || '',
-          employees: company.employees || '',
-          type: company.type || undefined,
-          logo: company.logo || '',
-          coverImage: company.coverImage || '',
-          isApproved: company.isApproved || false,
-          isVerified: company.isVerified || false,
-          createdAt: company.createdAt || new Date().toISOString(),
-          news: company.news || [],
-          userId: company.userId || userId // Ensure userId is set
+          id: (company as any)._id || (company as any).id,
+          name: (company as any).name || '',
+          website: (company as any).website || '',
+          industry: (company as any).industry || '',
+          size: (company as any).size || '',
+          businessType: (company as any).businessType || '',
+          description: (company as any).description || '',
+          founded: (company as any).founded || '',
+          headquarters: (company as any).headquarters || '',
+          employees: (company as any).employees || '',
+          type: (company as any).type || undefined,
+          logo: (company as any).logo || '',
+          coverImage: (company as any).coverImage || '',
+          isApproved: (company as any).isApproved || false,
+          isVerified: (company as any).isVerified || false,
+          createdAt: (company as any).createdAt || new Date().toISOString(),
+          news: (company as any).news || [],
+          userId: (company as any).userId || userId // Ensure userId is set
         });
 
-        setLogoPreview(company.logo || null);
-        setCoverPreview(company.coverImage || null);
+        setLogoPreview((company as any).logo || null);
+        setCoverPreview((company as any).coverImage || null);
         setLoading(false);
       } catch (error) {
         console.error('Error loading company data:', error);
@@ -123,7 +124,7 @@ export default function EditCompanyPage() {
         throw new Error('Company name is missing');
       }
       // Update company data
-      await updateCompany(formData);
+      await companyApi.updateCompany(formData.id, formData as any);
       router.push('/company');
     } catch (error) {
       console.error('Error updating company:', error);

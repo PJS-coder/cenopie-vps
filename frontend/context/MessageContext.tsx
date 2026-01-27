@@ -25,15 +25,12 @@ export const MessageProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     const handleUnreadCountUpdate = (event: CustomEvent) => {
       const { count } = event.detail;
-      console.log('📱 MessageContext received unread count update:', count);
       setUnreadCount(count);
     };
 
-    console.log('📱 MessageContext: Setting up event listener for unreadCountUpdate');
     window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate as EventListener);
     
     return () => {
-      console.log('📱 MessageContext: Cleaning up event listener');
       window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate as EventListener);
     };
   }, []); // Remove unreadCount dependency to prevent infinite re-renders

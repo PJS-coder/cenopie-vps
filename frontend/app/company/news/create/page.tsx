@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { NewspaperIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 import { useToastContext } from '@/components/ToastProvider';
 
 export default function CreateNewsPage() {
@@ -125,7 +125,7 @@ export default function CreateNewsPage() {
   };
 
   if (loading || !company) {
-    return <OptimizedLoader variant="page" />;
+    return <CenopieLoader />;
   }
 
   return (

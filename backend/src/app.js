@@ -206,7 +206,7 @@ app.use(passport.initialize());
 // Enhanced rate limiting with Redis store for clustering
 const limiter = rateLimit({ 
   windowMs: process.env.RATE_LIMIT_WINDOW || 15 * 60 * 1000, // 15 minutes
-  max: process.env.RATE_LIMIT_MAX || (process.env.NODE_ENV === 'production' ? 5000 : 10000), // Increased limits significantly
+  max: process.env.RATE_LIMIT_MAX || (process.env.NODE_ENV === 'production' ? 1000 : 10000), // Production optimized
   message: { 
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: process.env.RATE_LIMIT_WINDOW || 15 * 60 * 1000

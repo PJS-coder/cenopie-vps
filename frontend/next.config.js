@@ -48,7 +48,7 @@ const nextConfig = {
   },
 
   // Basic settings
-  output: 'standalone',
+  // output: 'standalone', // Commented out for PM2 compatibility
   trailingSlash: false,
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
   poweredByHeader: false,

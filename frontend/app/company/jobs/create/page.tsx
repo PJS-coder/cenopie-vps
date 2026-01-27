@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BriefcaseIcon, MapPinIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/outline';
-import OptimizedLoader from '@/components/OptimizedLoader';
+import CenopieLoader from '@/components/CenopieLoader';
 
 export default function CreateJobPage() {
   const router = useRouter();
@@ -196,7 +196,7 @@ export default function CreateJobPage() {
   };
 
   if (loading || !company) {
-    return <OptimizedLoader variant="page" />;
+    return <CenopieLoader />;
   }
 
   return (
