@@ -2,6 +2,15 @@
 
 This file contains all the environment variables needed for Cenopie deployment.
 
+## 🚨 Important: Registration Control
+
+**Registration is currently DISABLED by default** (`ALLOW_REGISTRATION=false`). This means:
+- ✅ Existing users can log in
+- ❌ New users cannot register
+- 🔒 Platform is in closed beta mode
+
+To enable registration later, change `ALLOW_REGISTRATION=false` to `ALLOW_REGISTRATION=true` in your environment files.
+
 ## 📁 File Structure
 
 ```
@@ -89,9 +98,9 @@ FRONTEND_URL=http://localhost:3000
 # Redis (disabled for local development)
 REDIS_DISABLED=true
 
-# Launch Control (open for development)
-ALLOW_REGISTRATION=true
-LAUNCH_MODE=open
+# Launch Control (Closed Beta Mode - Registration disabled by default)
+ALLOW_REGISTRATION=false
+LAUNCH_MODE=closed_beta
 ```
 
 ## 🌐 Frontend Environment Variables
