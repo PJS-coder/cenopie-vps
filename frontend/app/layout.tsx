@@ -19,14 +19,15 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
     apple: '/favicon.svg'
   },
-  manifest: '/manifest.json',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover'
-  }
+  manifest: '/manifest.json'
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover'
 }
 
 export default function RootLayout({

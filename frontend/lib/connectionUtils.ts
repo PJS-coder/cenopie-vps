@@ -1,4 +1,6 @@
-// Utility functions for handling connection status updates
+import { useConnectionStore } from '@/lib/stores/connectionStore';
+
+export type ConnectionStatus = 'none' | 'pending_sent' | 'pending_received' | 'accepted' | 'self';
 
 /**
  * Dispatch a custom event to notify other components about connection status updates
@@ -12,29 +14,48 @@ export const notifyConnectionStatusUpdate = (userId: string) => {
 };
 
 /**
- * Update connection status in localStorage and notify other components
+ * Update connection status using modern state management
  * @param currentUserId The ID of the current user
  * @param targetUserId The ID of the target user
  * @param status The new connection status
+ * @param connectionId Optional connection ID
  */
-export const updateConnectionStatus = (currentUserId: string, targetUserId: string, status: 'none' | 'pending' | 'connected') => {
-  // Update localStorage
-  localStorage.setItem(`connectionStatus_${currentUserId}_${targetUserId}`, status);
-  
-  // Notify other components
-  notifyConnectionStatusUpdate(targetUserId);
+export const updateConnectionStatus = (
+  currentUserId: string, 
+  targetUserId: string, 
+  status: ConnectionStatus,
+  connectionId?: string
+) => {
+  const { updateConnectionStatus } = useConnectionStore.getState();
+  updateConnectionStatus(currentUserId, targetUserId, status, connectionId);
 };
 
 /**
- * Get connection status from localStorage
+ * Get connection status using modern state management
  * @param currentUserId The ID of the current user
  * @param targetUserId The ID of the target user
  * @returns The connection status
  */
-export const getConnectionStatus = (currentUserId: string, targetUserId: string): 'none' | 'pending' | 'connected' => {
-  const storedStatus = localStorage.getItem(`connectionStatus_${currentUserId}_${targetUserId}`);
-  if (storedStatus === 'pending' || storedStatus === 'connected') {
-    return storedStatus;
-  }
-  return 'none';
+export const getConnectionStatus = (currentUserId: string, targetUserId: string): ConnectionStatus => {
+  const { getConnectionStatus } = useConnectionStore.getState();
+  return getConnectionStatus(currentUserId, targetUserId);
+};
+
+/**
+ * Add a user to recent users list
+ * @param userId The user ID
+ * @param userName The user name
+ */
+export const addRecentUser = (userId: string, userName: string) => {
+  const { addRecentUser } = useConnectionStore.getState();
+  addRecentUser(userId, userName);
+};
+
+/**
+ * Get all recent users
+ * @returns Record of userId -> userName
+ */
+export const getRecentUsers = (): Record<string, string> => {
+  const { getRecentUsers } = useConnectionStore.getState();
+  return getRecentUsers();
 };

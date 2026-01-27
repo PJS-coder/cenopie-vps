@@ -18,6 +18,7 @@ import {
 import RepostModal from '@/components/RepostModalNew';
 import ConnectButton from '@/components/ConnectButton';
 import { useToastContext } from '@/components/ToastProvider';
+import { addRecentUser } from '@/lib/connectionUtils';
 import ConfirmModal from '@/components/ConfirmModal';
 import MinimalVideoPlayer from '@/components/CustomVideoPlayer';
 
@@ -264,9 +265,7 @@ const PostCard = ({
     }
 
     if (author && author !== 'User' && author !== 'Unknown User') {
-      const storedUsers = JSON.parse(localStorage.getItem('recentUsers') || '{}');
-      storedUsers[postAuthorId] = author;
-      localStorage.setItem('recentUsers', JSON.stringify(storedUsers));
+      addRecentUser(postAuthorId, author);
     }
 
     if (onMessage) {

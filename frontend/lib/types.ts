@@ -99,14 +99,10 @@ export interface ApplicationData {
   updatedAt: string | Date;
 }
 
-// Utility function for generating user IDs (still needed for session management)
-export const getUserId = (): string => {
-  if (typeof window === 'undefined') return '';
-  
-  let userId = localStorage.getItem('canopie_user_id');
-  if (!userId) {
-    userId = uuidv4();
-    localStorage.setItem('canopie_user_id', userId);
-  }
-  return userId;
+// Utility function for generating user IDs (now handled by auth store)
+export const generateUserId = (): string => {
+  return uuidv4();
 };
+
+// Legacy function for backward compatibility
+export const getUserId = generateUserId;
