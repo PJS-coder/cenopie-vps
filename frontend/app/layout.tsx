@@ -116,6 +116,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Critical SEO Meta Tags */}
+        <title>Cenopie - Professional Network & Career Platform (Beta)</title>
+        <meta name="description" content="Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, network with professionals, and advance your career. Currently in Beta." />
+        <meta property="og:title" content="Cenopie - Professional Network & Career Platform (Beta)" />
+        <meta property="og:description" content="Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, network with professionals, and advance your career." />
+        <meta property="og:image" content="https://cenopie.com/og-image.svg" />
+        <meta property="og:url" content="https://cenopie.com" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Cenopie - Professional Network & Career Platform (Beta)" />
+        <meta name="twitter:description" content="Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, and advance your career." />
+        <meta name="twitter:image" content="https://cenopie.com/og-image.svg" />
+        
         {/* Additional meta tags for better SEO and branding */}
         <meta name="application-name" content="Cenopie" />
         <meta name="apple-mobile-web-app-title" content="Cenopie" />

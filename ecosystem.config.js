@@ -35,9 +35,8 @@ module.exports = {
     },
     {
       name: 'cenopie-frontend',
-      script: 'node_modules/.bin/next',
-      args: 'start',
-      cwd: '/var/www/cenopie-vps/frontend',
+      script: 'server.js',
+      cwd: '/var/www/cenopie-vps/frontend/.next/standalone',
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
