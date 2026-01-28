@@ -1,19 +1,47 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0BC0DF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0891B2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0F9FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
   <!-- Background -->
-  <rect width="1200" height="630" fill="#ffffff"/>
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
   
-  <!-- Brand background -->
-  <rect x="100" y="150" width="1000" height="330" rx="20" fill="#0BC0DF"/>
+  <!-- Pattern overlay -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
   
-  <!-- Logo circle -->
-  <circle cx="300" cy="315" r="80" fill="rgba(255,255,255,0.2)"/>
-  <circle cx="300" cy="315" r="60" fill="white"/>
+  <!-- Logo -->
+  <rect x="100" y="200" width="120" height="120" rx="20" fill="rgba(255,255,255,0.2)"/>
+  <text x="160" y="280" font-family="Garet, Arial, sans-serif" font-size="72" font-weight="700" text-anchor="middle" fill="white" letter-spacing="-2px">pie</text>
   
-  <!-- Logo text in circle -->
-  <text x="300" y="335" font-family="Arial, sans-serif" font-size="32" font-weight="700" text-anchor="middle" fill="#0BC0DF">pie</text>
+  <!-- Main title -->
+  <text x="280" y="280" font-family="Garet, Arial, sans-serif" font-size="84" font-weight="700" fill="url(#textGradient)" letter-spacing="-2px">Cenopie</text>
   
-  <!-- Main text -->
-  <text x="450" y="290" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="white">Cenopie</text>
-  <text x="450" y="350" font-family="Arial, sans-serif" font-size="32" font-weight="400" fill="rgba(255,255,255,0.9)">Professional Network</text>
-  <text x="450" y="400" font-family="Arial, sans-serif" font-size="24" font-weight="300" fill="rgba(255,255,255,0.8)">Connect • Grow • Succeed</text>
+  <!-- Beta badge -->
+  <rect x="680" y="220" width="80" height="40" rx="8" fill="#FF6B35"/>
+  <text x="720" y="245" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="white">BETA</text>
+  
+  <!-- Subtitle -->
+  <text x="100" y="360" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="500" fill="rgba(255,255,255,0.9)">Professional Network &amp; Career Platform</text>
+  
+  <!-- Description -->
+  <text x="100" y="420" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="400" fill="rgba(255,255,255,0.8)">Connect with professionals • Find opportunities • Showcase your skills</text>
+  
+  <!-- URL -->
+  <text x="100" y="500" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="600" fill="rgba(255,255,255,0.9)">cenopie.com</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="1000" cy="150" r="60" fill="rgba(255,255,255,0.1)"/>
+  <circle cx="1100" cy="300" r="40" fill="rgba(255,255,255,0.08)"/>
+  <circle cx="950" cy="450" r="80" fill="rgba(255,255,255,0.06)"/>
 </svg>

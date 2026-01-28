@@ -17,6 +17,7 @@ import { authenticatedFetchWithRetry, handleApiResponse } from '@/lib/apiUtils';
 import { jobApi } from '@/lib/api';
 
 import SimpleLoader from '@/components/SimpleLoader';
+import { JobCardSkeleton } from '@/components/LoadingSkeleton';
 
 interface Job {
   id: string;
@@ -86,32 +87,44 @@ export default function JobsPage() {
     loadJobs();
   }, [appliedFilters, activeTab]);
 
-  // Load saved jobs status
+  // Load saved jobs status - optimized to run in background
   useEffect(() => {
-    loadSavedJobsStatus();
+    if (jobs.length > 0) {
+      // Don't block UI - load saved status in background
+      loadSavedJobsStatus();
+    }
   }, [jobs]);
 
   const loadSavedJobsStatus = async () => {
     try {
       const savedJobsSet = new Set<string>();
       
-      // Check saved status for each job
-      for (const job of jobs) {
-        try {
-          const response = await jobApi.isJobSaved(job.id);
-          
-          // Handle both response formats
-          const isSaved = response.data?.saved ?? response.saved;
-          
-          if (isSaved) {
-            savedJobsSet.add(job.id);
+      // Check saved status for each job in batches to avoid blocking
+      const batchSize = 5;
+      for (let i = 0; i < jobs.length; i += batchSize) {
+        const batch = jobs.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (job) => {
+          try {
+            const response = await jobApi.isJobSaved(job.id);
+            const isSaved = response.data?.saved ?? response.saved;
+            
+            if (isSaved) {
+              savedJobsSet.add(job.id);
+            }
+          } catch (error) {
+            // Silently fail for individual jobs
           }
-        } catch (error) {
-          console.error(`Error checking saved status for job ${job.id}:`, error);
+        }));
+        
+        // Update UI after each batch
+        setSavedJobs(new Set(savedJobsSet));
+        
+        // Small delay between batches to avoid overwhelming the API
+        if (i + batchSize < jobs.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
-      
-      setSavedJobs(savedJobsSet);
     } catch (error) {
       console.error('Error loading saved jobs status:', error);
     }
@@ -191,12 +204,19 @@ export default function JobsPage() {
       }
       
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com';
-      const response = await authenticatedFetchWithRetry(
+      
+      // Use Promise.race to timeout after 5 seconds
+      const fetchPromise = authenticatedFetchWithRetry(
         `${apiUrl}/api/jobs?${params.toString()}`,
         {},
-        { maxRetries: 3, baseDelay: 2000 }
+        { maxRetries: 2, baseDelay: 1000 } // Reduced retries and delay
       );
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
       const data = await handleApiResponse<{jobs: Job[]}>(response);
       
       // Filter jobs based on active tab if backend doesn't filter properly
@@ -212,14 +232,20 @@ export default function JobsPage() {
         );
       }
       
-      // Add mock data for demonstration (remove in production)
-      const mockJobs: Job[] = [];
-      
-      // Combine real jobs with mock data
-      setJobs([...filteredJobs, ...mockJobs]);
+      // Set jobs immediately - don't wait for saved status
+      setJobs(filteredJobs);
       
     } catch (error) {
       console.error('Error loading jobs:', error);
+      // Show cached jobs if available
+      const cachedJobs = localStorage.getItem('cachedJobs');
+      if (cachedJobs) {
+        try {
+          setJobs(JSON.parse(cachedJobs));
+        } catch (e) {
+          // Ignore cache errors
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -239,8 +265,71 @@ export default function JobsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <SimpleLoader size="lg" />
+      <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+        <div className="w-full flex justify-center px-4 lg:px-6 py-4 lg:py-8">
+          <div className="w-full lg:w-[1400px]">
+            {/* Header Skeleton */}
+            <div className="mb-6 lg:mb-8 lg:ml-80">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gray-200 rounded-2xl animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-8 bg-gray-200 rounded w-80 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Layout with Sidebar */}
+            <div className="flex gap-4 items-start relative">
+              {/* Left Sidebar Skeleton - Desktop Only */}
+              <div className="w-80 flex-shrink-0 hidden lg:block">
+                <div className="fixed top-24 w-80 space-y-6 z-10" 
+                     style={{left: 'max(1rem, calc(50vw - 700px))'}}>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <div className="h-6 bg-gray-200 rounded w-24 mb-3 animate-pulse"></div>
+                    <div className="space-y-2">
+                      <div className="h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                      <div className="h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                    <div className="h-5 bg-gray-200 rounded w-16 mb-3 animate-pulse"></div>
+                    <div className="space-y-3">
+                      <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content Skeleton */}
+              <div className="flex-1">
+                <div className="mb-4 lg:mb-6">
+                  <div className="h-6 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                </div>
+
+                {/* Job Cards Skeleton */}
+                <div className="space-y-8">
+                  {[1, 2, 3].map((section) => (
+                    <div key={section}>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                        {[1, 2, 3].map((card) => (
+                          <JobCardSkeleton key={card} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

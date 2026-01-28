@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import SimpleLoader from '@/components/SimpleLoader';
+import { ProfileSkeleton } from '@/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import {
   SparklesIcon,
@@ -78,29 +79,49 @@ function ShowcaseContent() {
     try {
       setLoading(true);
       
-      // Fetch users and posters in parallel
-      const [usersRes, postersRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?limit=50`),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/showcases/posters`)
+      // Create abort controllers for timeout
+      const usersController = new AbortController();
+      const postersController = new AbortController();
+      
+      const usersTimeout = setTimeout(() => usersController.abort(), 3000);
+      const postersTimeout = setTimeout(() => postersController.abort(), 3000);
+      
+      // Fetch users and posters in parallel with timeout
+      const [usersRes, postersRes] = await Promise.allSettled([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?limit=50`, {
+          signal: usersController.signal
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/showcases/posters`, {
+          signal: postersController.signal
+        })
       ]);
 
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
+      clearTimeout(usersTimeout);
+      clearTimeout(postersTimeout);
+
+      // Handle users response
+      if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
+        const usersData = await usersRes.value.json();
         setUsers(usersData.users || []);
       }
 
-      if (postersRes.ok) {
-        const postersData = await postersRes.json();
+      // Handle posters response
+      if (postersRes.status === 'fulfilled' && postersRes.value.ok) {
+        const postersData = await postersRes.value.json();
         setPosters(postersData.posters || []);
       }
 
-      // Get current user info
+      // Get current user info from localStorage (no API call needed)
       const token = localStorage.getItem('authToken');
       if (token) {
         const currentUserData = localStorage.getItem('currentUser');
         if (currentUserData) {
-          const user = JSON.parse(currentUserData);
-          setCurrentUser(user);
+          try {
+            const user = JSON.parse(currentUserData);
+            setCurrentUser(user);
+          } catch (e) {
+            console.error('Error parsing current user data:', e);
+          }
         }
       }
     } catch (error) {
@@ -131,8 +152,44 @@ function ShowcaseContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <SimpleLoader size="lg" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-8">
+        <div className="w-full flex justify-center px-3 sm:px-4 py-4 sm:py-8">
+          <div className="w-full lg:w-[1200px]">
+            
+            {/* Header Skeleton */}
+            <div className="mb-6 sm:mb-8 text-center">
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mx-auto mb-2 animate-pulse"></div>
+            </div>
+
+            {/* Banner Skeleton */}
+            <div className="relative mb-6 sm:mb-8 flex justify-center">
+              <div className="w-full max-w-5xl h-[280px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+            </div>
+
+            {/* Your Profile Skeleton */}
+            <div className="mb-8">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-6 animate-pulse"></div>
+              <ProfileSkeleton />
+            </div>
+
+            {/* Showcase Results Skeleton */}
+            <div className="mb-8">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40 mb-6 animate-pulse"></div>
+              <div className="text-center py-16">
+                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8 max-w-2xl mx-auto">
+                  <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 animate-pulse"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mx-auto mb-3 animate-pulse"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-80 mx-auto mb-6 animate-pulse"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-4 animate-pulse">
+                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full mb-2 animate-pulse"></div>
+                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mx-auto animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     );
   }

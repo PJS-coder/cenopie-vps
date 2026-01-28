@@ -1,7 +1,7 @@
 {
-  "name": "Cenopie - Professional Network",
+  "name": "Cenopie - Professional Network & Career Platform",
   "short_name": "Cenopie",
-  "description": "Connect with professionals and grow your career on Cenopie. Find jobs, network with industry experts, and showcase your skills.",
+  "description": "Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, network with professionals, and advance your career. Currently in Beta.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -9,7 +9,16 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["business", "productivity", "social"],
+  "categories": ["business", "productivity", "social", "networking"],
+  "screenshots": [
+    {
+      "src": "/og-image.svg",
+      "sizes": "1200x630",
+      "type": "image/svg+xml",
+      "platform": "wide",
+      "label": "Cenopie Professional Network"
+    }
+  ],
   "icons": [
     {
       "src": "/favicon.svg",
@@ -31,6 +40,29 @@
       "src": "/logo.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find Jobs",
+      "short_name": "Jobs",
+      "description": "Browse and apply for job opportunities",
+      "url": "/jobs",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Profile",
+      "short_name": "Profile",
+      "description": "View and edit your professional profile",
+      "url": "/profile",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Check your professional messages",
+      "url": "/messages",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
     }
   ]
 }

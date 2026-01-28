@@ -4,8 +4,13 @@ interface CenopieLogoProps {
 }
 
 export default function CenopieLogo({ className = "", showBeta = true }: CenopieLogoProps) {
-  // Only show beta in development or if explicitly enabled
-  const shouldShowBeta = showBeta && (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_SHOW_BETA === 'true');
+  // Always show beta in production since we're in beta phase
+  // Only hide if explicitly disabled
+  const shouldShowBeta = showBeta && (
+    process.env.NODE_ENV === 'development' || 
+    process.env.NODE_ENV === 'production' || 
+    process.env.NEXT_PUBLIC_SHOW_BETA === 'true'
+  );
   
   return (
     <div className={`flex items-center shrink-0 relative ${className}`}>

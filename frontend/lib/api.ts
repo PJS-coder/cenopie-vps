@@ -1,4 +1,6 @@
 // API service for handling requests to the backend
+import { performanceCache, CACHE_KEYS, cachedFetch } from './performance-cache';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export interface ApiResponse<T> {
@@ -554,14 +556,49 @@ export const authApi = {
 
 // Profile API
 export const profileApi = {
-  getProfile: (): Promise<ApiResponse<{ user: UserProfile }>> => authenticatedRequest('/api/profile'),
-  updateProfile: (userData: Partial<UserProfile> | FormData): Promise<ApiResponse<UserProfile>> => {
+  getProfile: async (): Promise<ApiResponse<{ user: UserProfile }>> => {
+    try {
+      // Check cache first
+      const cached = performanceCache.get<ApiResponse<{ user: UserProfile }>>(CACHE_KEYS.USER_PROFILE);
+      if (cached) {
+        return cached;
+      }
+
+      // Fetch from API with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await authenticatedRequest('/api/profile', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Cache the result for 2 minutes (profile data changes less frequently)
+      performanceCache.set(CACHE_KEYS.USER_PROFILE, response, 2 * 60 * 1000);
+      
+      return response;
+    } catch (error) {
+      // Try to return cached data even if expired
+      const staleCache = performanceCache.get<ApiResponse<{ user: UserProfile }>>(CACHE_KEYS.USER_PROFILE);
+      if (staleCache) {
+        return staleCache;
+      }
+      throw error;
+    }
+  },
+  updateProfile: async (userData: Partial<UserProfile> | FormData): Promise<ApiResponse<UserProfile>> => {
     const isFormData = userData instanceof FormData;
-    return authenticatedRequest('/api/profile/me', {
+    const response = await authenticatedRequest('/api/profile/me', {
       method: 'PUT',
       headers: isFormData ? {} : { 'Content-Type': 'application/json' },
       body: isFormData ? userData : JSON.stringify(userData),
     });
+    
+    // Clear profile cache after update
+    performanceCache.delete(CACHE_KEYS.USER_PROFILE);
+    
+    return response;
   },
   getProfileById: (userId: string): Promise<ApiResponse<{ user: UserProfile }>> => authenticatedRequest(`/api/profile/${userId}`),
   // New endpoint for suggested users

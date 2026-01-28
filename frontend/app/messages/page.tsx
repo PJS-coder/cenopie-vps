@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
 import SimpleLoader from '@/components/SimpleLoader';
+import { ConversationSkeleton } from '@/components/LoadingSkeleton';
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -97,14 +98,20 @@ export default function MessagesPage() {
       const loadConversationMessages = async () => {
         setLoadingMessages(true);
         try {
-          const response = await loadMessages(selectedConversation._id);
+          // Use Promise.race to timeout after 3 seconds
+          const loadPromise = loadMessages(selectedConversation._id);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Loading timeout')), 3000)
+          );
+          
+          const response = await Promise.race([loadPromise, timeoutPromise]);
           setHasMoreMessages(response.pagination.hasMore);
           
-          // Mark conversation as read
-          await markConversationAsRead(selectedConversation._id);
+          // Mark conversation as read (don't wait for this)
+          markConversationAsRead(selectedConversation._id).catch(console.error);
         } catch (error) {
           console.error('Failed to load messages:', error);
-          // Don't let loading errors block the UI
+          // Don't let loading errors block the UI - show empty state
         } finally {
           // Always reset loading state
           setLoadingMessages(false);
@@ -238,12 +245,36 @@ export default function MessagesPage() {
   // Show loading only for initial conversations load, not for individual message loading
   if ((loading && conversations.length === 0) || creatingConversation) {
     return (
-      <div className="fixed inset-0 top-14 sm:top-16 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <SimpleLoader 
-          size="lg" 
-          showText={true} 
-          text={creatingConversation ? 'Starting conversation...' : 'Loading conversations...'} 
-        />
+      <div className="messages-page-lock bg-white dark:bg-gray-900">
+        <div className="flex h-full overflow-hidden">
+          {/* Conversation List Skeleton */}
+          <div className="flex w-full md:w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="w-full">
+              {/* Header Skeleton */}
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+              </div>
+              
+              {/* Conversations Skeleton */}
+              <div className="overflow-y-auto">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <ConversationSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Area Skeleton - Desktop */}
+          <div className="hidden md:flex md:flex-1 flex-col overflow-hidden">
+            <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800 p-8">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 animate-pulse"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40 mx-auto mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 mx-auto animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

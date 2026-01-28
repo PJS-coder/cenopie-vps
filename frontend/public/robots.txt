@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://cenopie.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /secure-admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+
+# Allow important pages
+Allow: /
+Allow: /jobs
+Allow: /companies
+Allow: /showcase
+Allow: /auth/login
+Allow: /auth/signup
+Allow: /landing
+
+# Crawl delay (optional)
+Crawl-delay: 1

@@ -59,9 +59,17 @@ function InterviewsContent() {
   const fetchInterview = async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interviews`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -77,6 +85,9 @@ function InterviewsContent() {
         }
       }
     } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error fetching interview:', error);
+      }
     } finally {
       setLoading(false);
     }

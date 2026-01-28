@@ -15,12 +15,21 @@ import { Suspense } from 'react'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Cenopie - Professional Network',
-  description: 'Connect with professionals and grow your career on Cenopie. Find jobs, network with industry experts, and showcase your skills.',
-  keywords: ['professional network', 'career', 'jobs', 'networking', 'professionals', 'cenopie'],
-  authors: [{ name: 'Cenopie Team' }],
+  title: {
+    default: 'Cenopie - Professional Network & Career Platform',
+    template: '%s | Cenopie'
+  },
+  description: 'Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, network with professionals, and advance your career. Currently in Beta.',
+  keywords: [
+    'professional network', 'career platform', 'job search', 'networking', 
+    'professionals', 'cenopie', 'beta', 'career development', 'job opportunities',
+    'professional connections', 'skill showcase', 'career growth'
+  ],
+  authors: [{ name: 'Cenopie Team', url: 'https://cenopie.com' }],
   creator: 'Cenopie',
   publisher: 'Cenopie',
+  applicationName: 'Cenopie',
+  referrer: 'origin-when-cross-origin',
   formatDetection: {
     email: false,
     address: false,
@@ -31,8 +40,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Cenopie - Professional Network',
-    description: 'Connect with professionals and grow your career on Cenopie. Find jobs, network with industry experts, and showcase your skills.',
+    title: 'Cenopie - Professional Network & Career Platform (Beta)',
+    description: 'Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, network with professionals, and advance your career.',
     url: 'https://cenopie.com',
     siteName: 'Cenopie',
     images: [
@@ -40,7 +49,7 @@ export const metadata: Metadata = {
         url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: 'Cenopie - Professional Network',
+        alt: 'Cenopie - Professional Network & Career Platform',
       },
     ],
     locale: 'en_US',
@@ -48,14 +57,19 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Cenopie - Professional Network',
-    description: 'Connect with professionals and grow your career on Cenopie. Find jobs, network with industry experts, and showcase your skills.',
+    title: 'Cenopie - Professional Network & Career Platform (Beta)',
+    description: 'Join Cenopie, the professional network connecting talent with opportunities. Find jobs, showcase skills, and advance your career.',
     images: ['/og-image.svg'],
     creator: '@cenopie',
+    site: '@cenopie',
   },
   robots: {
     index: true,
     follow: true,
+    noarchive: false,
+    nosnippet: false,
+    noimageindex: false,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
@@ -67,17 +81,23 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', sizes: '32x32' }
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' }
     ],
     shortcut: '/favicon.ico',
     apple: [
-      { url: '/favicon.svg', type: 'image/svg+xml' }
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' },
+      { url: '/logo.svg', sizes: '180x180', type: 'image/svg+xml' }
+    ],
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/favicon.svg',
+        color: '#0BC0DF',
+      },
     ],
   },
   manifest: '/manifest.json',
-  verification: {
-    google: 'your-google-verification-code', // Replace with actual verification code
-  },
+  category: 'business',
 }
 
 export const viewport = {
@@ -95,6 +115,38 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Additional meta tags for better SEO and branding */}
+        <meta name="application-name" content="Cenopie" />
+        <meta name="apple-mobile-web-app-title" content="Cenopie" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#0BC0DF" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="theme-color" content="#0BC0DF" />
+        
+        {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* DNS prefetch for better performance */}
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+        
+        {/* Additional favicon formats */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="mask-icon" href="/favicon.svg" color="#0BC0DF" />
+        
+        {/* Microsoft tiles */}
+        <meta name="msapplication-TileImage" content="/favicon.svg" />
+        <meta name="msapplication-square70x70logo" content="/favicon.svg" />
+        <meta name="msapplication-square150x150logo" content="/favicon.svg" />
+        <meta name="msapplication-wide310x150logo" content="/logo.svg" />
+        <meta name="msapplication-square310x310logo" content="/favicon.svg" />
+      </head>
       <body className={inter.className}>
         <PerformanceMonitor />
         <AppInitializer>

@@ -31,6 +31,7 @@ import Image from 'next/image';
 import VerificationBadge from '@/components/VerificationBadge';
 
 import SimpleLoader from '@/components/SimpleLoader';
+import { ProfileSkeleton } from '@/components/LoadingSkeleton';
 
 interface UserProfile {
   id: string;
@@ -168,7 +169,14 @@ export default function ProfilePage() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await profileApi.getProfile();
+      clearTimeout(timeoutId);
+      
       const userProfile: UserProfile = (response.data?.user || response.user) as UserProfile;
       setProfile(userProfile);
       
@@ -181,6 +189,26 @@ export default function ProfilePage() {
       });
     } catch (err) {
       console.error('Profile fetch error:', err);
+      
+      // Try to use cached profile data from localStorage
+      const cachedUser = localStorage.getItem('currentUser');
+      if (cachedUser) {
+        try {
+          const userProfile = JSON.parse(cachedUser) as UserProfile;
+          setProfile(userProfile);
+          setBasicInfoForm({
+            name: userProfile.name,
+            headline: userProfile.headline,
+            bio: userProfile.bio,
+            location: userProfile.location,
+            pronouns: userProfile.pronouns
+          });
+          return; // Don't set error if we have cached data
+        } catch (parseError) {
+          console.error('Error parsing cached user data:', parseError);
+        }
+      }
+      
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
     } finally {
       setLoading(false);
@@ -319,8 +347,177 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <SimpleLoader size="lg" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%224%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+          
+          <div className="relative w-full flex justify-center px-4 py-8">
+            <div className="w-full max-w-[1200px]">
+              <div className="flex gap-8">
+                
+                {/* Main Content Area */}
+                <div className="flex-1 space-y-6">
+                  
+                  {/* Profile Header Card Skeleton */}
+                  <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                    
+                    {/* Banner Section Skeleton */}
+                    <div className="relative h-56">
+                      <div className="w-full h-full bg-gray-200 animate-pulse"></div>
+                      
+                      {/* Profile Image Skeleton */}
+                      <div className="absolute -bottom-20 left-8 z-30">
+                        <div className="w-40 h-40 bg-gray-200 rounded-full border-4 border-white shadow-2xl animate-pulse"></div>
+                      </div>
+                    </div>
+                    
+                    {/* Profile Info Section Skeleton */}
+                    <div className="px-8 pt-24 pb-8">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
+                            <div className="w-6 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+                          </div>
+                          <div className="h-6 bg-gray-200 rounded w-80 mb-4 animate-pulse"></div>
+                          <div className="flex gap-4">
+                            <div className="h-8 bg-gray-200 rounded-full w-32 animate-pulse"></div>
+                            <div className="h-8 bg-gray-200 rounded-full w-40 animate-pulse"></div>
+                          </div>
+                        </div>
+                        <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
+                      </div>
+                      
+                      {/* Bio Section Skeleton */}
+                      <div className="mt-6 bg-gray-100 p-6 rounded-2xl">
+                        <div className="space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats Cards Skeleton */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                          <div>
+                            <div className="h-6 bg-gray-200 rounded w-12 mb-1 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-20 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* About Section Skeleton */}
+                  <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gray-200 rounded-xl animate-pulse"></div>
+                      <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    </div>
+                    <div className="bg-gray-100 p-6 rounded-2xl">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-4/5 animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/5 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Experience Section Skeleton */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 rounded w-24 animate-pulse"></div>
+                        </div>
+                        <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <div className="space-y-3">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="p-3 border border-gray-100 rounded-lg">
+                            <div className="h-4 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32 mb-1 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-40 animate-pulse"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Education Section Skeleton */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 rounded w-20 animate-pulse"></div>
+                        </div>
+                        <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <div className="space-y-3">
+                        {[1].map((i) => (
+                          <div key={i} className="p-3 border border-gray-100 rounded-lg">
+                            <div className="h-4 bg-gray-200 rounded w-40 mb-2 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-48 mb-1 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32 mb-1 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Certifications Section Skeleton */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-5 bg-gray-200 rounded w-40 animate-pulse"></div>
+                        </div>
+                        <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <div className="h-4 bg-gray-200 rounded w-64 mx-auto animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Network Section Skeleton */}
+                  <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                    <div className="bg-gray-200 p-6 animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-300 rounded-xl animate-pulse"></div>
+                        <div className="h-6 bg-gray-300 rounded w-48 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="p-8">
+                      <div className="bg-gray-100 p-6 rounded-2xl">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-200 rounded w-full mb-2 animate-pulse"></div>
+                            <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </ProtectedRoute>
     );
