@@ -27,7 +27,8 @@ export function LoadingSkeleton({
             style={{
               width: index === lines - 1 ? '75%' : '100%',
               ...(width && { width }),
-              ...(height && { height })
+              ...(height && { height }),
+              animationDuration: '1s' // Faster animation
             }}
           />
         ))}
@@ -41,7 +42,8 @@ export function LoadingSkeleton({
         className={`${baseClasses} rounded-full ${className}`}
         style={{
           width: width || '40px',
-          height: height || '40px'
+          height: height || '40px',
+          animationDuration: '1s' // Faster animation
         }}
       />
     );
@@ -70,7 +72,8 @@ export function LoadingSkeleton({
       className={`${baseClasses} rounded ${className}`}
       style={{
         width: width || '100%',
-        height: height || '20px'
+        height: height || '20px',
+        animationDuration: '1s' // Faster animation
       }}
     />
   );
@@ -184,6 +187,136 @@ export function ProfileHeaderSkeleton() {
         {/* Bio Section Skeleton */}
         <div className="mt-6 bg-gray-100 p-6 rounded-2xl">
           <LoadingSkeleton variant="text" lines={3} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ProfilePageSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%224%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+      
+      <div className="relative w-full flex justify-center px-4 py-8">
+        <div className="w-full max-w-[1200px]">
+          <div className="flex gap-8">
+            
+            {/* Main Content Area */}
+            <div className="flex-1 space-y-6">
+              
+              {/* Profile Header Card Skeleton */}
+              <ProfileHeaderSkeleton />
+
+              {/* Stats Cards Skeleton */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg">
+                    <div className="flex items-center gap-3">
+                      <LoadingSkeleton variant="circular" width="48px" height="48px" className="rounded-xl" />
+                      <div>
+                        <LoadingSkeleton width="48px" height="24px" className="mb-1" />
+                        <LoadingSkeleton width="80px" height="12px" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* About Section Skeleton */}
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <LoadingSkeleton variant="circular" width="40px" height="40px" className="rounded-xl" />
+                  <LoadingSkeleton width="80px" height="24px" />
+                </div>
+                <div className="bg-gray-100 p-6 rounded-2xl">
+                  <LoadingSkeleton variant="text" lines={3} />
+                </div>
+              </div>
+
+              {/* Experience Section Skeleton */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LoadingSkeleton variant="circular" width="20px" height="20px" />
+                      <LoadingSkeleton width="96px" height="20px" />
+                    </div>
+                    <LoadingSkeleton width="64px" height="24px" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-3">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="p-3 border border-gray-100 rounded-lg">
+                        <LoadingSkeleton width="192px" height="16px" className="mb-2" />
+                        <LoadingSkeleton width="128px" height="12px" className="mb-1" />
+                        <LoadingSkeleton width="160px" height="12px" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Education Section Skeleton */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LoadingSkeleton variant="circular" width="20px" height="20px" />
+                      <LoadingSkeleton width="80px" height="20px" />
+                    </div>
+                    <LoadingSkeleton width="64px" height="24px" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="p-3 border border-gray-100 rounded-lg">
+                    <LoadingSkeleton width="160px" height="16px" className="mb-2" />
+                    <LoadingSkeleton width="192px" height="12px" className="mb-1" />
+                    <LoadingSkeleton width="128px" height="12px" className="mb-1" />
+                    <LoadingSkeleton width="96px" height="12px" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Certifications Section Skeleton */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LoadingSkeleton variant="circular" width="20px" height="20px" />
+                      <LoadingSkeleton width="160px" height="20px" />
+                    </div>
+                    <LoadingSkeleton width="64px" height="24px" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <LoadingSkeleton width="256px" height="16px" className="mx-auto" />
+                </div>
+              </div>
+
+              {/* Network Section Skeleton */}
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="bg-gray-200 p-6" style={{ animationDuration: '1s' }}>
+                  <div className="flex items-center gap-3">
+                    <LoadingSkeleton variant="circular" width="40px" height="40px" className="rounded-xl bg-gray-300" />
+                    <LoadingSkeleton width="192px" height="24px" className="bg-gray-300" />
+                  </div>
+                </div>
+                <div className="p-8">
+                  <div className="bg-gray-100 p-6 rounded-2xl">
+                    <div className="flex items-center gap-4">
+                      <LoadingSkeleton variant="circular" width="48px" height="48px" className="rounded-xl" />
+                      <div className="flex-1">
+                        <LoadingSkeleton variant="text" lines={2} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
     </div>
