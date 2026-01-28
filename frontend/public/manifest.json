@@ -1,11 +1,15 @@
 {
   "name": "Cenopie - Professional Network",
   "short_name": "Cenopie",
-  "description": "Connect with professionals and grow your career",
+  "description": "Connect with professionals and grow your career on Cenopie. Find jobs, network with industry experts, and showcase your skills.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0BC0DF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity", "social"],
   "icons": [
     {
       "src": "/favicon.svg",
@@ -14,8 +18,18 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.svg",
+      "src": "/favicon.ico",
       "sizes": "32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
       "type": "image/svg+xml"
     }
   ]

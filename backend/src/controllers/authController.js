@@ -3,10 +3,10 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import passport from 'passport';
 
-function genToken(id, expiresIn = '1h') {
+function genToken(id, expiresIn = process.env.JWT_EXPIRES_IN || '24h') {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn });
 }
-function genRefresh(id, expiresIn = '30d') {
+function genRefresh(id, expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '30d') {
   return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn });
 }
 

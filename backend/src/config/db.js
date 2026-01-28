@@ -3,16 +3,11 @@ import logger from './logger.js';
 
 const connectDB = async () => {
   try {
-    // Force load production environment using ES module syntax
-    if (process.env.NODE_ENV === 'production') {
-      const { config } = await import('dotenv');
-      config({ path: '.env.production' });
-    }
-    
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/canopie';
     const IS_PRODUCTION = process.env.NODE_ENV === 'production';
     
     console.log('🔗 Connecting to MongoDB:', mongoUri.includes('mongodb+srv') ? 'Atlas Database' : 'Local Database');
+    console.log('🔍 MongoDB URI preview:', mongoUri.substring(0, 20) + '...');
     
     // Enhanced connection options for high concurrency
     const options = {
