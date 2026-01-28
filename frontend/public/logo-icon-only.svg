@@ -1,5 +1,5 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <!-- Logo icon only - text and beta badge handled by CenopieLogo component -->
+  <!-- Clean logo icon without text or beta badge -->
   <rect width="32" height="32" rx="6" fill="#0BC0DF"/>
   <text x="16" y="22" font-family="Garet, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="white" letter-spacing="-1px">pie</text>
 </svg>

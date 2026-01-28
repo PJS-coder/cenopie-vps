@@ -2,19 +2,11 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useRegistrationStatus } from "@/hooks/useRegistrationStatus";
 
 export default function LandingPage() {
-  const router = useRouter();
   const { allowRegistration, isClosedBeta, loading, message } = useRegistrationStatus();
-
-  // Redirect authenticated users to the feed
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-    if (token) router.replace("/feed");
-  }, [router]);
 
   // Add landing page class to body to prevent mobile nav spacing
   useEffect(() => {

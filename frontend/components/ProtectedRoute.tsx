@@ -7,46 +7,35 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      console.log('ProtectedRoute: Checking auth, token exists:', !!token);
-      console.log('ProtectedRoute: Current pathname:', pathname);
+    const checkAuth = () => {
+      if (typeof window === "undefined") return;
+      
+      const token = localStorage.getItem('authToken');
       
       if (!token) {
-        console.log('ProtectedRoute: No token, redirecting to login');
-        setShouldRedirect('/auth/login');
-      } else {
-        console.log('ProtectedRoute: Token found, setting authenticated');
-        setIsAuthenticated(true);
+        // No token, redirect to login immediately
+        router.replace('/auth/login');
+        return;
       }
+      
+      // Token exists, user is authenticated
+      setIsAuthenticated(true);
       setIsLoading(false);
     };
 
+    // Check immediately without delay
     checkAuth();
   }, [router, pathname]);
 
-  // Handle redirects in useEffect to avoid setState during render
-  useEffect(() => {
-    if (shouldRedirect) {
-      console.log('Redirecting to:', shouldRedirect);
-      router.push(shouldRedirect as any);
-      setShouldRedirect(null);
-    }
-  }, [shouldRedirect, router]);
-
+  // Show minimal loading
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-optimized-spin rounded-full h-8 w-8 border-2 border-gray-300/20 border-t-gray-900"></div>
+      <div className="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-[#0BC0DF]"></div>
       </div>
     );
-  }
-
-  if (shouldRedirect) {
-    return null;
   }
 
   if (!isAuthenticated) {
