@@ -3,18 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { ProfileSkeleton } from '@/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
-import {
-  SparklesIcon,
-  EyeIcon,
-  PencilIcon,
-  StarIcon,
-  HeartIcon,
-  ArrowTopRightOnSquareIcon
-} from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 
 interface User {
   _id: string;
@@ -32,6 +22,12 @@ interface User {
     connections: number;
     posts: number;
     showcases: number;
+    interviews?: {
+      total: number;
+      selected: number;
+      rejected: number;
+      score: number;
+    };
   };
   createdAt: string;
 }
@@ -52,7 +48,6 @@ export default function ShowcasePage() {
 
 function ShowcaseContent() {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
   const [posters, setPosters] = useState<Poster[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,8 +125,7 @@ function ShowcaseContent() {
 
       // Handle users response
       if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
-        const usersData = await usersRes.value.json();
-        setUsers(usersData.users || []);
+        // Users data not needed for current functionality
       }
 
       // Handle posters response
@@ -158,25 +152,6 @@ function ShowcaseContent() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const groupUsersByDomain = (users: User[]) => {
-    const grouped = users.reduce((acc, user) => {
-      const domain = user.experience || user.headline || 'Other';
-      if (!acc[domain]) {
-        acc[domain] = [];
-      }
-      acc[domain].push(user);
-      return acc;
-    }, {} as Record<string, User[]>);
-
-    // Sort domains by number of users (descending)
-    return Object.entries(grouped)
-      .sort(([, a], [, b]) => b.length - a.length)
-      .reduce((acc, [domain, users]) => {
-        acc[domain] = users;
-        return acc;
-      }, {} as Record<string, User[]>);
   };
 
   if (loading) {
@@ -237,9 +212,9 @@ function ShowcaseContent() {
 
           {/* Three Posters - Carousel Style */}
           {posters.length > 0 && (
-            <div className="relative mb-6 sm:mb-8 flex justify-center">
+            <div className="relative mb-5 sm:mb-7 flex justify-center">
               <div 
-                className="relative w-full max-w-5xl h-[200px] sm:h-[280px] md:h-[320px] lg:h-[360px] rounded-xl overflow-hidden shadow-lg cursor-pointer select-none"
+                className="relative w-full max-w-5xl h-[140px] sm:h-[200px] md:h-[240px] lg:h-[280px] rounded-xl overflow-hidden shadow-lg cursor-pointer select-none"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -257,8 +232,8 @@ function ShowcaseContent() {
                 />
                 <div className="hidden w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800 text-gray-500">
                   <div className="text-center">
-                    <div className="w-12 h-12 mx-auto mb-2 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 mx-auto mb-2 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -275,10 +250,10 @@ function ShowcaseContent() {
                         e.stopPropagation();
                         setCurrentPosterIndex(prev => prev === 0 ? posters.length - 1 : prev - 1);
                       }}
-                      className="hidden sm:flex absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
+                      className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
                       aria-label="Previous banner"
                     >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
@@ -289,16 +264,16 @@ function ShowcaseContent() {
                         e.stopPropagation();
                         setCurrentPosterIndex(prev => prev === posters.length - 1 ? 0 : prev + 1);
                       }}
-                      className="hidden sm:flex absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
+                      className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
                       aria-label="Next banner"
                     >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
                     
-                    {/* Dots Indicator - Larger on mobile */}
-                    <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    {/* Dots Indicator - Hidden on mobile, visible on desktop */}
+                    <div className="hidden sm:flex absolute bottom-3 left-1/2 -translate-x-1/2 gap-2 z-10">
                       {posters.map((_, index) => (
                         <button
                           key={index}
@@ -307,7 +282,7 @@ function ShowcaseContent() {
                             e.stopPropagation();
                             setCurrentPosterIndex(index);
                           }}
-                          className={`w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
+                          className={`w-2 h-2 rounded-full transition-colors ${
                             index === currentPosterIndex ? 'bg-white' : 'bg-white/50'
                           }`}
                           aria-label={`Go to banner ${index + 1}`}
@@ -317,13 +292,13 @@ function ShowcaseContent() {
                   </>
                 )}
                 
-                {/* Mobile swipe indicator */}
+                {/* Mobile swipe indicator - better positioned */}
                 {posters.length > 1 && (
-                  <div className="sm:hidden absolute top-3 right-3 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 text-white text-xs flex items-center gap-1">
+                  <div className="sm:hidden absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs flex items-center gap-1">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                     </svg>
-                    {currentPosterIndex + 1} / {posters.length}
+                    {currentPosterIndex + 1}/{posters.length}
                   </div>
                 )}
               </div>
@@ -332,71 +307,125 @@ function ShowcaseContent() {
 
           {/* Your Profile */}
           {currentUser && (
-            <div className="mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+            <div className="mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
                 Your Profile
               </h2>
               
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  {/* Profile Image */}
-                  <div className="w-16 h-16 sm:w-12 sm:h-12 rounded-full overflow-hidden flex-shrink-0 bg-[#0BC0DF] flex items-center justify-center">
-                    {currentUser.profileImage ? (
-                      <img 
-                        src={currentUser.profileImage} 
-                        alt={currentUser.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-bold text-xl sm:text-lg">
-                        {currentUser.name?.charAt(0) || 'U'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0 w-full sm:w-auto">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg sm:text-base text-gray-900 dark:text-white">
-                        {currentUser.name}
-                      </h3>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  {/* Left: Profile Image & Info */}
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-[#0BC0DF] to-[#0aa9c4] flex items-center justify-center">
+                        {currentUser.profileImage ? (
+                          <img 
+                            src={currentUser.profileImage} 
+                            alt={currentUser.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-white font-bold text-lg">
+                            {currentUser.name?.charAt(0) || 'U'}
+                          </span>
+                        )}
+                      </div>
                       {currentUser.isVerified && (
-                        <div className="w-5 h-5 sm:w-4 sm:h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                          <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                      {currentUser.bio || currentUser.headline || 'No bio available'}
-                    </p>
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4 sm:mb-0">
-                      <div className="flex items-center gap-1">
-                        <span>{currentUser.stats?.connections || 0} connections</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>{currentUser.stats?.posts || 0} posts</span>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base text-gray-900 dark:text-white truncate">
+                        {currentUser.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                        {currentUser.bio || currentUser.headline || 'Professional profile'}
+                      </p>
                     </div>
                   </div>
                   
-                  <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
+                  {/* Center: Stats */}
+                  <div className="hidden sm:flex gap-4 mx-4">
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                        {currentUser.stats?.interviews?.selected || 0}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Selected</div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                        {currentUser.stats?.interviews?.rejected || 0}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Rejected</div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-purple-500">
+                        {currentUser.stats?.interviews?.total || 0}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-yellow-500">
+                        {currentUser.stats?.interviews?.score || 0}%
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Score</div>
+                    </div>
+                  </div>
+                  
+                  {/* Right: Edit Button */}
+                  <div className="flex-shrink-0">
                     <Button 
-                      variant="outline" 
                       size="sm"
                       onClick={() => router.push(`/profile/${currentUser._id}`)}
-                      className="flex-1 sm:flex-none text-[#0BC0DF] border-[#0BC0DF] hover:bg-[#0BC0DF] hover:text-white"
+                      className="bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white text-xs px-4 py-2 rounded-lg"
                     >
-                      View Profile
+                      Edit Profile
                     </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => router.push('/profile')}
-                      className="flex-1 sm:flex-none bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white"
-                    >
-                      Edit
-                    </Button>
+                  </div>
+                </div>
+                
+                {/* Mobile Stats - Show below on small screens */}
+                <div className="sm:hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <div className="flex gap-4 justify-center text-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentUser.stats?.interviews?.selected || 0}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Selected</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentUser.stats?.interviews?.rejected || 0}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Rejected</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentUser.stats?.interviews?.total || 0}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Total</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentUser.stats?.interviews?.score || 0}%
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Score</span>
+                    </div>
                   </div>
                 </div>
               </div>
