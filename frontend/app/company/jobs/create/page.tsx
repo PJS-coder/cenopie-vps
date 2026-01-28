@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BriefcaseIcon, MapPinIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/outline';
-import CenopieLoader from '@/components/CenopieLoader';
+import StreamingFeedLoader from '@/components/StreamingFeedLoader';
 
 export default function CreateJobPage() {
   const router = useRouter();
@@ -196,7 +196,7 @@ export default function CreateJobPage() {
   };
 
   if (loading || !company) {
-    return <CenopieLoader />;
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><StreamingFeedLoader count={1} /></div>;
   }
 
   return (

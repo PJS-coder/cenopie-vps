@@ -13,7 +13,7 @@ import {
   UsersIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
-import CenopieLoader from '@/components/CenopieLoader';
+import StreamingFeedLoader from '@/components/StreamingFeedLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 
 interface Company {
@@ -365,7 +365,7 @@ export default function CompanyProfilePage() {
   };
 
   if (loading) {
-    return <CenopieLoader />;
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><StreamingFeedLoader count={1} /></div>;
   }
 
   if (!company) {

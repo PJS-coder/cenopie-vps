@@ -11,7 +11,7 @@ import {
   UserGroupIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import CenopieLoader from '@/components/CenopieLoader';
+import StreamingFeedLoader from '@/components/StreamingFeedLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 import ConnectButton from '@/components/ConnectButton';
 import { newsApi, profileApi } from '@/lib/api';
@@ -178,7 +178,7 @@ export default function NewsArticlePage() {
   };
 
   if (loading) {
-    return <CenopieLoader />;
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><StreamingFeedLoader count={1} /></div>;
   }
 
   if (error || !article) {

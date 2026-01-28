@@ -8,7 +8,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { mediaApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import VerificationBadge from '@/components/VerificationBadge';
-import CenopieLoader from '@/components/CenopieLoader';
 import PostCard from '@/components/PostCard';
 import CustomVideoPlayer from '@/components/CustomVideoPlayer';
 import { useToastContext } from '@/components/ToastProvider';
@@ -116,13 +115,16 @@ export default function FeedPage() {
       throw error;
     }
   };
+
   const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!postContent.trim() || isPosting) return;
+    
     try {
       setIsPosting(true);
       const finalContent = postContent.trim();
       if (!finalContent) throw new Error('Text content is required.');
+      
       if (selectedFiles.length === 0) {
         const mediaType = isArticleMode ? 'article' : undefined;
         await createPost(finalContent, undefined, mediaType);
@@ -130,6 +132,7 @@ export default function FeedPage() {
         const uploadResult = await uploadFile(selectedFiles[0]);
         await createPost(finalContent, uploadResult.url, uploadResult.mediaType);
       }
+      
       setPostContent('');
       setSelectedFiles([]);
       setPreviewUrls([]);
@@ -146,15 +149,19 @@ export default function FeedPage() {
   const handleLike = async (postId: string) => {
     try { await likePost(postId); } catch (err) { console.error('Like failed:', err); }
   };
+
   const handleRepost = async (postId: string, repostComment?: string) => {
     try { await repostPost(postId, repostComment); } catch (err) { alert('Failed to repost'); }
   };
+
   const handleSave = async (postId: string) => {
     try {
-      const postToSave = posts.find(post => post.id === postId);
+      const postToSave = posts.find((post: any) => post.id === postId);
       if (!postToSave) return;
+      
       const existingSavedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
       const isAlreadySaved = existingSavedPosts.some((savedPost: any) => savedPost.id === postId);
+      
       if (isAlreadySaved) {
         const updatedSavedPosts = existingSavedPosts.filter((savedPost: any) => savedPost.id !== postId);
         localStorage.setItem('savedPosts', JSON.stringify(updatedSavedPosts));
@@ -165,16 +172,23 @@ export default function FeedPage() {
         localStorage.setItem('savedPosts', JSON.stringify(updatedSavedPosts));
         alert('Post saved successfully!');
       }
+      
       window.dispatchEvent(new Event('savedPostsUpdated'));
-    } catch (err) { alert('Failed to save post'); }
+    } catch (err) { 
+      alert('Failed to save post'); 
+    }
   };
+
   const handleShare = (postId: string) => alert(`Share post ${postId}`);
+
   const handleDelete = async (postId: string) => {
     try { if (window.confirm('Delete this post?')) await deletePost(postId); } catch (err) { toast.error('Failed to delete post'); }
   };
+
   const handleDeleteComment = async (postId: string, commentId: string) => {
     try { await deleteComment(postId, commentId); } catch (err) { alert('Failed to delete comment'); }
   };
+
   const handleMessage = useCallback((userId: string) => {
     localStorage.setItem('messageTargetUserId', userId);
     const storedUsers = JSON.parse(localStorage.getItem('recentUsers') || '{}');
@@ -184,13 +198,13 @@ export default function FeedPage() {
     }
     router.push(`/messages?user=${userId}`);
   }, [router]);
+
   const handleComment = async (postId: string, commentText?: string) => {
     try { if (commentText) await commentOnPost(postId, commentText); } catch (err) { alert('Failed to add comment'); }
   };
 
   // Loading state - only show full loader on initial mount, not when switching filters
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  
   useEffect(() => {
     if (!loading && posts.length > 0) {
       setHasLoadedOnce(true);
@@ -198,7 +212,13 @@ export default function FeedPage() {
   }, [loading, posts.length]);
 
   if (loading && posts.length === 0 && !hasLoadedOnce) {
-    return <ProtectedRoute><CenopieLoader /></ProtectedRoute>;
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0BC0DF]"></div>
+        </div>
+      </ProtectedRoute>
+    );
   }
 
   // Error state
@@ -221,9 +241,11 @@ export default function FeedPage() {
       <div className="w-full flex justify-center px-4 lg:px-6 pb-8 pt-6">
         <div className="w-full lg:w-[1200px]">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            
             {/* Left Sidebar */}
             <div className="lg:col-span-1 order-1">
               <div className="lg:sticky lg:top-[72px] space-y-6">
+                
                 {/* User Profile Card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="relative h-24 w-full cursor-pointer" onClick={() => {
@@ -235,13 +257,25 @@ export default function FeedPage() {
                     }
                   }}>
                     {currentUser?.bannerImage ? (
-                      <Image src={currentUser.bannerImage} alt="Banner" className="w-full h-full object-cover" fill sizes="100vw" />
+                      <Image 
+                        src={currentUser.bannerImage} 
+                        alt="Banner" 
+                        className="w-full h-full object-cover" 
+                        fill 
+                        sizes="100vw" 
+                      />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-r from-blue-400 to-purple-500"></div>
                     )}
                     <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-white dark:bg-gray-800">
                       {currentUser?.profileImage ? (
-                        <Image src={currentUser.profileImage} alt={currentUser.name || 'User'} className="w-full h-full rounded-full object-cover" width={80} height={80} />
+                        <Image 
+                          src={currentUser.profileImage} 
+                          alt={currentUser.name || 'User'} 
+                          className="w-full h-full rounded-full object-cover" 
+                          width={80} 
+                          height={80} 
+                        />
                       ) : (
                         <div className="w-full h-full rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold">
                           {currentUser?.name ? getUserInitials(currentUser.name) : <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>}
@@ -249,11 +283,11 @@ export default function FeedPage() {
                       )}
                     </div>
                   </div>
+                  
                   <div className="p-5 pt-10">
                     <div className="flex flex-col items-center text-center">
                       <h4 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-                        <span 
-                          className="cursor-pointer hover:text-[#0BC0DF] transition-colors"
+                        <span className="cursor-pointer hover:text-[#0BC0DF] transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             const userId = currentUser?._id || currentUser?.id;
@@ -268,14 +302,21 @@ export default function FeedPage() {
                         </span>
                         <VerificationBadge isVerified={currentUser?.isVerified} size="md" />
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{currentUser?.role || 'Professional'}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        {currentUser?.role || 'Professional'}
+                      </p>
                       {(currentUser?.company || currentUser?.college) && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{currentUser?.company || currentUser?.college}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {currentUser?.company || currentUser?.college}
+                        </p>
                       )}
                       {currentUser?.bio && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-3">{currentUser.bio}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-3">
+                          {currentUser.bio}
+                        </p>
                       )}
                     </div>
+                    
                     <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
                       <div className="flex justify-between text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 -mx-2 px-2 py-1 rounded transition-colors" onClick={() => router.push('/notifications?tab=network')}>
                         <span className="text-gray-500 dark:text-gray-400">Connections</span>
@@ -311,8 +352,10 @@ export default function FeedPage() {
                 </div>
               </div>
             </div>
+
             {/* Center Feed */}
             <div className="lg:col-span-3 order-2 space-y-2">
+              
               {/* Create Post */}
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-4">
@@ -320,7 +363,13 @@ export default function FeedPage() {
                     <div className="flex items-center justify-between">
                       <div className="w-10 h-10 rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold flex-shrink-0">
                         {currentUser?.profileImage ? (
-                          <Image src={currentUser.profileImage} alt={currentUser.name || 'User'} className="w-full h-full rounded-full object-cover" width={40} height={40} />
+                          <Image 
+                            src={currentUser.profileImage} 
+                            alt={currentUser.name || 'User'} 
+                            className="w-full h-full rounded-full object-cover" 
+                            width={40} 
+                            height={40} 
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[#0BC0DF] text-sm font-semibold">
                             {getUserInitials(currentUser?.name || 'User')}
@@ -328,19 +377,45 @@ export default function FeedPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="file" id="file-upload" className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
+                        <input 
+                          type="file" 
+                          id="file-upload" 
+                          className="hidden" 
+                          accept="image/*,video/*" 
+                          onChange={handleFileChange} 
+                        />
                         <label htmlFor="file-upload" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer" title="Add photo">
                           <PhotoIcon className="w-4 h-4" />
                         </label>
-                        <button type="button" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors" title="Add video" onClick={() => { const input = document.getElementById('file-upload') as HTMLInputElement; if (input) { input.accept = 'video/*'; input.click(); } }}>
+                        <button 
+                          type="button" 
+                          className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors" 
+                          title="Add video" 
+                          onClick={() => { 
+                            const input = document.getElementById('file-upload') as HTMLInputElement; 
+                            if (input) { 
+                              input.accept = 'video/*'; 
+                              input.click(); 
+                            } 
+                          }}
+                        >
                           <VideoCameraIcon className="w-4 h-4" />
                         </button>
-                        <button type="button" className={`p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors ${isArticleMode ? 'text-purple-500 bg-purple-50 dark:bg-purple-900/10' : 'text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Write article" onClick={() => setIsArticleMode(!isArticleMode)}>
+                        <button 
+                          type="button" 
+                          className={`p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors ${
+                            isArticleMode 
+                              ? 'text-purple-500 bg-purple-50 dark:bg-purple-900/10' 
+                              : 'text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'
+                          }`} 
+                          title="Write article" 
+                          onClick={() => setIsArticleMode(!isArticleMode)}
+                        >
                           <DocumentTextIcon className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* File Preview */}
                     {previewUrls.length > 0 && (
                       <div className="mt-2">
@@ -348,9 +423,24 @@ export default function FeedPage() {
                           {selectedFiles[0]?.type.startsWith('video/') ? (
                             <CustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain" />
                           ) : (
-                            <Image src={previewUrls[0]} alt="Preview" className="w-full h-auto max-h-[300px] object-contain" width={400} height={300} />
+                            <Image 
+                              src={previewUrls[0]} 
+                              alt="Preview" 
+                              className="w-full h-auto max-h-[300px] object-contain" 
+                              width={400} 
+                              height={300} 
+                            />
                           )}
-                          <button type="button" className="absolute top-2 right-2 bg-black/70 text-white p-1.5 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 rounded-full" onClick={() => { setSelectedFiles([]); previewUrls.forEach(url => URL.revokeObjectURL(url)); setPreviewUrls([]); }} title="Remove file">
+                          <button 
+                            type="button" 
+                            className="absolute top-2 right-2 bg-black/70 text-white p-1.5 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 rounded-full" 
+                            onClick={() => { 
+                              setSelectedFiles([]); 
+                              previewUrls.forEach(url => URL.revokeObjectURL(url)); 
+                              setPreviewUrls([]); 
+                            }} 
+                            title="Remove file"
+                          >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
@@ -358,13 +448,26 @@ export default function FeedPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="flex items-start">
                       <form onSubmit={handlePostSubmit} className="flex-1 ml-12">
                         {isArticleMode ? (
-                          <textarea id="post-input" placeholder="Share your thoughts..." className="w-full bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all min-h-[80px]" value={postContent} onChange={(e) => setPostContent(e.target.value)} />
+                          <textarea 
+                            id="post-input" 
+                            placeholder="Share your thoughts..." 
+                            className="w-full bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all min-h-[80px]" 
+                            value={postContent} 
+                            onChange={(e) => setPostContent(e.target.value)} 
+                          />
                         ) : (
-                          <input id="post-input" type="text" placeholder="Share your thoughts..." className="w-full bg-gray-50 dark:bg-gray-800 rounded-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all pr-10" value={postContent} onChange={(e) => setPostContent(e.target.value)} />
+                          <input 
+                            id="post-input" 
+                            type="text" 
+                            placeholder="Share your thoughts..." 
+                            className="w-full bg-gray-50 dark:bg-gray-800 rounded-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all pr-10" 
+                            value={postContent} 
+                            onChange={(e) => setPostContent(e.target.value)} 
+                          />
                         )}
                         <div className="flex justify-between items-center mt-2">
                           <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -383,7 +486,15 @@ export default function FeedPage() {
                               )
                             )}
                           </div>
-                          <button type="submit" disabled={!postContent.trim() || isPosting} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${postContent.trim() && !isPosting ? 'bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'}`}>
+                          <button 
+                            type="submit" 
+                            disabled={!postContent.trim() || isPosting} 
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                              postContent.trim() && !isPosting 
+                                ? 'bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
                             {isPosting ? (
                               <div className="flex items-center gap-1">
                                 <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -401,14 +512,31 @@ export default function FeedPage() {
               {/* Feed Filters */}
               <div className="mb-4">
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1">
-                  <button onClick={() => setActiveFilter('all')} className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${activeFilter === 'all' ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                    <EyeIcon className="w-4 h-4" />All Posts
+                  <button 
+                    onClick={() => setActiveFilter('all')} 
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeFilter === 'all' 
+                        ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <EyeIcon className="w-4 h-4" />
+                    All Posts
                   </button>
-                  <button onClick={() => setActiveFilter('following')} className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${activeFilter === 'following' ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                    <HeartIcon className="w-4 h-4" />Following
+                  <button 
+                    onClick={() => setActiveFilter('following')} 
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeFilter === 'following' 
+                        ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <HeartIcon className="w-4 h-4" />
+                    Following
                   </button>
                 </div>
               </div>
+
               {/* Posts Content */}
               <div className="space-y-4">
                 {loading && posts.length === 0 && (
@@ -444,7 +572,7 @@ export default function FeedPage() {
 
                 {/* Feed Posts */}
                 {posts && posts.length > 0 ? (
-                  posts.map((post, index) => {
+                  posts.map((post: any, index: number) => {
                     return post.id && post.author && post.content ? (
                       <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                         <PostCard
@@ -480,17 +608,19 @@ export default function FeedPage() {
                     ) : null;
                   })
                 ) : null}
-                
+
                 {/* Infinite scroll loader */}
                 <div ref={loaderRef} className="flex justify-center py-4">
                   {loading && posts.length > 0 && (
                     <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
                   )}
                   {!hasMore && posts.length > 0 && (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">You've reached the end of the feed</div>
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      You've reached the end of the feed
+                    </div>
                   )}
                 </div>
-                
+
                 {/* Empty feed message */}
                 {!loading && !error && posts.length === 0 && (
                   <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm p-12 text-center">
@@ -505,19 +635,24 @@ export default function FeedPage() {
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
                       {activeFilter === 'following' ? 'Follow people to see their posts in your feed' : 'Be the first to share something with your network!'}
                     </p>
-                    <Button onClick={() => document.getElementById('post-input')?.focus()}>Create your first post</Button>
+                    <Button onClick={() => document.getElementById('post-input')?.focus()}>
+                      Create your first post
+                    </Button>
                   </div>
                 )}
               </div>
             </div>
+
             {/* Right Sidebar */}
             <div className="lg:col-span-1 order-3 space-y-6 hidden lg:block">
+              
               {/* Industry News */}
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <NewspaperIcon className="w-4 h-4 text-blue-500" />News
+                      <NewspaperIcon className="w-4 h-4 text-blue-500" />
+                      News
                     </h3>
                     <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">Live</span>
                   </div>
@@ -541,9 +676,13 @@ export default function FeedPage() {
                             </div>
                             <div className="flex items-center justify-between mt-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{article?.company?.name || 'Company'}</span>
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                  {article?.company?.name || 'Company'}
+                                </span>
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{article?.timeAgo || 'Recently'}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {article?.timeAgo || 'Recently'}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -553,13 +692,15 @@ export default function FeedPage() {
                 </div>
                 <div className="p-4 border-t border-gray-100 dark:border-gray-700">
                   <button onClick={() => router.push('/news')} className="w-full text-sm font-medium text-[#0BC0DF] hover:text-[#0aa9c4] transition-colors flex items-center justify-center gap-2">
-                    <NewspaperIcon className="w-4 h-4" />View all news
+                    <NewspaperIcon className="w-4 h-4" />
+                    View all news
                   </button>
                 </div>
               </div>
 
               {/* Sticky Container for People You May Know */}
               <div className="lg:sticky lg:top-[72px] space-y-6">
+                
                 {/* People You May Know */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
@@ -579,7 +720,13 @@ export default function FeedPage() {
                         <div key={`${person.id}-${index}`} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors group" onClick={() => router.push(`/profile/${person.id}`)}>
                           <div className="w-10 h-10 rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold text-sm overflow-hidden flex-shrink-0">
                             {person.profileImage ? (
-                              <Image src={person.profileImage} alt={person.name} width={40} height={40} className="w-full h-full object-cover rounded-full" />
+                              <Image 
+                                src={person.profileImage} 
+                                alt={person.name} 
+                                width={40} 
+                                height={40} 
+                                className="w-full h-full object-cover rounded-full" 
+                              />
                             ) : (
                               <span>{person.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}</span>
                             )}
@@ -603,7 +750,7 @@ export default function FeedPage() {
                     </button>
                   </div>
                 </div>
-              
+
                 {/* Footer Links */}
                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2 p-4">
                   <div className="flex flex-wrap gap-2">
@@ -621,6 +768,7 @@ export default function FeedPage() {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

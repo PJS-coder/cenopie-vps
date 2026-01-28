@@ -18,7 +18,7 @@ import {
   MapPinIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
-import CenopieLoader from '@/components/CenopieLoader';
+import StreamingFeedLoader from '@/components/StreamingFeedLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 import { useToastContext } from '@/components/ToastProvider';
 import ConfirmModal from '@/components/ConfirmModal';

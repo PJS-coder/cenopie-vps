@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid, BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/context/AuthContext';
-import CenopieLoader from '@/components/CenopieLoader';
+import StreamingFeedLoader from '@/components/StreamingFeedLoader';
 import VerificationBadge from '@/components/VerificationBadge';
 import { jobApi } from '@/lib/api';
 import { useToastContext } from '@/components/ToastProvider';
@@ -219,7 +219,7 @@ export default function JobDetailPage() {
   };
 
   if (loading) {
-    return <CenopieLoader />;
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6"><StreamingFeedLoader count={1} /></div>;
   }
 
   if (!job) {

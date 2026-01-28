@@ -5,9 +5,12 @@ import Providers from '@/components/Providers'
 import ConditionalNavbar from '@/components/ConditionalNavbar'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import ConditionalFooter from '@/components/ConditionalFooter'
-import GlobalLoadingIndicator from '@/components/GlobalLoadingIndicator'
+import ProgressLoader from '@/components/ProgressLoader'
+import AppInitializer from '@/components/AppInitializer'
+import PerformanceMonitor from '@/components/PerformanceMonitor'
 import { ToastProvider } from '@/components/ToastProvider'
 import ConditionalMain from '@/components/ConditionalMain'
+import { Suspense } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -93,20 +96,25 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ErrorBoundary>
-          <Providers>
-            <ToastProvider>
-              <GlobalLoadingIndicator />
-              <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                <ConditionalNavbar />
-                <ConditionalMain>
-                  {children}
-                </ConditionalMain>
-                <ConditionalFooter />
-              </div>
-            </ToastProvider>
-          </Providers>
-        </ErrorBoundary>
+        <PerformanceMonitor />
+        <AppInitializer>
+          <ErrorBoundary>
+            <Providers>
+              <ToastProvider>
+                <ProgressLoader isLoading={false} />
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+                  <ConditionalNavbar />
+                  <ConditionalMain>
+                    <Suspense fallback={<ProgressLoader isLoading={true} />}>
+                      {children}
+                    </Suspense>
+                  </ConditionalMain>
+                  <ConditionalFooter />
+                </div>
+              </ToastProvider>
+            </Providers>
+          </ErrorBoundary>
+        </AppInitializer>
       </body>
     </html>
   )

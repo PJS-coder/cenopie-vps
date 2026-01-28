@@ -79,12 +79,27 @@ interface QueuedRequest {
   priority: number;
   resolve: (value: any) => void;
   reject: (error: any) => void;
+  key?: string; // For deduplication
+  timestamp: number;
+}
+
+interface BatchRequest {
+  endpoint: string;
+  ids: string[];
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
 }
 
 const requestQueue: QueuedRequest[] = [];
+const batchQueue: Map<string, BatchRequest> = new Map();
 let isProcessingQueue = false;
 let activeRequests = 0;
-const MAX_CONCURRENT_REQUESTS = 6; // Limit concurrent requests
+const MAX_CONCURRENT_REQUESTS = 8; // Increased for better throughput
+const BATCH_DELAY = 50; // ms to wait for batching
+const REQUEST_TIMEOUT = 10000; // 10 seconds timeout
+
+// Request deduplication cache
+const pendingRequests = new Map<string, Promise<any>>();
 
 const processRequestQueue = async () => {
   if (isProcessingQueue || requestQueue.length === 0 || activeRequests >= MAX_CONCURRENT_REQUESTS) {
@@ -92,6 +107,30 @@ const processRequestQueue = async () => {
   }
   
   isProcessingQueue = true;
+  
+  // Process batched requests first
+  if (batchQueue.size > 0) {
+    for (const [endpoint, batch] of batchQueue.entries()) {
+      if (activeRequests >= MAX_CONCURRENT_REQUESTS) break;
+      
+      activeRequests++;
+      batchQueue.delete(endpoint);
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: batch.ids })
+        });
+        const data = await response.json();
+        batch.resolve(data);
+      } catch (error) {
+        batch.reject(error);
+      } finally {
+        activeRequests--;
+      }
+    }
+  }
   
   while (requestQueue.length > 0 && activeRequests < MAX_CONCURRENT_REQUESTS) {
     // Sort by priority (higher number = higher priority)
@@ -115,13 +154,15 @@ const processRequestQueue = async () => {
   isProcessingQueue = false;
 };
 
-const enqueueRequest = <T>(requestFn: () => Promise<T>, priority: number = 1): Promise<T> => {
+const enqueueRequest = <T>(requestFn: () => Promise<T>, priority: number = 1, key?: string): Promise<T> => {
   return new Promise((resolve, reject) => {
     requestQueue.push({
       fn: requestFn,
       priority,
       resolve,
       reject,
+      key,
+      timestamp: Date.now(),
     });
     processRequestQueue();
   });

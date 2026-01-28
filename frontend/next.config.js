@@ -16,6 +16,13 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
+    optimizeCss: true,
+    scrollRestoration: true,
+  },
+
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 
   // Image optimization
@@ -40,9 +47,11 @@ const nextConfig = {
     minimumCacheTTL: 60,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    loader: 'default',
+    unoptimized: false,
   },
 
-  // Security headers
+  // Performance and security headers
   async headers() {
     return [
       {
@@ -66,6 +75,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400',
+          },
+        ],
+      },
     ];
   },
 
@@ -85,53 +103,6 @@ const nextConfig = {
     ];
   },
 
-  // Compiler optimizations
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'] // Keep console.error and console.warn in production
-    } : false,
-    reactRemoveProperties: process.env.NODE_ENV === 'production',
-  },
-
-  // Webpack optimizations
-  webpack: (config, { dev, isServer }) => {
-    // Production optimizations
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'all',
-              enforce: true,
-            },
-          },
-        },
-      };
-    }
-
-    // Bundle analyzer
-    if (process.env.ANALYZE === 'true') {
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-      config.plugins.push(
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'static',
-          openAnalyzer: false,
-        })
-      );
-    }
-
-    return config;
-  },
-
   // Production settings
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   trailingSlash: false,
@@ -144,11 +115,6 @@ const nextConfig = {
   // TypeScript config
   typescript: {
     ignoreBuildErrors: false,
-  },
-
-  // Environment variables
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
 };
 
