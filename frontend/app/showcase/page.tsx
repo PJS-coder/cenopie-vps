@@ -57,6 +57,8 @@ function ShowcaseContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPosterIndex, setCurrentPosterIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -74,6 +76,33 @@ function ShowcaseContent() {
 
     return () => clearInterval(interval);
   }, [posters.length]);
+
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && posters.length > 1) {
+      // Swipe left - next image
+      setCurrentPosterIndex(prev => prev === posters.length - 1 ? 0 : prev + 1);
+    }
+    if (isRightSwipe && posters.length > 1) {
+      // Swipe right - previous image
+      setCurrentPosterIndex(prev => prev === 0 ? posters.length - 1 : prev - 1);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -209,22 +238,35 @@ function ShowcaseContent() {
           {/* Three Posters - Carousel Style */}
           {posters.length > 0 && (
             <div className="relative mb-6 sm:mb-8 flex justify-center">
-              <div className="relative w-full max-w-5xl h-[280px] rounded-xl overflow-hidden shadow-lg">
+              <div 
+                className="relative w-full max-w-5xl h-[200px] sm:h-[280px] md:h-[320px] lg:h-[360px] rounded-xl overflow-hidden shadow-lg cursor-pointer select-none"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <img
                   src={posters[currentPosterIndex]?.image}
                   alt="Showcase Banner"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center transition-transform duration-300"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     target.nextElementSibling!.classList.remove('hidden');
                   }}
+                  draggable={false}
                 />
                 <div className="hidden w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800 text-gray-500">
-                  Image not available
+                  <div className="text-center">
+                    <div className="w-12 h-12 mx-auto mb-2 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm">Image not available</p>
+                  </div>
                 </div>
                 
-                {/* Navigation Arrows */}
+                {/* Navigation Arrows - Hidden on mobile, visible on tablet+ */}
                 {posters.length > 1 && (
                   <>
                     <button
@@ -233,9 +275,10 @@ function ShowcaseContent() {
                         e.stopPropagation();
                         setCurrentPosterIndex(prev => prev === 0 ? posters.length - 1 : prev - 1);
                       }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
+                      className="hidden sm:flex absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
+                      aria-label="Previous banner"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
@@ -246,15 +289,16 @@ function ShowcaseContent() {
                         e.stopPropagation();
                         setCurrentPosterIndex(prev => prev === posters.length - 1 ? 0 : prev + 1);
                       }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors z-10"
+                      className="hidden sm:flex absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/30 hover:bg-black/50 rounded-full items-center justify-center text-white transition-colors z-10"
+                      aria-label="Next banner"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
                     
-                    {/* Dots Indicator */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    {/* Dots Indicator - Larger on mobile */}
+                    <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                       {posters.map((_, index) => (
                         <button
                           key={index}
@@ -263,13 +307,24 @@ function ShowcaseContent() {
                             e.stopPropagation();
                             setCurrentPosterIndex(index);
                           }}
-                          className={`w-2 h-2 rounded-full transition-colors ${
+                          className={`w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
                             index === currentPosterIndex ? 'bg-white' : 'bg-white/50'
                           }`}
+                          aria-label={`Go to banner ${index + 1}`}
                         />
                       ))}
                     </div>
                   </>
+                )}
+                
+                {/* Mobile swipe indicator */}
+                {posters.length > 1 && (
+                  <div className="sm:hidden absolute top-3 right-3 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 text-white text-xs flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                    </svg>
+                    {currentPosterIndex + 1} / {posters.length}
+                  </div>
                 )}
               </div>
             </div>
@@ -278,14 +333,14 @@ function ShowcaseContent() {
           {/* Your Profile */}
           {currentUser && (
             <div className="mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                 Your Profile
               </h2>
               
               <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex items-start gap-4">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
                   {/* Profile Image */}
-                  <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-[#0BC0DF] flex items-center justify-center">
+                  <div className="w-16 h-16 sm:w-12 sm:h-12 rounded-full overflow-hidden flex-shrink-0 bg-[#0BC0DF] flex items-center justify-center">
                     {currentUser.profileImage ? (
                       <img 
                         src={currentUser.profileImage} 
@@ -293,20 +348,20 @@ function ShowcaseContent() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-white font-bold text-lg">
+                      <span className="text-white font-bold text-xl sm:text-lg">
                         {currentUser.name?.charAt(0) || 'U'}
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                  <div className="flex-1 min-w-0 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-lg sm:text-base text-gray-900 dark:text-white">
                         {currentUser.name}
                       </h3>
                       {currentUser.isVerified && (
-                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-5 h-5 sm:w-4 sm:h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
@@ -316,7 +371,7 @@ function ShowcaseContent() {
                       {currentUser.bio || currentUser.headline || 'No bio available'}
                     </p>
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4 sm:mb-0">
                       <div className="flex items-center gap-1">
                         <span>{currentUser.stats?.connections || 0} connections</span>
                       </div>
@@ -326,19 +381,19 @@ function ShowcaseContent() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => router.push(`/profile/${currentUser._id}`)}
-                      className="text-[#0BC0DF] border-[#0BC0DF] hover:bg-[#0BC0DF] hover:text-white"
+                      className="flex-1 sm:flex-none text-[#0BC0DF] border-[#0BC0DF] hover:bg-[#0BC0DF] hover:text-white"
                     >
                       View Profile
                     </Button>
                     <Button 
                       size="sm"
                       onClick={() => router.push('/profile')}
-                      className="bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white"
+                      className="flex-1 sm:flex-none bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white"
                     >
                       Edit
                     </Button>
@@ -350,27 +405,27 @@ function ShowcaseContent() {
 
           {/* Showcase Results Coming Soon */}
           <div className="mb-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Showcase Results
             </h2>
             
-            <div className="text-center py-16">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-8 max-w-2xl mx-auto">
+            <div className="text-center py-8 sm:py-16">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
                   Results Coming Soon
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+                <p className="text-gray-600 dark:text-gray-400 mb-6 text-base sm:text-lg">
                   Showcase section results will be shown after 1 month
                 </p>
-                <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-blue-100 dark:border-blue-800">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                     We're currently collecting and analyzing showcase submissions. 
                     Check back in a month to see the top profiles from our community!
                   </p>

@@ -21,6 +21,7 @@ export interface FeedPost {
   image?: string;
   mediaType?: 'image' | 'video' | 'article';
   isConnected?: boolean;
+  isRepost?: boolean;
   originalPost?: FeedPost;
   authorId?: string;
   profileImage?: string;
@@ -35,7 +36,7 @@ interface UseFeedProps {
 
 // Simple cache to prevent unnecessary API calls
 let feedCache: { [key: string]: { data: FeedPost[]; timestamp: number; page: number } } = {};
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for feed data
+const CACHE_DURATION = 30 * 1000; // Reduced to 30 seconds for better repost visibility
 
 export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -85,13 +86,19 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         return;
       }
       
-      const response: any = await feedApi.getFeed(filter, pageNum);
+      console.log('=== FETCHING FEED ===');
+      console.log('Page:', pageNum, 'Filter:', filter);
       
-      if (response && response.data) {
+      const response: any = await feedApi.getFeed(filter, pageNum);
+      console.log('Feed API response:', response);
+      
+      if (response && response.success && response.data) {
         const feedData = Array.isArray(response.data) ? response.data : [];
+        console.log('Feed data received:', feedData.length, 'posts');
+        console.log('Reposts in feed:', feedData.filter((p: any) => p.isRepost).length);
         
         const transformedPosts = feedData.map((post: any) => ({
-          id: post.id || post._id,
+          id: post.id,
           author: post.author,
           role: post.role,
           content: post.content,
@@ -107,8 +114,12 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           profileImage: post.profileImage,
           isLiked: post.isLiked,
           isVerified: post.isVerified,
+          isRepost: post.isRepost || false, // Ensure this is properly set
           originalPost: post.originalPost
         }));
+        
+        console.log('Transformed posts:', transformedPosts.length);
+        console.log('Reposts after transform:', transformedPosts.filter((p: FeedPost) => p.isRepost).length);
         
         if (pageNum === 1) {
           setPosts(transformedPosts);
@@ -123,8 +134,12 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         }
         
         setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
+      } else {
+        console.error('Invalid feed response format:', response);
+        throw new Error('Invalid response format from feed API');
       }
     } catch (err) {
+      console.error('=== FETCH FEED ERROR ===');
       console.error('fetchFeed error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch feed');
       if (pageNum === 1) setPosts([]);
@@ -140,6 +155,38 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     }
   }, [hasMore, loading, page, fetchFeed]);
 
+  // Force refresh function to clear all caches and reload feed
+  const forceRefreshFeed = useCallback(async () => {
+    console.log('🔄 FORCE REFRESHING FEED...');
+    
+    // Clear all caches
+    feedCache = {};
+    
+    // Clear browser cache for API calls
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(cacheName => caches.delete(cacheName))
+        );
+        console.log('🗑️ Cleared browser caches');
+      } catch (error) {
+        console.warn('Could not clear browser caches:', error);
+      }
+    }
+    
+    // Reset state
+    setPosts([]);
+    setPage(1);
+    setHasMore(true);
+    setError(null);
+    
+    // Fetch fresh data
+    await fetchFeed(1, true);
+    
+    console.log('✅ Feed force refresh complete');
+  }, [fetchFeed]);
+
   const createPost = async (content: string, image?: string, mediaType?: string) => {
     try {
       const postData: { content: string; image?: string; mediaType?: string } = { content };
@@ -149,8 +196,9 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
       const response: any = await feedApi.createPost(postData);
       
       if (response.data) {
-        // Clear cache when new post is created
-        delete feedCache[cacheKey];
+        // Clear ALL cache when new post is created
+        feedCache = {};
+        console.log('🗑️ Cleared all feed cache after post creation');
         
         // Transform the new post to match our FeedPost interface
         const newPost = {
@@ -173,17 +221,9 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           originalPost: response.data.originalPost || null
         };
         
-        // Add the new post to the beginning of the feed, ensuring no duplicates
-        updatePostsSafely(prev => {
-          const existingIndex = prev.findIndex(post => post.id === newPost.id);
-          if (existingIndex >= 0) {
-            const updatedPosts = [...prev];
-            updatedPosts[existingIndex] = newPost;
-            return updatedPosts;
-          } else {
-            return [newPost, ...prev];
-          }
-        });
+        // Force refresh the feed to show the new post
+        await fetchFeed(1, true);
+        
         return response.data;
       }
     } catch (err) {
@@ -251,35 +291,89 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     }
   };
 
-  const commentOnPost = async (postId: string, text: string) => {
+  const loadPostComments = async (postId: string) => {
     try {
-      const response: any = await feedApi.commentOnPost(postId, text);
+      console.log(`Loading comments for post ${postId}`);
+      const response: any = await feedApi.getPostById(postId);
+      
       if (response.data) {
-        // Update the post in the feed
+        console.log('Loaded post with comments:', response.data);
+        console.log('Comment details:', response.data.commentDetails);
+        
+        // Update the specific post with full comment details
         updatePostsSafely(prev => {
-          console.log(`Updating post ${postId} after comment`);
           if (!Array.isArray(prev)) {
             console.error('Posts array is not valid:', prev);
             return prev || [];
           }
+          
           const updated = prev.map(post => {
             if (post.id === postId) {
-              console.log(`Found post ${postId} to update comments from ${post.comments} to`, 
-                (response.data as any).comments?.length || (response.data as any).comments || post.comments);
+              console.log(`Updating post ${postId} with loaded comments`);
               return {
                 ...post,
-                comments: (response.data as any).comments?.length || (response.data as any).comments || post.comments,
-                commentDetails: (response.data as any).commentDetails || post.commentDetails || [],
-                authorId: post.authorId || (response.data as any).author?._id || (response.data as any).author?.id || (response.data as any).authorId
+                commentDetails: response.data.commentDetails || [],
+                comments: response.data.comments || post.comments
               };
             }
             return post;
           });
+          
+          return updated;
+        });
+        
+        return response.data;
+      }
+    } catch (err) {
+      console.error('Failed to load post comments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load comments');
+      throw err;
+    }
+  };
+
+  const commentOnPost = async (postId: string, text: string) => {
+    try {
+      const response: any = await feedApi.commentOnPost(postId, text);
+      console.log('Comment API response:', response);
+      
+      if (response.data) {
+        // Update the post in the feed
+        updatePostsSafely(prev => {
+          console.log(`Updating post ${postId} after comment`);
+          console.log('Response data:', response.data);
+          console.log('Response commentDetails:', response.data.commentDetails);
+          
+          if (!Array.isArray(prev)) {
+            console.error('Posts array is not valid:', prev);
+            return prev || [];
+          }
+          
+          const updated = prev.map(post => {
+            if (post.id === postId) {
+              console.log(`Found post ${postId} to update`);
+              console.log('Current post commentDetails:', post.commentDetails);
+              console.log('New commentDetails from response:', response.data.commentDetails);
+              
+              const updatedPost = {
+                ...post,
+                comments: response.data.comments || post.comments,
+                commentDetails: response.data.commentDetails || post.commentDetails || [],
+                authorId: post.authorId || response.data.author?._id || response.data.author?.id || response.data.authorId
+              };
+              
+              console.log('Updated post commentDetails:', updatedPost.commentDetails);
+              return updatedPost;
+            }
+            return post;
+          });
+          
+          console.log('Updated posts array:', updated);
           return updated;
         });
         return response.data;
       }
     } catch (err) {
+      console.error('Comment submission error:', err);
       setError(err instanceof Error ? err.message : 'Failed to comment on post');
       throw err;
     }
@@ -324,55 +418,80 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
 
   const repostPost = async (postId: string, repostComment?: string) => {
     try {
+      console.log('=== FRONTEND REPOST START ===');
+      console.log('Post ID:', postId);
+      console.log('Repost comment:', repostComment);
+      
       const response: any = await feedApi.repostPost(postId, repostComment);
-      if (response && response.data) {
+      console.log('Repost API response:', response);
+      
+      if (response && response.success && response.data) {
+        console.log('Repost response data:', response.data);
+        console.log('isRepost from response:', response.data.isRepost);
+        console.log('originalPost from response:', response.data.originalPost);
+        
         // Transform the reposted post to match our FeedPost interface
-        const repostedPost = {
-          id: response.data._id || response.data.id,
-          author: response.data.author?.name || response.data.author || 'Unknown User',
-          role: response.data.author?.headline || response.data.author?.role || response.data.role || 'Professional',
+        const repostedPost: FeedPost = {
+          id: response.data.id,
+          author: response.data.author,
+          role: response.data.role,
           content: response.data.content,
-          likes: response.data.likes?.length || response.data.likes || 0,
-          comments: response.data.comments?.length || response.data.comments || 0,
+          likes: response.data.likes,
+          comments: response.data.comments,
+          commentDetails: response.data.commentDetails || [],
           shares: response.data.shares || 0,
-          timestamp: response.data.timestamp || new Date(response.data.createdAt || Date.now()).toLocaleDateString(),
+          timestamp: response.data.timestamp,
           image: response.data.image,
           mediaType: response.data.mediaType,
-          isConnected: response.data.isConnected || false,
-          authorId: (response.data.author && response.data.author._id) || 
-                    (response.data.author && response.data.author.id) || 
-                    response.data.authorId || null,
-          profileImage: response.data.author?.profileImage || response.data.profileImage || null,
-          isLiked: response.data.isLiked || true,
-          isVerified: response.data.author?.isVerified || response.data.isVerified || false,
-          isRepost: response.data.isRepost || false,
-          originalPost: response.data.originalPost || null
+          isConnected: response.data.isConnected,
+          authorId: response.data.authorId,
+          profileImage: response.data.profileImage,
+          isLiked: response.data.isLiked,
+          isVerified: response.data.isVerified,
+          isRepost: response.data.isRepost, // This should be true
+          originalPost: response.data.originalPost ? {
+            id: response.data.originalPost.id,
+            author: response.data.originalPost.author,
+            role: response.data.originalPost.role,
+            content: response.data.originalPost.content,
+            likes: response.data.originalPost.likes,
+            comments: response.data.originalPost.comments,
+            commentDetails: response.data.originalPost.commentDetails || [],
+            shares: response.data.originalPost.shares,
+            timestamp: response.data.originalPost.timestamp,
+            image: response.data.originalPost.image,
+            mediaType: response.data.originalPost.mediaType,
+            isConnected: response.data.originalPost.isConnected,
+            authorId: response.data.originalPost.authorId,
+            profileImage: response.data.originalPost.profileImage,
+            isLiked: response.data.originalPost.isLiked,
+            isVerified: response.data.originalPost.isVerified
+          } : undefined
         };
         
-        console.log('New repost to be added:', repostedPost);
+        console.log('Transformed repost:', repostedPost);
+        console.log('Repost isRepost:', repostedPost.isRepost);
+        console.log('Repost originalPost:', repostedPost.originalPost);
         
-        // Add the new repost to the beginning of the feed, ensuring no duplicates
-        updatePostsSafely(prev => {
-          // Check if post already exists
-          const existingIndex = prev.findIndex(post => post.id === repostedPost.id);
-          console.log('Existing repost index:', existingIndex);
-          if (existingIndex >= 0) {
-            // If it exists, replace it
-            console.log('Replacing existing repost with ID:', repostedPost.id);
-            const updatedPosts = [...prev];
-            updatedPosts[existingIndex] = repostedPost;
-            return updatedPosts;
-          } else {
-            // If it doesn't exist, add it to the beginning
-            console.log('Adding new repost with ID:', repostedPost.id);
-            return [repostedPost, ...prev];
-          }
-        });
+        // Clear ALL cache when repost is created
+        feedCache = {};
+        console.log('🗑️ Cleared all feed cache');
+        
+        // Force refresh the entire feed to ensure reposts show up
+        console.log('🔄 Force refreshing feed...');
+        await forceRefreshFeed();
+        
+        console.log('=== FRONTEND REPOST SUCCESS ===');
         return response.data;
+      } else {
+        throw new Error('Invalid response format from repost API');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to repost post');
-      throw err;
+      console.error('=== FRONTEND REPOST ERROR ===');
+      console.error('Repost error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to repost post';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -420,14 +539,19 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         setLoading(true);
         setError(null);
         
-        const response: any = await feedApi.getFeed(filter, 1);
+        console.log('=== INITIAL FEED FETCH ===');
+        console.log('Filter:', filter);
         
-        if (response && response.data) {
+        const response: any = await feedApi.getFeed(filter, 1);
+        console.log('Initial feed response:', response);
+        
+        if (response && response.success && response.data) {
           const feedData = Array.isArray(response.data) ? response.data : [];
+          console.log('Initial feed data:', feedData.length, 'posts');
           
           if (feedData.length > 0) {
             const transformedPosts = feedData.map((post: any) => ({
-              id: post.id || post._id,
+              id: post.id,
               author: post.author,
               role: post.role,
               content: post.content,
@@ -443,8 +567,12 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
               profileImage: post.profileImage,
               isLiked: post.isLiked,
               isVerified: post.isVerified,
+              isRepost: post.isRepost || false, // Ensure this is properly set
               originalPost: post.originalPost
             }));
+            
+            console.log('Initial transformed posts:', transformedPosts.length);
+            console.log('Initial reposts:', transformedPosts.filter((p: FeedPost) => p.isRepost).length);
             
             setPosts(transformedPosts);
             setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
@@ -460,11 +588,13 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
             setHasMore(false);
           }
         } else {
+          console.error('Invalid initial feed response:', response);
           setPosts([]);
           setHasMore(false);
         }
       } catch (err) {
-        console.error('Feed fetch error:', err);
+        console.error('=== INITIAL FEED FETCH ERROR ===');
+        console.error('Initial feed fetch error:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch feed');
         setPosts([]);
       } finally {
@@ -482,8 +612,10 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
     hasMore,
     fetchFeed,
     loadMore,
+    forceRefreshFeed,
     createPost,
     likePost,
+    loadPostComments,
     commentOnPost,
     deleteComment,
     repostPost,

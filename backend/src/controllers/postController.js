@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Connection from '../models/Connection.js';
 import Notification from '../models/Notification.js';
 import redisClient from '../config/redis.js';
+import mongoose from 'mongoose';
 
 // Helper function to create notifications
 const createNotification = async (userId, type, message, relatedUser, relatedPost, link) => {
@@ -51,6 +52,14 @@ const checkConnectionStatus = async (currentUserId, targetUserId) => {
 
 export const createPost = async (req, res) => {
   try {
+    // Validate content for original posts
+    if (!req.body.content || !req.body.content.trim()) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Content is required for posts' 
+      });
+    }
+    
     // Determine media type based on provided data
     let mediaType = 'article'; // Default to article if only text
     if (req.body.image) {
@@ -70,7 +79,7 @@ export const createPost = async (req, res) => {
     
     const post = await Post.create({ 
       author: req.user._id, 
-      content: req.body.content,
+      content: req.body.content.trim(),
       image: req.body.image, // URL to the image or video
       mediaType: mediaType
     });
@@ -116,10 +125,14 @@ export const createPost = async (req, res) => {
     }
     
     res.status(201).json({
+      success: true,
       data: formattedPost
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -436,6 +449,11 @@ export const feed = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
+    console.log('=== FEED REQUEST START ===');
+    console.log('Page:', page, 'Limit:', limit, 'Skip:', skip);
+    console.log('Filter:', req.query.filter);
+    console.log('User ID:', req.user._id);
+    
     let query = {};
     let connectedUserIds = [];
     
@@ -456,19 +474,30 @@ export const feed = async (req, res) => {
       
       connectedUserIds.push(req.user._id);
       query = { 'author': { $in: connectedUserIds } };
+      console.log('Following filter - connected users:', connectedUserIds.length);
     }
     
-    // OPTIMIZED: Get posts with minimal data, NO comment population
+    // Get posts with comprehensive population for reposts
     const posts = await Post.find(query)
-      .select('author content createdAt likes comments image mediaType')
+      .select('author content createdAt likes comments reposts image mediaType originalPost')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('author', 'name headline profileImage isVerified')
+      .populate({
+        path: 'originalPost',
+        populate: {
+          path: 'author',
+          select: 'name headline profileImage isVerified'
+        }
+      })
       .lean();
+    
+    console.log('Found posts:', posts.length);
     
     if (posts.length === 0) {
       return res.json({
+        success: true,
         data: [],
         pagination: {
           page,
@@ -478,12 +507,18 @@ export const feed = async (req, res) => {
       });
     }
     
-    // OPTIMIZED: Pre-calculate connection status for all users
+    // Pre-calculate connection status for all users (including original post authors)
     let connectionStatusMap = new Map();
     
     if (req.query.filter !== 'following') {
-      // Only calculate connections if not already filtered by following
-      const authorIds = [...new Set(posts.map(post => post.author._id.toString()))];
+      // Get all unique author IDs including original post authors
+      const authorIds = [...new Set([
+        ...posts.map(post => post.author._id.toString()),
+        ...posts.filter(post => post.originalPost?.author?._id)
+                .map(post => post.originalPost.author._id.toString())
+      ])];
+      
+      console.log('Checking connections for authors:', authorIds.length);
       
       const connections = await Connection.find({
         $or: [
@@ -507,29 +542,96 @@ export const feed = async (req, res) => {
       connectedUserIds.forEach(id => connectionStatusMap.set(id.toString(), true));
     }
     
-    // OPTIMIZED: Format posts without expensive operations
-    const formattedPosts = posts.map((post) => ({
-      id: post._id,
-      author: post.author.name,
-      role: post.author.headline || 'User',
-      content: post.content,
-      likes: post.likes.length,
-      comments: post.comments.length,
-      commentDetails: [], // Don't load comments upfront - load on demand
-      shares: 0,
-      timestamp: formatTimeAgo(post.createdAt),
-      image: post.image || null,
-      mediaType: post.mediaType || 'article',
-      isConnected: connectionStatusMap.get(post.author._id.toString()) || false,
-      authorId: post.author._id,
-      profileImage: post.author.profileImage || null,
-      isLiked: post.likes.some(like => like.toString() === req.user._id.toString()),
-      isVerified: post.author.isVerified || false,
-      isRepost: false,
-      originalPost: null
-    }));
+    // Calculate repost counts for all posts (both original posts and posts that are reposts)
+    const allPostIds = [
+      ...posts.map(post => post._id.toString()),
+      ...posts.filter(post => post.originalPost?._id)
+              .map(post => post.originalPost._id.toString())
+    ];
+    
+    console.log('Calculating repost counts for posts:', allPostIds.length);
+    
+    const repostCounts = await Post.aggregate([
+      { $match: { originalPost: { $in: allPostIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+      { $group: { _id: '$originalPost', count: { $sum: 1 } } }
+    ]);
+    
+    const repostCountMap = new Map();
+    repostCounts.forEach(item => {
+      repostCountMap.set(item._id.toString(), item.count);
+    });
+    
+    console.log('Repost counts calculated:', repostCountMap.size);
+    
+    // Format posts with proper repost handling
+    const formattedPosts = posts.map((post) => {
+      // Check if this is a repost
+      const isRepost = !!post.originalPost;
+      
+      console.log(`Processing post ${post._id}: isRepost=${isRepost}, author=${post.author.name}`);
+      
+      if (isRepost && post.originalPost) {
+        console.log(`  -> Repost of post ${post.originalPost._id} by ${post.originalPost.author?.name}`);
+      }
+      
+      // Get accurate repost count for this post
+      const postRepostCount = repostCountMap.get(post._id.toString()) || 0;
+      
+      const basePost = {
+        id: post._id,
+        author: post.author.name,
+        role: post.author.headline || 'User',
+        content: post.content,
+        likes: post.likes.length,
+        comments: post.comments.length,
+        commentDetails: [], // Don't load comments upfront - load on demand
+        shares: postRepostCount,
+        timestamp: formatTimeAgo(post.createdAt),
+        image: post.image || null,
+        mediaType: post.mediaType || 'article',
+        isConnected: connectionStatusMap.get(post.author._id.toString()) || false,
+        authorId: post.author._id,
+        profileImage: post.author.profileImage || null,
+        isLiked: post.likes.some(like => like.toString() === req.user._id.toString()),
+        isVerified: post.author.isVerified || false,
+        isRepost: isRepost
+      };
+      
+      // Add original post data if this is a repost
+      if (isRepost && post.originalPost) {
+        const originalPostRepostCount = repostCountMap.get(post.originalPost._id.toString()) || 0;
+        
+        basePost.originalPost = {
+          id: post.originalPost._id,
+          author: post.originalPost.author?.name || 'Unknown User',
+          role: post.originalPost.author?.headline || 'User',
+          content: post.originalPost.content,
+          likes: post.originalPost.likes?.length || 0,
+          comments: post.originalPost.comments?.length || 0,
+          commentDetails: [], // Don't load comments upfront
+          shares: originalPostRepostCount,
+          timestamp: formatTimeAgo(post.originalPost.createdAt),
+          image: post.originalPost.image || null,
+          mediaType: post.originalPost.mediaType || 'article',
+          authorId: post.originalPost.author?._id || null,
+          profileImage: post.originalPost.author?.profileImage || null,
+          isConnected: connectionStatusMap.get(post.originalPost.author?._id?.toString()) || false,
+          isLiked: post.originalPost.likes?.some(like => like.toString() === req.user._id.toString()) || false,
+          isVerified: post.originalPost.author?.isVerified || false
+        };
+      } else {
+        basePost.originalPost = null;
+      }
+      
+      return basePost;
+    });
+    
+    console.log('=== FEED REQUEST SUCCESS ===');
+    console.log('Formatted posts:', formattedPosts.length);
+    console.log('Reposts in feed:', formattedPosts.filter(p => p.isRepost).length);
     
     res.json({
+      success: true,
       data: formattedPosts,
       pagination: {
         page,
@@ -538,8 +640,12 @@ export const feed = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('=== FEED REQUEST ERROR ===');
     console.error('Error in feed function:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Failed to fetch feed'
+    });
   }
 };
 export const repostPost = async (req, res) => {
@@ -547,15 +653,42 @@ export const repostPost = async (req, res) => {
     const { postId: originalPostId } = req.params;
     const { repostComment } = req.body;
     
-    // Find the original post
-    const originalPost = await Post.findById(originalPostId);
-    if (!originalPost) {
-      return res.status(404).json({ message: 'Original post not found' });
+    console.log('=== REPOST POST START ===');
+    console.log('Original post ID:', originalPostId);
+    console.log('Repost comment:', repostComment);
+    console.log('User ID:', req.user._id);
+    console.log('Request body:', req.body);
+    
+    // Validate originalPostId
+    if (!mongoose.Types.ObjectId.isValid(originalPostId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid post ID' 
+      });
     }
     
+    // Find the original post with full population
+    const originalPost = await Post.findById(originalPostId)
+      .populate('author', 'name headline profileImage isVerified')
+      .populate('comments.author', 'name profileImage isVerified');
+    
+    if (!originalPost) {
+      console.log('Original post not found');
+      return res.status(404).json({ 
+        success: false,
+        message: 'Original post not found' 
+      });
+    }
+    
+    console.log('Original post found:', originalPost.author.name);
+    
     // Check if the user is trying to repost their own post
-    if (originalPost.author.toString() === req.user._id.toString()) {
-      return res.status(400).json({ message: 'You cannot repost your own post' });
+    if (originalPost.author._id.toString() === req.user._id.toString()) {
+      console.log('User trying to repost own post');
+      return res.status(400).json({ 
+        success: false,
+        message: 'You cannot repost your own post' 
+      });
     }
     
     // Check if user has already reposted this post
@@ -565,80 +698,102 @@ export const repostPost = async (req, res) => {
     });
     
     if (existingRepost) {
-      return res.status(400).json({ message: 'You have already reposted this post' });
+      console.log('User has already reposted this post');
+      return res.status(400).json({ 
+        success: false,
+        message: 'You have already reposted this post' 
+      });
     }
     
-    // Create a new repost
+    console.log('Creating new repost...');
+    
+    // Create a new repost - content is now optional at DB level
     const repost = await Post.create({
       author: req.user._id,
-      content: repostComment || originalPost.content || '', // Use comment if provided, otherwise original content
+      content: repostComment || '', // Empty string is fine for reposts
       originalPost: originalPostId,
-      // Copy image and mediaType from original post
-      image: originalPost.image,
-      mediaType: originalPost.mediaType
+      image: null, // Reposts don't have their own images
+      mediaType: 'article'
     });
+    
+    console.log('Repost created:', repost._id);
+    
+    console.log('Repost created:', repost._id);
     
     // Add the current user to the original post's reposts array
     await Post.findByIdAndUpdate(originalPostId, {
       $addToSet: { reposts: req.user._id }
     });
     
+    console.log('Updated original post reposts array');
+    
     // Create notification for the original post author
     const repostingUser = await User.findById(req.user._id);
     if (repostingUser) {
       const message = `${repostingUser.name} reposted your post`;
       await createNotification(
-        originalPost.author,
+        originalPost.author._id,
         'repost',
         message,
         req.user._id,
         originalPost._id,
         `/feed?post=${originalPost._id}`
       );
+      console.log('Notification created for original post author');
     }
     
-    // Populate necessary data
+    // Invalidate all caches
+    if (redisClient && redisClient.isOpen) {
+      try {
+        const keys = await redisClient.keys('*');
+        if (keys.length > 0) {
+          await redisClient.del(keys);
+          console.log('All caches invalidated');
+        }
+      } catch (cacheError) {
+        console.error('Error invalidating cache:', cacheError);
+      }
+    }
+    
+    // Populate the repost with all necessary data
     await repost.populate('author', 'name headline profileImage isVerified');
-    await repost.populate({
-      path: 'originalPost',
-      populate: [
-        { path: 'author', select: 'name headline profileImage isVerified' },
-        { path: 'comments.author', select: 'name profileImage isVerified' }
-      ]
-    });
     
-    // Get the current user to check connections
-    const currentUser = await User.findById(req.user._id);
+    // Get connection status
     const isAuthorConnected = await checkConnectionStatus(req.user._id, repost.author._id);
-    const isOriginalAuthorConnected = await checkConnectionStatus(req.user._id, repost.originalPost.author._id);
+    const isOriginalAuthorConnected = await checkConnectionStatus(req.user._id, originalPost.author._id);
     
-    // Format the response
+    // Get accurate repost count for the original post
+    const repostCount = await Post.countDocuments({ originalPost: originalPostId });
+    
+    console.log('Repost count for original post:', repostCount);
+    
+    // Format the response with complete data
     const formattedRepost = {
       id: repost._id,
       author: repost.author?.name || 'Unknown User',
       role: repost.author?.headline || 'User',
-      content: repost.content,
+      content: repost.content || '', // Ensure content is always a string
       likes: repost.likes.length,
       comments: repost.comments.length,
       commentDetails: [], // New reposts have no comments initially
-      shares: repost.reposts.length,
+      shares: 0, // This repost itself has no reposts yet
       timestamp: formatTimeAgo(repost.createdAt),
-      image: repost.image || null,
-      mediaType: repost.mediaType || 'article',
+      image: null, // Reposts don't have their own images
+      mediaType: 'article',
       isConnected: isAuthorConnected,
       authorId: repost.author._id,
       profileImage: repost.author?.profileImage || null,
-      isLiked: true, // The author of a repost automatically likes it
+      isLiked: false, // User hasn't liked their own repost yet
       isVerified: repost.author?.isVerified || false,
-      isRepost: true,
-      originalPost: repost.originalPost ? {
-        id: repost.originalPost._id,
-        author: repost.originalPost.author?.name || 'Unknown User',
-        role: repost.originalPost.author?.headline || 'User',
-        content: repost.originalPost.content,
-        likes: repost.originalPost.likes.length,
-        comments: repost.originalPost.comments.length,
-        commentDetails: repost.originalPost.comments.map(comment => ({
+      isRepost: true, // This is crucial - mark as repost
+      originalPost: {
+        id: originalPost._id,
+        author: originalPost.author?.name || 'Unknown User',
+        role: originalPost.author?.headline || 'User',
+        content: originalPost.content,
+        likes: originalPost.likes.length,
+        comments: originalPost.comments.length,
+        commentDetails: originalPost.comments.map(comment => ({
           id: comment._id,
           author: comment.author?.name || 'Unknown User',
           authorId: comment.author?._id || null,
@@ -647,23 +802,49 @@ export const repostPost = async (req, res) => {
           createdAt: formatTimeAgo(comment.createdAt),
           isVerified: comment.author?.isVerified || false
         })) || [],
-        shares: repost.originalPost.reposts.length,
-        timestamp: formatTimeAgo(repost.originalPost.createdAt),
-        image: repost.originalPost.image || null,
-        mediaType: repost.originalPost.mediaType || 'article',
-        authorId: repost.originalPost.author._id,
-        profileImage: repost.originalPost.author?.profileImage || null,
+        shares: repostCount, // Use the accurate count
+        timestamp: formatTimeAgo(originalPost.createdAt),
+        image: originalPost.image || null,
+        mediaType: originalPost.mediaType || 'article',
+        authorId: originalPost.author._id,
+        profileImage: originalPost.author?.profileImage || null,
         isConnected: isOriginalAuthorConnected,
-        isLiked: repost.originalPost.likes.includes(req.user._id),
-        isVerified: repost.originalPost.author?.isVerified || false
-      } : null
+        isLiked: originalPost.likes.includes(req.user._id),
+        isVerified: originalPost.author?.isVerified || false
+      }
     };
     
+    console.log('=== REPOST POST SUCCESS ===');
+    console.log('Formatted repost:', {
+      id: formattedRepost.id,
+      isRepost: formattedRepost.isRepost,
+      originalPostId: formattedRepost.originalPost?.id,
+      originalPostShares: formattedRepost.originalPost?.shares
+    });
+    
     res.status(201).json({
+      success: true,
       data: formattedRepost
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('=== REPOST POST ERROR ===');
+    console.error('Error details:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Validation failed: ' + validationErrors.join(', '),
+        errors: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Failed to create repost'
+    });
   }
 };
 

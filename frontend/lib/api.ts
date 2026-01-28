@@ -729,6 +729,9 @@ export const feedApi = {
       throw error;
     }
   },
+  getPostById: (postId: string): Promise<ApiResponse<Post>> => authenticatedRequest(`/api/posts/${postId}`, {
+    method: 'GET',
+  }),
   commentOnPost: (postId: string, text: string): Promise<ApiResponse<Post>> => authenticatedRequest(`/api/posts/${postId}/comment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -738,10 +741,17 @@ export const feedApi = {
     method: 'DELETE',
   }),
   repostPost: (postId: string, repostComment?: string): Promise<ApiResponse<Post>> => {
+    console.log('API: Reposting post', postId, 'with comment:', repostComment);
     return authenticatedRequest(`/api/posts/${postId}/repost`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repostComment: repostComment || undefined }),
+      body: JSON.stringify({ repostComment: repostComment || '' }),
+    }).then(response => {
+      console.log('API: Repost response:', response);
+      return response;
+    }).catch(error => {
+      console.error('API: Repost error:', error);
+      throw error;
     });
   },
   deletePost: (postId: string): Promise<ApiResponse<void>> => authenticatedRequest(`/api/posts/${postId}`, {

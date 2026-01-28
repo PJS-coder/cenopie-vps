@@ -209,8 +209,8 @@ export default function NewsArticlePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="w-full flex justify-center px-4 lg:px-6 pb-8 pt-6">
-        <div className="w-full lg:w-[1200px]">
+      <div className="w-full flex justify-center px-4 lg:px-6 pb-0 lg:pb-8 pt-6">
+        <div className="w-full lg:w-[1200px] pb-0 lg:pb-0">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             
             {/* Left Sidebar - Profile & Quick Actions */}

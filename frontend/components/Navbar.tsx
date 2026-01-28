@@ -313,10 +313,19 @@ export default function Navbar() {
     return (
       <header className="sticky top-0 z-30 border-b bg-white/70 backdrop-blur dark:bg-black/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-4 xl:px-8 h-14 sm:h-16">
-          {/* Logo */}
-          <Link href="/company/dashboard" className="flex items-center shrink-0">
+          {/* Logo - Desktop Only */}
+          <Link href="/company/dashboard" className="hidden md:flex items-center shrink-0">
             <CenopieLogo />
           </Link>
+          
+          {/* Mobile Company Title */}
+          <div className="flex md:hidden items-center">
+            <h1 className="text-lg font-bold text-gray-800 dark:text-white">
+              <span className="text-gray-800 dark:text-white">ceno</span>
+              <span className="text-[#0BC0DF]">pie</span>
+              <span className="ml-2 text-sm text-gray-600">Company</span>
+            </h1>
+          </div>
           
           {/* Company Info & Logout */}
           <div className="flex items-center gap-3">
@@ -345,18 +354,27 @@ export default function Navbar() {
     return (
       <header className="sticky top-0 z-30 border-b bg-white/70 backdrop-blur dark:bg-black/50">
         <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 px-3 sm:px-4 xl:px-8 h-14 sm:h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
+          {/* Logo - Desktop Only */}
+          <Link href="/" className="hidden md:flex items-center shrink-0">
             <CenopieLogo />
           </Link>
+          
+          {/* Mobile App Title */}
+          <div className="flex md:hidden items-center">
+            <h1 className="text-lg font-bold text-gray-800 dark:text-white">
+              <span className="text-gray-800 dark:text-white">ceno</span>
+              <span className="text-[#0BC0DF]">pie</span>
+              <span className="ml-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">BETA</span>
+            </h1>
+          </div>
           
           {/* Right Section with Login/Signup Buttons */}
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
             {/* User Auth Buttons */}
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" size="sm" asChild>
               <Link href="/auth/login">Log in</Link>
             </Button>
-            <Button asChild>
+            <Button size="sm" asChild>
               <Link href="/auth/signup">Sign up</Link>
             </Button>
             
@@ -381,15 +399,43 @@ export default function Navbar() {
       {/* Top Header */}
       <header className="sticky top-0 z-30 border-b bg-white/70 backdrop-blur dark:bg-black/50">
         <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 px-3 sm:px-4 xl:px-8 h-14 sm:h-16">
-          {/* Logo */}
-          <Link href="/feed" className="flex items-center shrink-0">
+          {/* Logo - Desktop Only */}
+          <Link href="/feed" className="hidden md:flex items-center shrink-0">
             <CenopieLogo />
           </Link>
+          
+          {/* Mobile Search Bar - Replaces Logo */}
+          <div 
+            ref={searchContainerRef}
+            className="relative md:hidden flex-1 max-w-none mr-2"
+          >
+            <form onSubmit={handleSearch}>
+              <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input 
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                className="w-full pl-9 pr-3 py-2 rounded-full bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0BC0DF] text-sm border-0" 
+                placeholder="Search users, jobs, companies..." 
+              />
+            </form>
+            {isSearchFocused && (
+              <SearchSuggestions
+                results={results}
+                loading={loading}
+                onSelect={handleSelectSuggestion}
+                onSearchAll={handleSearchAll}
+                query={searchQuery}
+              />
+            )}
+          </div>
           
           {/* Search Bar - Desktop Only */}
           <div 
             ref={searchContainerRef}
-            className="relative hidden md:block flex-1 max-w-sm"
+            className="relative hidden md:block flex-1 max-w-sm ml-4"
           >
             <form onSubmit={handleSearch}>
               <MagnifyingGlassIcon className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -464,18 +510,8 @@ export default function Navbar() {
             <ProfileDropdown />
           </div>
 
-          {/* Mobile Right Section - Search and Messages */}
-          <div className="flex md:hidden items-center gap-2 ml-auto">
-            {/* Mobile Search Button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9"
-              onClick={() => setMobileSearchOpen(true)}
-            >
-              <MagnifyingGlassIcon className="h-5 w-5" />
-            </Button>
-            
+          {/* Mobile Right Section - Messages Only (Search moved to left) */}
+          <div className="flex md:hidden items-center gap-2">
             {/* Mobile Messages Button */}
             <Link 
               href="/messages" 

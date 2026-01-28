@@ -43,7 +43,7 @@ export default function FeedPage() {
   // Use feed hook
   const feedData = useFeed({ filter: activeFilter });
   const {
-    posts, loading, error, fetchFeed, loadMore, hasMore, createPost, likePost, repostPost, deletePost, commentOnPost, deleteComment
+    posts, loading, error, fetchFeed, loadMore, hasMore, forceRefreshFeed, createPost, likePost, repostPost, deletePost, loadPostComments, commentOnPost, deleteComment
   } = feedData;
 
   // Use news hook
@@ -151,7 +151,21 @@ export default function FeedPage() {
   };
 
   const handleRepost = async (postId: string, repostComment?: string) => {
-    try { await repostPost(postId, repostComment); } catch (err) { alert('Failed to repost'); }
+    try { 
+      await repostPost(postId, repostComment);
+      
+      // Show success message
+      toast.success('Post reposted successfully! Refreshing feed...');
+      
+      // Force refresh after repost to ensure it shows up
+      setTimeout(async () => {
+        await forceRefreshFeed();
+        toast.success('Feed refreshed! Your repost should now be visible.');
+      }, 1000);
+    } catch (err) { 
+      console.error('Repost error:', err);
+      toast.error('Failed to repost: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
   };
 
   const handleSave = async (postId: string) => {
@@ -200,7 +214,17 @@ export default function FeedPage() {
   }, [router]);
 
   const handleComment = async (postId: string, commentText?: string) => {
-    try { if (commentText) await commentOnPost(postId, commentText); } catch (err) { alert('Failed to add comment'); }
+    try { 
+      if (commentText) {
+        // Submitting a new comment
+        await commentOnPost(postId, commentText);
+      } else {
+        // Just clicked comment button - load existing comments
+        await loadPostComments(postId);
+      }
+    } catch (err) { 
+      alert('Failed to load/add comment'); 
+    }
   };
 
   // Loading state - only show full loader on initial mount, not when switching filters
@@ -238,8 +262,8 @@ export default function FeedPage() {
 
   return (
     <ProtectedRoute>
-      <div className="w-full flex justify-center px-4 lg:px-6 pb-8 pt-6">
-        <div className="w-full lg:w-[1200px]">
+      <div className="w-full flex justify-center px-4 lg:px-6 pb-0 lg:pb-8 pt-6">
+        <div className="w-full lg:w-[1200px] pb-0 lg:pb-0">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             
             {/* Left Sidebar */}
@@ -511,28 +535,45 @@ export default function FeedPage() {
 
               {/* Feed Filters */}
               <div className="mb-4">
-                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1">
-                  <button 
-                    onClick={() => setActiveFilter('all')} 
-                    className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
-                      activeFilter === 'all' 
-                        ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 flex-1 mr-3">
+                    <button 
+                      onClick={() => setActiveFilter('all')} 
+                      className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
+                        activeFilter === 'all' 
+                          ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                      All Posts
+                    </button>
+                    <button 
+                      onClick={() => setActiveFilter('following')} 
+                      className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
+                        activeFilter === 'following' 
+                          ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      <HeartIcon className="w-4 h-4" />
+                      Following
+                    </button>
+                  </div>
+                  <button
+                    onClick={forceRefreshFeed}
+                    disabled={loading}
+                    className="p-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
+                    title="Refresh feed"
                   >
-                    <EyeIcon className="w-4 h-4" />
-                    All Posts
-                  </button>
-                  <button 
-                    onClick={() => setActiveFilter('following')} 
-                    className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
-                      activeFilter === 'following' 
-                        ? 'bg-white dark:bg-gray-700 text-[#0BC0DF] shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
-                  >
-                    <HeartIcon className="w-4 h-4" />
-                    Following
+                    <svg 
+                      className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -565,7 +606,20 @@ export default function FeedPage() {
                     <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
                       <div className="text-red-800 dark:text-red-200 font-medium">Error loading feed</div>
                       <div className="text-red-600 dark:text-red-400 text-sm mt-1">{error}</div>
-                      <button onClick={() => fetchFeed(1, true)} className="mt-2 px-3 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 text-sm rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors">Retry</button>
+                      <div className="flex gap-2 mt-3">
+                        <button 
+                          onClick={() => fetchFeed(1, true)} 
+                          className="px-3 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 text-sm rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+                        >
+                          Retry
+                        </button>
+                        <button 
+                          onClick={forceRefreshFeed} 
+                          className="px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-sm rounded-lg hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
+                        >
+                          Force Refresh
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -573,7 +627,39 @@ export default function FeedPage() {
                 {/* Feed Posts */}
                 {posts && posts.length > 0 ? (
                   posts.map((post: any, index: number) => {
-                    return post.id && post.author && post.content ? (
+                    // Debug logging for all posts
+                    console.log(`Post ${index + 1}:`, {
+                      id: post.id,
+                      author: post.author,
+                      content: post.content,
+                      contentLength: post.content?.length || 0,
+                      isRepost: post.isRepost,
+                      hasOriginalPost: !!post.originalPost,
+                      originalPostAuthor: post.originalPost?.author,
+                      willRender: !!(post.id && post.author && (post.content || post.isRepost))
+                    });
+                    
+                    // Debug logging for reposts
+                    if (post.isRepost) {
+                      console.log('✅ REPOST DETECTED:', {
+                        id: post.id,
+                        author: post.author,
+                        content: `"${post.content}"`,
+                        contentEmpty: !post.content,
+                        isRepost: post.isRepost,
+                        originalPost: post.originalPost,
+                        willRender: !!(post.id && post.author && (post.content || post.isRepost))
+                      });
+                    } else if (post.originalPost) {
+                      console.log('⚠️ HAS ORIGINAL POST BUT isRepost=false:', {
+                        id: post.id,
+                        author: post.author,
+                        isRepost: post.isRepost,
+                        originalPost: post.originalPost
+                      });
+                    }
+                    
+                    return post.id && post.author && (post.content || post.isRepost) ? (
                       <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                         <PostCard
                           id={post.id}
@@ -582,6 +668,7 @@ export default function FeedPage() {
                           content={post.content}
                           likes={post.likes}
                           comments={post.comments}
+                          shares={post.shares || 0}
                           commentDetails={post.commentDetails}
                           timestamp={post.timestamp}
                           image={post.image}
@@ -600,7 +687,7 @@ export default function FeedPage() {
                           onMessage={handleMessage}
                           isLiked={post.isLiked}
                           isSaved={isPostSaved(post.id)}
-                          isRepost={post.originalPost ? true : false}
+                          isRepost={post.isRepost || false}
                           isVerified={post.isVerified}
                           originalPost={post.originalPost}
                         />
@@ -610,12 +697,12 @@ export default function FeedPage() {
                 ) : null}
 
                 {/* Infinite scroll loader */}
-                <div ref={loaderRef} className="flex justify-center py-4">
+                <div ref={loaderRef} className="flex justify-center -mb-4 lg:mb-0">
                   {loading && posts.length > 0 && (
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 py-4"></div>
                   )}
                   {!hasMore && posts.length > 0 && (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                    <div className="text-center text-gray-500 dark:text-gray-400 text-sm mb-0 pb-0">
                       You've reached the end of the feed
                     </div>
                   )}
@@ -751,8 +838,8 @@ export default function FeedPage() {
                   </div>
                 </div>
 
-                {/* Footer Links */}
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2 p-4">
+                {/* Footer Links - Hidden on Mobile */}
+                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2 p-4 hidden md:block">
                   <div className="flex flex-wrap gap-2">
                     <a href="#" className="hover:underline">About</a>
                     <span>•</span>

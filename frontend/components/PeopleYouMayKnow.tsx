@@ -77,8 +77,8 @@ export default function PeopleYouMayKnow({ currentUserId }: PeopleYouMayKnowProp
         </div>
       </div>
     
-      {/* Footer Links */}
-      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2 p-4">
+      {/* Footer Links - Hidden on Mobile */}
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2 p-4 hidden md:block">
         <div>© {new Date().getFullYear()} Cenopie. All rights reserved.</div>
       </div>
     </div>

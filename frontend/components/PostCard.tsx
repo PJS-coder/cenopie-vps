@@ -187,6 +187,31 @@ const PostCard = ({
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
+  // Debug logging
+  console.log(`PostCard ${id} - Props received:`, {
+    id,
+    author,
+    isRepost,
+    hasOriginalPost: !!originalPost,
+    originalPostAuthor: originalPost?.author,
+    commentDetails: commentDetails?.length || 0,
+    comments,
+    showCommentInput
+  });
+
+  if (isRepost && originalPost) {
+    console.log(`✅ PostCard ${id} - REPOST PROPS:`, {
+      isRepost,
+      originalPost: {
+        id: originalPost.id,
+        author: originalPost.author,
+        content: originalPost.content?.substring(0, 50) + '...'
+      }
+    });
+  } else if (isRepost && !originalPost) {
+    console.log(`❌ PostCard ${id} - REPOST WITHOUT ORIGINAL POST:`, { isRepost, originalPost });
+  }
+
   // Check if the current user is the author of the post
   const isPostAuthor = currentUserId && postAuthorId && currentUserId === postAuthorId;
 
@@ -200,13 +225,30 @@ const PostCard = ({
     }
   }, [id, isLiked, likes, onLike]);
 
-  const handleComment = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setShowCommentInput(!showCommentInput);
-    if (onComment) {
-      onComment(id);
+  // Load comments for preview if they exist but aren't loaded yet
+  useEffect(() => {
+    if (comments > 0 && commentDetails.length === 0 && onComment) {
+      console.log(`Auto-loading comments for preview - post ${id}`);
+      onComment(id); // Load comments for preview
     }
-  }, [id, onComment, setShowCommentInput, showCommentInput]);
+  }, [comments, commentDetails.length, id, onComment]);
+
+  const handleComment = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (onComment) {
+      // If there are no comment details but comments count > 0, load them
+      if (comments > 0 && commentDetails.length === 0) {
+        console.log(`Loading comments for post ${id} - count: ${comments}, details: ${commentDetails.length}`);
+        await onComment(id); // Load comments without text
+      } else {
+        onComment(id); // Just notify that comment section was opened
+      }
+    }
+    
+    // Toggle comment input visibility
+    setShowCommentInput(!showCommentInput);
+  }, [id, onComment, comments, commentDetails.length, showCommentInput]);
 
   const handleCommentSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,12 +256,14 @@ const PostCard = ({
       try {
         await onComment(id, commentText);
         setCommentText('');
+        // Keep comment input visible after submitting
+        // setShowCommentInput(false); // Removed this line to keep comments open
       } catch (error) {
         console.error('Failed to submit comment:', error);
         toast.error('Failed to add comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }
-  }, [commentText, id, onComment]);
+  }, [commentText, id, onComment, toast]);
 
   const handleShare = useCallback(() => {
     setShowShareModal(true);
@@ -736,11 +780,17 @@ const PostCard = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-2 px-3 py-2 rounded-full h-9 text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-full h-9 transition-all duration-200 ${
+                    showCommentInput
+                      ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50'
+                      : commentDetails.length > 0
+                      ? 'text-blue-500 bg-blue-25 dark:bg-blue-950/20 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20'
+                  }`}
                   onClick={handleComment}
                 >
                   <ChatBubbleLeftIcon className="h-4 w-4" />
-                  <span className="text-sm font-medium">{comments}</span>
+                  <span className="text-sm font-medium">{commentDetails.length || comments}</span>
                 </Button>
 
                 {/* Only show repost button if user is not the post author */}
@@ -768,35 +818,83 @@ const PostCard = ({
               </Button>
             </div>
 
-            {/* Comment input */}
-            {showCommentInput && (
-              <div className="p-4 pt-3 pb-2">
-                <form onSubmit={handleCommentSubmit} className="flex gap-2">
-                  <Input
-                    placeholder="Write a comment..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    className="flex-1 text-sm h-10"
-                  />
-                  <Button type="submit" size="sm" className="h-10 px-4" disabled={!commentText.trim()}>
-                    <span className="text-sm">Post</span>
-                  </Button>
-                </form>
+            {/* Comment Preview - Show 2-3 comments when section is closed */}
+            {!showCommentInput && commentDetails.length > 0 && (
+              <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-3">
+                <div className="space-y-2">
+                  {commentDetails.slice(0, 2).map((comment) => (
+                    <CommentItem
+                      key={comment.id}
+                      comment={comment}
+                      currentUserId={currentUserId || ''}
+                      onDeleteComment={memoizedDeleteComment}
+                      postId={id}
+                    />
+                  ))}
+                  {commentDetails.length > 2 && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowCommentInput(true);
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                    >
+                      View all {commentDetails.length} comments
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Comments */}
-            {commentDetails.length > 0 && (
-              <div className="space-y-2 p-4 pt-3 pb-2 border-t border-gray-100 dark:border-gray-800">
-                {commentDetails.map((comment) => (
-                  <CommentItem
-                    key={comment.id}
-                    comment={comment}
-                    currentUserId={currentUserId || ''}
-                    onDeleteComment={memoizedDeleteComment}
-                    postId={id}
-                  />
-                ))}
+            {/* Full Comments Section - Show when comment input is active */}
+            {showCommentInput && (
+              <div className="border-t border-gray-100 dark:border-gray-800">
+                {/* Comments Header with Close Button */}
+                <div className="flex items-center justify-between px-4 pt-3 pb-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {commentDetails.length > 0 ? `Comments (${commentDetails.length})` : 'Comments'}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowCommentInput(false)}
+                    title="Close comments"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* All Comments */}
+                {commentDetails.length > 0 && (
+                  <div className="space-y-2 px-4 pb-2 max-h-80 overflow-y-auto">
+                    {commentDetails.map((comment) => (
+                      <CommentItem
+                        key={comment.id}
+                        comment={comment}
+                        currentUserId={currentUserId || ''}
+                        onDeleteComment={memoizedDeleteComment}
+                        postId={id}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+                {/* Comment input */}
+                <div className="p-4 pt-2 pb-3">
+                  <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                    <Input
+                      placeholder="Write a comment..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="flex-1 text-sm h-10"
+                      autoFocus
+                    />
+                    <Button type="submit" size="sm" className="h-10 px-4" disabled={!commentText.trim()}>
+                      <span className="text-sm">Post</span>
+                    </Button>
+                  </form>
+                </div>
               </div>
             )}
           </div>
