@@ -68,7 +68,7 @@ function CompanyNewsTab({ companyId }: { companyId: string }) {
           <h2 className="text-xl font-semibold text-gray-900">Company News</h2>
         </div>
         <div className="p-6">
-          <SimpleLoader size="sm" />
+          <LoadingSkeleton variant="rectangular" />
         </div>
       </div>
     );
@@ -156,7 +156,7 @@ function CompanyNewsTab({ companyId }: { companyId: string }) {
   );
 }
 
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 interface Company {
   id: string;
@@ -439,7 +439,7 @@ export default function CompanyDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <SimpleLoader size="lg" />
+        <LoadingSkeleton variant="rectangular" />
       </div>
     );
   }

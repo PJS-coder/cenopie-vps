@@ -9,7 +9,7 @@ import { Conversation, Message } from '@/lib/messageApi';
 import { Button } from '@/components/ui/button';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { ConversationSkeleton } from '@/components/LoadingSkeleton';
 
 export default function MessagesPage() {

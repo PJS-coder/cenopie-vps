@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 const LoadingPage = () => {
-  return <SimpleLoader size="lg" className="min-h-screen" />;
+  return <LoadingSkeleton variant="rectangular" />;
 };
 
 export default LoadingPage;

@@ -1,5 +1,5 @@
 // API service for handling requests to the backend
-import { performanceCache, CACHE_KEYS, cachedFetch } from './performance-cache';
+import { apiCache } from './performance';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -559,7 +559,7 @@ export const profileApi = {
   getProfile: async (): Promise<ApiResponse<{ user: UserProfile }>> => {
     try {
       // Check cache first
-      const cached = performanceCache.get<ApiResponse<{ user: UserProfile }>>(CACHE_KEYS.USER_PROFILE);
+      const cached = apiCache.get('USER_PROFILE');
       if (cached) {
         return cached;
       }
@@ -575,12 +575,12 @@ export const profileApi = {
       clearTimeout(timeoutId);
       
       // Cache the result for 2 minutes (profile data changes less frequently)
-      performanceCache.set(CACHE_KEYS.USER_PROFILE, response, 2 * 60 * 1000);
+      apiCache.set('USER_PROFILE', response, 2 * 60 * 1000);
       
       return response;
     } catch (error) {
       // Try to return cached data even if expired
-      const staleCache = performanceCache.get<ApiResponse<{ user: UserProfile }>>(CACHE_KEYS.USER_PROFILE);
+      const staleCache = apiCache.get('USER_PROFILE');
       if (staleCache) {
         return staleCache;
       }
@@ -596,7 +596,7 @@ export const profileApi = {
     });
     
     // Clear profile cache after update
-    performanceCache.delete(CACHE_KEYS.USER_PROFILE);
+    apiCache.delete('USER_PROFILE');
     
     return response;
   },

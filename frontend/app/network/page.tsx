@@ -8,7 +8,7 @@ import { UserGroupIcon, UserPlusIcon, ClockIcon, CheckIcon, XMarkIcon } from '@h
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ConnectButton from '@/components/ConnectButton';
 import VerificationBadge from '@/components/VerificationBadge';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { useConnections, useConnectionRequests } from '@/hooks/useConnections';
 import { profileApi } from '@/lib/api';
 import StreamingFeedLoader from '@/components/StreamingFeedLoader';
@@ -111,7 +111,7 @@ export default function NetworkPage() {
   if (!mounted || initialLoading || (connectionsLoading && connections.length === 0)) {
     return (
       <ProtectedRoute>
-        <SimpleLoader size="lg" className="min-h-screen" />
+        <LoadingSkeleton variant="rectangular" />
       </ProtectedRoute>
     );
   }

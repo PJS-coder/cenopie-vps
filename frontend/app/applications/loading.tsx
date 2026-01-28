@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export default function ApplicationsLoading() {
-  return <SimpleLoader size="lg" className="min-h-screen" />;
+  return <LoadingSkeleton variant="rectangular" />;
 }

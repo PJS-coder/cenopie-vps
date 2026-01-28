@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { profileApi, companyApi } from '@/lib/api'; 
 import ProtectedRoute from '@/components/ProtectedRoute';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import ConnectButton from '@/components/ConnectButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -178,7 +178,7 @@ const UserPostsSection = ({ userId, isOwnProfile, currentUserId }: { userId: str
   const router = useRouter();
 
   if (loading) {
-    return <SimpleLoader size="sm" className="h-32" />;
+    return <LoadingSkeleton variant="rectangular" />;
   }
 
   if (error) {
@@ -776,7 +776,7 @@ function ProfilePage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <SimpleLoader size="lg" className="min-h-screen" />
+        <LoadingSkeleton variant="rectangular" />
       </ProtectedRoute>
     );
   }

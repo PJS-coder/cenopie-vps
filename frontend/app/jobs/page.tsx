@@ -16,7 +16,7 @@ import VerificationBadge from '@/components/VerificationBadge';
 import { authenticatedFetchWithRetry, handleApiResponse } from '@/lib/apiUtils';
 import { jobApi } from '@/lib/api';
 
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { JobCardSkeleton } from '@/components/LoadingSkeleton';
 
 interface Job {

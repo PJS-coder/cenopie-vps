@@ -12,7 +12,7 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 import { useNews } from '@/hooks/useNews';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import VerificationBadge from '@/components/VerificationBadge';
 import { profileApi } from '@/lib/api';
 import { useSuggestedUsers } from '@/hooks/useSuggestedUsers';
@@ -133,7 +133,7 @@ export default function NewsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <SimpleLoader size="lg" />
+        <LoadingSkeleton variant="rectangular" />
       </div>
     );
   }
@@ -402,7 +402,7 @@ export default function NewsPage() {
                   <div className="divide-y divide-gray-100 dark:divide-gray-700">
                     {suggestedUsersLoading ? (
                       <div className="p-4">
-                        <SimpleLoader size="sm" />
+                        <LoadingSkeleton variant="rectangular" />
                       </div>
                     ) : suggestedUsers.length === 0 ? (
                       <div className="p-4 text-center text-gray-500 dark:text-gray-400">

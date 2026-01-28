@@ -13,7 +13,7 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 interface Interview {
   _id: string;
@@ -137,7 +137,7 @@ function InterviewsContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <SimpleLoader size="lg" />
+        <LoadingSkeleton variant="rectangular" />
       </div>
     );
   }

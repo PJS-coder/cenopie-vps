@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { BellIcon, UserGroupIcon, UserPlusIcon, CheckIcon, XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import SimpleLoader from '@/components/SimpleLoader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { useConnections, useConnectionRequests } from '@/hooks/useConnections';
 import { profileApi } from '@/lib/api';
 import VerificationBadge from '@/components/VerificationBadge';
@@ -303,7 +303,7 @@ export default function UpdatesPage() {
               {activeTab === 'notifications' && (
                 <div className="space-y-4">
                   {notificationsLoading ? (
-                    <SimpleLoader size="sm" className="py-8" />
+                    <LoadingSkeleton variant="rectangular" />
                   ) : notifications.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -382,7 +382,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'requests' && (
                 <div>
                   {receivedLoading ? (
-                    <SimpleLoader size="sm" className="py-8" />
+                    <LoadingSkeleton variant="rectangular" />
                   ) : receivedRequests.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -463,7 +463,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'connections' && (
                 <div>
                   {connectionsLoading ? (
-                    <SimpleLoader size="sm" className="py-8" />
+                    <LoadingSkeleton variant="rectangular" />
                   ) : connections.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -533,7 +533,7 @@ export default function UpdatesPage() {
                   {networkSubTab === 'sent' && (
                 <div>
                   {sentLoading ? (
-                    <SimpleLoader size="sm" className="py-8" />
+                    <LoadingSkeleton variant="rectangular" />
                   ) : sentRequests.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-12 text-center">
                       <div className="bg-[#E6F7FC] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">

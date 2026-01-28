@@ -67,6 +67,10 @@ class UltraFastCache<T> {
     this.cache.clear();
   }
   
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+  
   // Get cache statistics
   getStats() {
     let totalSize = 0;
