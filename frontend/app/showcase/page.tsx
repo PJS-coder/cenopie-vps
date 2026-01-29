@@ -59,9 +59,17 @@ function ShowcaseContent() {
     fetchData();
   }, []);
 
-  // Auto-rotate posters
+  // Auto-rotate posters and preload images
   useEffect(() => {
     if (posters.length <= 1) return;
+
+    // Preload all images for faster switching
+    posters.forEach((poster, index) => {
+      if (poster.image) {
+        const img = new Image();
+        img.src = poster.image;
+      }
+    });
 
     const interval = setInterval(() => {
       setCurrentPosterIndex((prev) => 
@@ -70,7 +78,7 @@ function ShowcaseContent() {
     }, 5000); // Change every 5 seconds
 
     return () => clearInterval(interval);
-  }, [posters.length]);
+  }, [posters]);
 
   // Touch handlers for mobile swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -222,7 +230,9 @@ function ShowcaseContent() {
                 <img
                   src={posters[currentPosterIndex]?.image}
                   alt="Showcase Banner"
-                  className="w-full h-full object-cover object-center transition-transform duration-300"
+                  className="w-full h-full object-cover object-center transition-opacity duration-300"
+                  loading="eager"
+                  fetchPriority="high"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
@@ -323,6 +333,8 @@ function ShowcaseContent() {
                             src={currentUser.profileImage} 
                             alt={currentUser.name}
                             className="w-full h-full object-cover"
+                            loading="eager"
+                            fetchPriority="high"
                           />
                         ) : (
                           <span className="text-white font-bold text-lg">
