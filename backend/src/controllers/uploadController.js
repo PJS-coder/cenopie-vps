@@ -64,60 +64,25 @@ const uploadToCloudinary = (buffer, options = {}) => {
 // Upload message attachment with direct Cloudinary upload
 export const uploadMessageAttachment = async (req, res) => {
   try {
-    // Use multer middleware
-    const uploadSingle = upload.single('file');
-    
-    uploadSingle(req, res, async (err) => {
-      if (err) {
-        console.error('Upload error:', err);
-        
-        // Handle different types of Multer errors
-        if (err instanceof multer.MulterError) {
-          let message = 'File upload failed';
-          switch (err.code) {
-            case 'LIMIT_FILE_SIZE':
-              message = 'File too large. Maximum size is 50MB';
-              break;
-            case 'LIMIT_UNEXPECTED_FILE':
-              message = err.message || 'Unexpected file type';
-              break;
-            case 'LIMIT_FILE_COUNT':
-              message = 'Too many files';
-              break;
-            default:
-              message = err.message || 'File upload failed';
-          }
-          return res.status(400).json({
-            success: false,
-            message: message,
-            code: err.code
-          });
-        }
-        
-        return res.status(400).json({
-          success: false,
-          message: err.message || 'File upload failed'
-        });
-      }
+    // File is already processed by multer middleware in routes
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file provided'
+      });
+    }
 
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No file provided'
-        });
-      }
+    const file = req.file;
+    const fileType = req.body.type || 'file';
 
-      const file = req.file;
-      const fileType = req.body.type || 'file';
-
-      try {
-        // Determine resource type for Cloudinary
-        let resourceType = 'auto';
-        let folder = 'message-attachments';
-        
-        if (file.mimetype.startsWith('image/')) {
-          resourceType = 'image';
-          folder = 'message-images';
+    try {
+      // Determine resource type for Cloudinary
+      let resourceType = 'auto';
+      let folder = 'message-attachments';
+      
+      if (file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+        folder = 'message-images';
         } else if (file.mimetype.startsWith('video/')) {
           resourceType = 'video';
           folder = 'message-videos';
@@ -197,7 +162,6 @@ export const uploadMessageAttachment = async (req, res) => {
           message: 'Failed to upload file to cloud storage'
         });
       }
-    });
 
   } catch (error) {
     console.error('Upload controller error:', error);
@@ -211,56 +175,38 @@ export const uploadMessageAttachment = async (req, res) => {
 // Upload profile image with direct Cloudinary upload
 export const uploadProfileImage = async (req, res) => {
   try {
-    const uploadSingle = upload.single('image');
+    // File is already processed by multer middleware in routes
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
     
-    uploadSingle(req, res, async (err) => {
-      if (err) {
-        if (err instanceof multer.MulterError) {
-          return res.status(400).json({
-            success: false,
-            message: err.message || 'Image upload failed',
-            code: err.code
-          });
-        }
-        
-        return res.status(400).json({
-          success: false,
-          message: err.message || 'Image upload failed'
-        });
-      }
+    try {
+      // Upload to Cloudinary
+      const uploadResult = await uploadToCloudinary(req.file.buffer, {
+        resource_type: 'image',
+        folder: 'profile-images',
+        public_id: `profile-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+      });
 
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No image provided'
-        });
-      }
+      res.json({
+        success: true,
+        data: {
+          url: uploadResult.secure_url,
+          public_id: uploadResult.public_id
+        },
+        message: 'Image uploaded successfully'
+      });
 
-      try {
-        // Upload to Cloudinary
-        const uploadResult = await uploadToCloudinary(req.file.buffer, {
-          resource_type: 'image',
-          folder: 'profile-images',
-          public_id: `profile-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-        });
-
-        res.json({
-          success: true,
-          data: {
-            url: uploadResult.secure_url,
-            public_id: uploadResult.public_id
-          },
-          message: 'Image uploaded successfully'
-        });
-
-      } catch (cloudinaryError) {
-        console.error('Cloudinary upload error:', cloudinaryError);
-        res.status(500).json({
-          success: false,
-          message: 'Failed to upload image to cloud storage'
-        });
-      }
-    });
+    } catch (cloudinaryError) {
+      console.error('Cloudinary upload error:', cloudinaryError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to cloud storage'
+      });
+    }
 
   } catch (error) {
     console.error('Profile image upload error:', error);

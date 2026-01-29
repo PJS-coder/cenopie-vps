@@ -7,17 +7,59 @@ import { uploadMessageAttachment, uploadProfileImage, deleteFile } from '../cont
 
 const router = express.Router();
 
-// Configure multer for memory storage with Multer 2.x compatibility
-const storage = multer.memoryStorage();
-const upload = multer({ 
-  storage,
+// Configure multer for interview video uploads specifically
+const videoStorage = multer.memoryStorage();
+const videoUpload = multer({ 
+  storage: videoStorage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   fileFilter: (req, file, cb) => {
-    // Add basic file validation for Multer 2.x
-    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+    console.log('Video upload - File received:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
+    
+    // Allow video files and also allow files without mimetype (some browsers don't set it correctly)
+    if (file.mimetype.startsWith('video/') || 
+        file.mimetype === 'application/octet-stream' || 
+        file.mimetype === '' || 
+        !file.mimetype ||
+        file.originalname.endsWith('.webm') ||
+        file.originalname.endsWith('.mp4')) {
+      console.log('Video file accepted');
       cb(null, true);
     } else {
-      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Only video and image files are allowed'));
+      console.error('Invalid file type for video upload:', file.mimetype);
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Only video files are allowed for interview uploads'));
+    }
+  }
+});
+
+// Configure multer for general uploads (images, documents, etc.)
+const generalStorage = multer.memoryStorage();
+const generalUpload = multer({ 
+  storage: generalStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  fileFilter: (req, file, cb) => {
+    console.log('General upload - File received:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype
+    });
+    
+    // Allow images, documents, and audio files for general uploads
+    const allowedMimes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'audio/mpeg', 'audio/wav', 'audio/webm'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      console.error('Invalid file type for general upload:', file.mimetype);
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'File type not allowed for this upload'));
     }
   }
 });
@@ -28,34 +70,48 @@ router.get('/test', (req, res) => {
 });
 
 // Upload message attachment
-router.post('/message-attachment', protect, uploadMessageAttachment);
+router.post('/message-attachment', protect, generalUpload.single('file'), uploadMessageAttachment);
 
-// Upload profile image
-router.post('/profile-image', protect, uploadProfileImage);
+// Upload profile image  
+router.post('/profile-image', protect, generalUpload.single('image'), uploadProfileImage);
 
 // Delete file
 router.delete('/file', protect, deleteFile);
 
 // Upload interview video
-router.post('/interview-video', protect, upload.single('video'), async (req, res) => {
+router.post('/interview-video', protect, videoUpload.single('video'), async (req, res) => {
   try {
-    console.log('=== UPLOAD REQUEST RECEIVED ===');
+    console.log('=== INTERVIEW VIDEO UPLOAD REQUEST ===');
     console.log('User:', req.user?.email);
+    console.log('Headers:', req.headers['content-type']);
     
     if (!req.file) {
-      console.error('No file in request');
-      return res.status(400).json({ error: 'No video file provided' });
+      console.error('No video file in request');
+      return res.status(400).json({ 
+        success: false,
+        error: 'No video file provided' 
+      });
     }
 
-    console.log('File received:', {
+    console.log('Video file received:', {
+      fieldname: req.file.fieldname,
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
       sizeInMB: (req.file.size / 1024 / 1024).toFixed(2) + 'MB'
     });
 
+    // Validate file size
+    if (req.file.size === 0) {
+      console.error('Empty video file received');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Empty video file' 
+      });
+    }
+
     // Upload to Cloudinary
-    console.log('Starting Cloudinary upload...');
+    console.log('Starting Cloudinary upload for interview video...');
     
     const uploadPromise = new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -63,14 +119,20 @@ router.post('/interview-video', protect, upload.single('video'), async (req, res
           resource_type: 'video',
           folder: 'interview-videos',
           chunk_size: 6000000,
-          timeout: 120000
+          timeout: 120000,
+          public_id: `interview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         },
         (error, result) => {
           if (error) {
             console.error('Cloudinary upload error:', error);
             reject(error);
           } else {
-            console.log('Cloudinary upload success:', result.secure_url);
+            console.log('Cloudinary upload success:', {
+              url: result.secure_url,
+              publicId: result.public_id,
+              duration: result.duration,
+              format: result.format
+            });
             resolve(result);
           }
         }
@@ -85,13 +147,16 @@ router.post('/interview-video', protect, upload.single('video'), async (req, res
     res.json({
       success: true,
       url: result.secure_url,
-      publicId: result.public_id
+      publicId: result.public_id,
+      duration: result.duration,
+      format: result.format
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Interview video upload error:', error);
     res.status(500).json({ 
-      error: 'Failed to upload video',
+      success: false,
+      error: 'Failed to upload interview video',
       details: error.message 
     });
   }

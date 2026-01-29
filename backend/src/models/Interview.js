@@ -38,6 +38,12 @@ const interviewSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    category: String,
+    difficulty: {
+      type: String,
+      enum: ['Easy', 'Medium', 'Hard'],
+      default: 'Medium'
+    },
     answer: String,
     videoUrl: String,
     duration: Number,

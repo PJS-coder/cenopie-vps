@@ -9,10 +9,14 @@ const interviewQuestionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  category: {
+    type: String,
+    trim: true
+  },
   difficulty: {
     type: String,
-    enum: ['easy', 'medium', 'hard'],
-    default: 'medium'
+    enum: ['Easy', 'Medium', 'Hard', 'easy', 'medium', 'hard'],
+    default: 'Medium'
   },
   order: {
     type: Number,

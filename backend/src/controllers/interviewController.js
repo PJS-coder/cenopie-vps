@@ -6,21 +6,23 @@ export const createInterview = async (req, res) => {
   try {
     const { domain, companyId, jobId, applicationId } = req.body;
     
-    // Get 10 random questions for the domain
-    const questions = await InterviewQuestion.find({ 
+    // Get all questions for the domain
+    const allQuestions = await InterviewQuestion.find({ 
       domain, 
       isActive: true 
-    })
-    .sort({ order: 1 })
-    .limit(10);
+    });
     
-    if (questions.length === 0) {
+    if (allQuestions.length === 0) {
       return res.status(404).json({ 
         error: 'No questions available for this domain' 
       });
     }
     
-    // Create interview
+    // Shuffle and select 10 random questions
+    const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
+    const selectedQuestions = shuffledQuestions.slice(0, Math.min(10, shuffledQuestions.length));
+    
+    // Create interview with shuffled questions
     const interview = new Interview({
       user: req.user._id,
       company: companyId,
@@ -28,20 +30,29 @@ export const createInterview = async (req, res) => {
       application: applicationId,
       domain,
       title: `${domain} Interview`,
-      questions: questions.map(q => ({
-        question: q.question
+      questions: selectedQuestions.map(q => ({
+        question: q.question,
+        category: q.category,
+        difficulty: q.difficulty
       })),
       status: 'scheduled'
     });
     
     await interview.save();
     
+    console.log(`✅ Created interview with ${selectedQuestions.length} shuffled questions for domain: ${domain}`);
+    
     res.status(201).json({
       success: true,
       interview: {
         id: interview._id,
         domain: interview.domain,
-        questionCount: interview.questions.length
+        questionCount: interview.questions.length,
+        questions: interview.questions.map((q, index) => ({
+          index: index + 1,
+          category: q.category,
+          difficulty: q.difficulty
+        }))
       }
     });
   } catch (error) {

@@ -1,98 +1,189 @@
-# Cenopie - Social Networking Platform
+# Cenopie - Professional Social Network
 
-A modern social networking platform built with Next.js, Node.js, and MongoDB.
+A modern professional networking platform built with Next.js and Node.js, featuring job applications, company profiles, interviews, and social networking capabilities.
 
-## 🚀 Quick Start
+## 🚀 Features
+
+- **User Profiles**: Complete professional profiles with skills, experience, and portfolio
+- **Job Board**: Post and apply for jobs with integrated application tracking
+- **Company Profiles**: Dedicated company pages with job postings and team information
+- **Interview System**: Secure video interview platform with violation detection
+- **Social Feed**: Professional networking with posts, comments, and connections
+- **Real-time Messaging**: Direct messaging between users and companies
+- **Admin Dashboard**: Comprehensive admin panel for platform management
+- **Showcase Section**: Highlight top talent and achievements
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Next.js 16** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Shadcn/ui** - Modern UI components
+- **Socket.IO Client** - Real-time communication
+
+### Backend
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **MongoDB** - Database with Mongoose ODM
+- **Socket.IO** - Real-time communication
+- **Cloudinary** - Media storage and optimization
+- **Redis** - Caching and session management
+- **Passport.js** - Authentication
+
+## 📦 Installation
 
 ### Prerequisites
-- Node.js 18+
-- MongoDB Atlas connection
-- npm or yarn
+- Node.js 18+ 
+- MongoDB
+- Redis (optional)
+- Cloudinary account
 
-### Local Development
+### Setup
 
+1. **Clone the repository**
 ```bash
-# Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
-
-# Start servers
-cd backend && npm start
-cd frontend && npm run dev
+git clone <repository-url>
+cd cenopie-production-main
 ```
 
-### Production Deployment
+2. **Install dependencies**
+```bash
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+3. **Environment Configuration**
+
+Backend (`.env.production`):
+```env
+NODE_ENV=production
+PORT=4000
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
+CLIENT_ORIGIN=http://localhost:3000
+```
+
+Frontend (`.env.production`):
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+4. **Start the application**
+```bash
+# Backend
+cd backend
+npm start
+
+# Frontend (new terminal)
+cd frontend
+npm run build
+npm start
+```
+
+## 🔧 Development
 
 ```bash
-# Deploy all services
+# Backend development
+cd backend
+npm run dev
+
+# Frontend development
+cd frontend
+npm run dev
+```
+
+## 📁 Project Structure
+
+```
+cenopie-production-main/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/     # Route handlers
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API routes
+│   │   ├── middlewares/    # Custom middleware
+│   │   ├── config/         # Configuration files
+│   │   ├── services/       # Business logic
+│   │   ├── socket/         # Socket.IO handlers
+│   │   └── utils/          # Utility functions
+│   └── scripts/            # Database scripts
+├── frontend/
+│   ├── app/               # Next.js App Router pages
+│   ├── components/        # Reusable components
+│   ├── lib/              # Utilities and configurations
+│   ├── hooks/            # Custom React hooks
+│   └── styles/           # Global styles
+└── scripts/              # Deployment scripts
+```
+
+## 🔐 Security Features
+
+- JWT-based authentication
+- Role-based access control (User, Company, HR, Admin)
+- Interview violation detection system
+- Secure file upload with validation
+- Rate limiting and CORS protection
+
+## 🚀 Deployment
+
+The application is configured for production deployment with:
+- PM2 process management
+- Nginx reverse proxy
+- SSL/TLS encryption
+- MongoDB Atlas integration
+- Cloudinary CDN
+
+Use the deployment script:
+```bash
 ./deploy.sh
-
-# Or deploy specific fixes
-./fix-repost-feed-final.sh
 ```
 
-### Access
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:4000
-- Production: https://cenopie.com
+## 📊 Key Features
 
-## 🛠️ Technology Stack
+### Interview System
+- Secure fullscreen interview environment
+- Real-time violation detection
+- Video recording and upload
+- Automatic submission on violations
+- HR review and scoring system
 
-- **Backend**: Node.js, Express.js, MongoDB, Socket.IO, JWT, Redis
-- **Frontend**: Next.js 14, React 18, Tailwind CSS, TypeScript
-- **Infrastructure**: PM2, Nginx, Cloudinary, MongoDB Atlas
+### Social Networking
+- Professional posts and interactions
+- Connection requests and networking
+- Real-time notifications
+- Direct messaging system
 
-## 📱 Features
+### Job Management
+- Company job postings
+- User applications tracking
+- Interview scheduling
+- Application status management
 
-- User authentication and profiles
-- Real-time messaging with Socket.IO
-- Social feed with posts, reposts, and comments
-- Job board and applications
-- Company profiles and management
-- File uploads with Cloudinary
-- Advanced search functionality
-- Mobile-responsive design
-- Interview scheduling system
-- Notification system
+## 🤝 Contributing
 
-## 🔧 Recent Improvements
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-See [RECENT_IMPROVEMENTS.md](./RECENT_IMPROVEMENTS.md) for detailed information about:
-- Repost feed fixes
-- Mobile responsiveness enhancements
-- Performance optimizations
-- SEO improvements
+## 📄 License
 
-## 🚀 Production Environment
+This project is proprietary software. All rights reserved.
 
-- **Domain**: https://cenopie.com
-- **Capacity**: 5,000-15,000 concurrent users
-- **Database**: MongoDB Atlas with optimized indexes
-- **Caching**: Redis for sessions and feed caching
-- **CDN**: Cloudinary for media storage
-- **Process Manager**: PM2 for service management
+## 🆘 Support
 
-## 📊 System Management
+For support and questions, please contact the development team.
 
-```bash
-# Check service status
-pm2 status
+---
 
-# View logs
-pm2 logs
-
-# Restart services
-pm2 restart all
-
-# Monitor performance
-./monitor-performance.sh
-```
-
-## 🐛 Troubleshooting
-
-Common issues and solutions are documented in [RECENT_IMPROVEMENTS.md](./RECENT_IMPROVEMENTS.md#troubleshooting).
-
-## 📝 Documentation
-
-- [Recent Improvements](./RECENT_IMPROVEMENTS.md) - Latest fixes and enhancements
-- [Deployment Guide](./DEPLOYMENT_GUIDE.md) - Production deployment instructions
+**Built with ❤️ for professional networking**

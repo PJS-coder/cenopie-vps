@@ -11,6 +11,12 @@ export default function ConditionalFooter() {
     return null;
   }
   
+  // Hide footer during interview sessions for security and focus
+  const isInterviewStartPage = pathname.includes('/interviews/') && pathname.includes('/start');
+  if (isInterviewStartPage) {
+    return null;
+  }
+  
   // Show the professional footer on the landing page
   if (pathname === '/landing') {
     return <LandingFooter />;
