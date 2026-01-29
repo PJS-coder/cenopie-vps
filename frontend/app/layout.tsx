@@ -139,6 +139,9 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="theme-color" content="#0BC0DF" />
         
+        {/* Permissions Policy for Camera and Microphone Access */}
+        <meta httpEquiv="Permissions-Policy" content="camera=(self), microphone=(self), display-capture=(self)" />
+        
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

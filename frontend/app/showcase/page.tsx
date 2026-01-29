@@ -399,7 +399,7 @@ function ShowcaseContent() {
                       onClick={() => router.push(`/profile/${currentUser._id}`)}
                       className="bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white text-xs px-4 py-2 rounded-lg"
                     >
-                      Edit Profile
+                      View & Edit Profile
                     </Button>
                   </div>
                 </div>
