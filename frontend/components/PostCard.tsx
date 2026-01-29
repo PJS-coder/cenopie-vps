@@ -254,13 +254,24 @@ const PostCard = ({
     e.preventDefault();
     if (commentText.trim() && onComment) {
       try {
+        // Check if user is still authenticated
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('User not authenticated, skipping comment submission');
+          return;
+        }
+
         await onComment(id, commentText);
         setCommentText('');
         // Keep comment input visible after submitting
         // setShowCommentInput(false); // Removed this line to keep comments open
       } catch (error) {
-        console.error('Failed to submit comment:', error);
-        toast.error('Failed to add comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        // Only show error if user is still authenticated
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          console.error('Failed to submit comment:', error);
+          toast.error('Failed to add comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
       }
     }
   }, [commentText, id, onComment, toast]);

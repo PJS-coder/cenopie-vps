@@ -215,6 +215,13 @@ export default function FeedPage() {
 
   const handleComment = async (postId: string, commentText?: string) => {
     try { 
+      // Check if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('User not authenticated, skipping comment operation');
+        return;
+      }
+
       if (commentText) {
         // Submitting a new comment
         await commentOnPost(postId, commentText);
@@ -223,7 +230,11 @@ export default function FeedPage() {
         await loadPostComments(postId);
       }
     } catch (err) { 
-      alert('Failed to load/add comment'); 
+      // Only show error if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        alert('Failed to load/add comment'); 
+      }
     }
   };
 

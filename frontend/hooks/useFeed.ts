@@ -293,6 +293,13 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
 
   const loadPostComments = async (postId: string) => {
     try {
+      // Check if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('User not authenticated, skipping comment loading');
+        return null;
+      }
+
       console.log(`Loading comments for post ${postId}`);
       const response: any = await feedApi.getPostById(postId);
       
@@ -325,14 +332,25 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         return response.data;
       }
     } catch (err) {
-      console.error('Failed to load post comments:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load comments');
+      // Only log error and set error state if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        console.error('Failed to load post comments:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load comments');
+      }
       throw err;
     }
   };
 
   const commentOnPost = async (postId: string, text: string) => {
     try {
+      // Check if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('User not authenticated, skipping comment submission');
+        return null;
+      }
+
       const response: any = await feedApi.commentOnPost(postId, text);
       console.log('Comment API response:', response);
       
@@ -373,8 +391,12 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
         return response.data;
       }
     } catch (err) {
-      console.error('Comment submission error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to comment on post');
+      // Only log error and set error state if user is still authenticated
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        console.error('Comment submission error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to comment on post');
+      }
       throw err;
     }
   };
