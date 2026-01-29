@@ -1,7 +1,30 @@
 // API service for handling requests to the backend
 import { apiCache } from './performance';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Get API base URL with proper fallback for production
+const getApiBaseUrl = (): string => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Check if we're on the production domain
+    if (window.location.hostname === 'cenopie.com' || window.location.hostname === 'www.cenopie.com') {
+      return 'https://cenopie.com';
+    }
+    // For local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    }
+  }
+  
+  // Fallback to environment variable or production URL
+  return process.env.NEXT_PUBLIC_API_URL || 'https://cenopie.com';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Log the API URL for debugging (only in development)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('API Base URL:', API_BASE_URL);
+}
 
 export interface ApiResponse<T> {
   data?: T;

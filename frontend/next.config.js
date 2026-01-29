@@ -127,7 +127,6 @@ const nextConfig = {
   },
 
   // Production settings
-  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   trailingSlash: false,
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
   poweredByHeader: false,

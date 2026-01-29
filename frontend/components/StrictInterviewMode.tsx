@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { getApiUrl } from '../lib/apiUrl';
 import {
   VideoCameraIcon,
   MicrophoneIcon,
@@ -119,7 +120,8 @@ function useInterviewNotifications() {
     notifications,
     success: (message: string, duration?: number) => addNotification(message, 'success', duration),
     error: (message: string, duration?: number) => addNotification(message, 'error', duration),
-    warning: (message: string, duration?: number) => addNotification(message, 'warning', duration)
+    warning: (message: string, duration?: number) => addNotification(message, 'warning', duration),
+    info: (message: string, duration?: number) => addNotification(message, 'info', duration)
   };
 }
 
@@ -129,7 +131,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   onComplete
 }) => {
   const router = useRouter();
-  const { notifications, success, error, warning } = useInterviewNotifications();
+  const { notifications, success, error, warning, info } = useInterviewNotifications();
   
   // Basic states
   const [step, setStep] = useState<'device-check' | 'setup' | 'interview' | 'complete'>('device-check');
@@ -334,7 +336,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     startRecording();
   };
 
-  // Start recording
+  // Start recording with optimized settings
   const startRecording = () => {
     if (!stream) {
       console.error('No media stream available for recording');
@@ -344,9 +346,27 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
     try {
       chunksRef.current = [];
-      const options = MediaRecorder.isTypeSupported('video/webm') 
-        ? { mimeType: 'video/webm' }
-        : { mimeType: 'video/mp4' };
+      
+      // Optimized recording options for smaller file sizes
+      const options: MediaRecorderOptions = {
+        mimeType: 'video/webm;codecs=vp9,opus', // VP9 codec for better compression
+        videoBitsPerSecond: 1000000, // 1 Mbps - good quality, smaller size
+        audioBitsPerSecond: 128000   // 128 kbps audio
+      };
+      
+      // Fallback options if VP9 is not supported
+      if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+        options.mimeType = 'video/webm;codecs=vp8,opus';
+        options.videoBitsPerSecond = 1500000; // Slightly higher for VP8
+      }
+      
+      // Final fallback
+      if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+        options.mimeType = 'video/webm';
+        options.videoBitsPerSecond = 2000000; // Higher bitrate for basic webm
+      }
+      
+      console.log('Recording with options:', options);
         
       const mediaRecorder = new MediaRecorder(stream, options);
       
@@ -356,11 +376,15 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         }
       };
 
-      mediaRecorder.start(5000);
+      // Record in smaller chunks for better performance
+      mediaRecorder.start(3000); // 3-second chunks instead of 5
       mediaRecorderRef.current = mediaRecorder;
       startTimeRef.current = Date.now();
       setIsRecording(true);
+      
+      console.log('Recording started with optimized settings');
     } catch (err) {
+      console.error('Failed to start recording:', err);
       error('Failed to start recording');
     }
   };
@@ -384,18 +408,25 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     });
   };
 
-  // Upload video
+  // Upload video with compression and parallel processing
   const uploadVideo = async (videoBlob: Blob): Promise<string> => {
     if (videoBlob.size === 0) return '';
 
     try {
-      console.log('Uploading video blob:', {
+      const sizeInMB = (videoBlob.size / 1024 / 1024).toFixed(2);
+      console.log('Uploading optimized video blob:', {
         size: videoBlob.size,
         type: videoBlob.type,
-        sizeInMB: (videoBlob.size / 1024 / 1024).toFixed(2) + 'MB'
+        sizeInMB: sizeInMB + 'MB'
       });
 
-      // Create a new blob with explicit video/webm type if type is empty
+      // Check if file is too large (200MB limit)
+      if (videoBlob.size > 200 * 1024 * 1024) {
+        error('Video file is too large. Maximum size is 200MB.');
+        return '';
+      }
+
+      // Create optimized blob with proper type
       let finalBlob = videoBlob;
       if (!videoBlob.type || videoBlob.type === '') {
         console.log('Blob has no type, setting to video/webm');
@@ -409,9 +440,24 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       
-      console.log('Making upload request to:', `${process.env.NEXT_PUBLIC_API_URL}/api/upload/interview-video`);
+      console.log('Starting optimized upload to:', `${process.env.NEXT_PUBLIC_API_URL}/api/upload/interview-video`);
+      console.log('Upload size:', sizeInMB + 'MB');
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/interview-video`, {
+      // Show appropriate upload message based on size
+      if (parseFloat(sizeInMB) > 100) {
+        warning(`Uploading large video (${sizeInMB}MB). Estimated time: 2-3 minutes...`, 8000);
+      } else if (parseFloat(sizeInMB) > 50) {
+        warning(`Uploading video (${sizeInMB}MB). Estimated time: 1-2 minutes...`, 6000);
+      } else {
+        success(`Uploading video (${sizeInMB}MB). This should be quick...`, 4000);
+      }
+      
+      const startTime = Date.now();
+      
+      const apiUrl = getApiUrl();
+      console.log('Using API URL for video upload:', apiUrl);
+      
+      const response = await fetch(`${apiUrl}/api/upload/interview-video`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -420,20 +466,34 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         body: formData
       });
 
-      console.log('Upload response status:', response.status);
-      
+      const uploadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`Upload completed in ${uploadTime} seconds`);
+
       if (response.ok) {
         const data = await response.json();
         console.log('Upload successful:', data);
+        success(`Video uploaded successfully in ${uploadTime}s! (${sizeInMB}MB)`);
         return data.url;
       } else {
         const errorText = await response.text();
         console.error('Video upload failed:', response.status, errorText);
-        error(`Video upload failed: ${response.status} ${errorText}`);
+        
+        // Parse error for better user feedback
+        let errorMessage = `Upload failed (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (e) {
+          // Use default message
+        }
+        
+        error(`Video upload failed: ${errorMessage}`);
       }
     } catch (err) {
       console.error('Video upload error:', err);
-      error('Video upload error');
+      error('Video upload error. Please check your internet connection and try again.');
     }
     return '';
   };
@@ -478,7 +538,10 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       
       console.log('Submitting interview with data:', submissionData);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interviews/${interviewId}/complete`, {
+      const apiUrl = getApiUrl();
+      console.log('Using API URL for interview completion:', apiUrl);
+      
+      const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -514,7 +577,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       
     } catch (err) {
       console.error('Interview submission error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown er3ror occurred';
       error(`Submission failed: ${errorMessage}`);
       setIsUploading(false);
       isSubmittingRef.current = false;
@@ -705,107 +768,244 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
   // Interview view
   if (step === 'interview') {
+    const currentQuestion = interview.questions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / interview.questions.length) * 100;
+    
     return (
-      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-black flex flex-col overflow-hidden">
+      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 flex flex-col overflow-hidden">
         <div className="fixed top-4 right-4 z-50 space-y-3">
           {notifications.map((notification) => (
             <InterviewNotification key={notification.id} {...notification} />
           ))}
         </div>
 
-        {/* Status Bar */}
-        <div className="bg-red-900/50 border-b border-red-500 p-2 text-white flex-shrink-0">
+        {/* Enhanced Status Bar */}
+        <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 backdrop-blur-sm border-b border-red-500/30 p-3 text-white flex-shrink-0 shadow-lg">
           <div className="flex items-center justify-between text-sm max-w-7xl mx-auto">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                RECORDING
-              </span>
-              <span className="font-bold">Violations: {violationCount}/2</span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
+                <span className="font-bold text-red-100">LIVE RECORDING</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-red-200">Security Status:</span>
+                <span className={`font-bold px-2 py-1 rounded text-xs ${
+                  violationCount === 0 ? 'bg-green-500/20 text-green-300' :
+                  violationCount === 1 ? 'bg-yellow-500/20 text-yellow-300' :
+                  'bg-red-500/20 text-red-300'
+                }`}>
+                  {violationCount === 0 ? 'SECURE' : 
+                   violationCount === 1 ? 'WARNING' : 'CRITICAL'}
+                </span>
+              </div>
+              <div className="text-red-200">
+                Violations: <span className="font-bold text-white">{violationCount}/2</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={cameraActive ? 'text-green-400' : 'text-red-400'}>
-                📹 {cameraActive ? 'ON' : 'OFF'}
-              </span>
-              <span className={micActive ? 'text-green-400' : 'text-red-400'}>
-                🎤 {micActive ? 'ON' : 'OFF'}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${cameraActive ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className={cameraActive ? 'text-green-300' : 'text-red-300'}>
+                  Camera {cameraActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${micActive ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className={micActive ? 'text-green-300' : 'text-red-300'}>
+                  Mic {micActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-4 overflow-hidden">
+        <div className="flex-1 p-6 overflow-hidden">
           <div className="max-w-7xl mx-auto h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-              {/* Question Area */}
-              <div className="lg:col-span-2 flex flex-col">
-                <div className="bg-gray-900 rounded-xl p-4 border border-gray-700 flex-1 flex flex-col">
-                  <div className="text-center mb-4">
-                    <div className="text-xs text-gray-400 mb-2">
-                      Question {currentQuestionIndex + 1} of {interview.questions.length}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+              
+              {/* Enhanced Question Area */}
+              <div className="lg:col-span-3 flex flex-col">
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 flex-1 flex flex-col overflow-hidden">
+                  
+                  {/* Question Header */}
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                          <span className="text-lg font-bold">{currentQuestionIndex + 1}</span>
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-semibold">Question {currentQuestionIndex + 1}</h2>
+                          <div className="flex items-center gap-2 text-blue-100 text-sm">
+                            <span>{interview.domain} Interview</span>
+                            {currentQuestion.category && (
+                              <>
+                                <span>•</span>
+                                <span>{currentQuestion.category}</span>
+                              </>
+                            )}
+                            {currentQuestion.difficulty && (
+                              <>
+                                <span>•</span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  currentQuestion.difficulty === 'Easy' ? 'bg-green-500/20 text-green-200' :
+                                  currentQuestion.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-200' :
+                                  'bg-red-500/20 text-red-200'
+                                }`}>
+                                  {currentQuestion.difficulty}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-blue-100">Progress</div>
+                        <div className="text-lg font-bold">{Math.round(progress)}%</div>
+                      </div>
                     </div>
-                    <h2 className="text-lg font-bold text-white mb-3 leading-tight">
-                      {interview.questions[currentQuestionIndex].question}
-                    </h2>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-white/20 rounded-full h-2 mb-2">
+                      <div 
+                        className="bg-white h-2 rounded-full transition-all duration-500 ease-out shadow-lg"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-blue-100">
+                      <span>Question {currentQuestionIndex + 1} of {interview.questions.length}</span>
+                      <span>{interview.questions.length - currentQuestionIndex - 1} remaining</span>
+                    </div>
                   </div>
 
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-300">Progress</span>
-                      <span className="text-xs text-gray-400">
-                        {currentQuestionIndex + 1} / {interview.questions.length}
-                      </span>
+                  {/* Question Content */}
+                  <div className="flex-1 p-8 flex flex-col">
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="max-w-4xl text-center">
+                        <div className="mb-6">
+                          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
+                            currentQuestionIndex === 0 
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {currentQuestionIndex === 0 ? (
+                              <>
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                </svg>
+                                Introduction & Experience
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                                Technical Question
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 leading-relaxed mb-8">
+                          {currentQuestion.question}
+                        </h3>
+                        
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                          <div className="flex items-start gap-4">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                              <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.894A1 1 0 0018 16V3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="text-left">
+                              <h4 className="font-semibold text-gray-800 mb-2">Instructions</h4>
+                              {currentQuestionIndex === 0 ? (
+                                <ul className="text-sm text-gray-600 space-y-1">
+                                  <li>• Introduce yourself professionally and confidently</li>
+                                  <li>• Mention your educational background and key experiences</li>
+                                  <li>• Explain your interest in this role and company</li>
+                                  <li>• Keep it concise but comprehensive (2-3 minutes)</li>
+                                  <li>• Maintain eye contact with the camera</li>
+                                </ul>
+                              ) : (
+                                <ul className="text-sm text-gray-600 space-y-1">
+                                  <li>• Take your time to think before answering</li>
+                                  <li>• Speak clearly and maintain eye contact with the camera</li>
+                                  <li>• Provide specific examples when possible</li>
+                                  <li>• Structure your answer logically</li>
+                                  <li>• Click "Next Question" when you're finished</li>
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      {interview.questions.map((_: any, index: number) => (
-                        <div
-                          key={index}
-                          className={`flex-1 h-1.5 rounded-full transition-all ${
-                            index === currentQuestionIndex
-                              ? 'bg-[#0BC0DF]'
-                              : index < currentQuestionIndex
-                              ? 'bg-green-500'
-                              : 'bg-gray-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
 
-                  <div className="mt-auto">
-                    <Button 
-                      onClick={handleNextQuestion} 
-                      size="lg" 
-                      className="w-full"
-                      disabled={isUploading}
-                    >
-                      {isUploading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing...
-                        </>
-                      ) : currentQuestionIndex < interview.questions.length - 1 ? (
-                        <>
-                          Next Question
-                          <ArrowRightIcon className="w-4 h-4 ml-2" />
-                        </>
-                      ) : (
-                        <>
-                          Complete Interview
-                          <CheckCircleIcon className="w-4 h-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="mt-8 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          Recording in progress
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        {currentQuestionIndex > 0 && (
+                          <button 
+                            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
+                            disabled
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Previous (Disabled)
+                          </button>
+                        )}
+                        
+                        <Button 
+                          onClick={handleNextQuestion} 
+                          size="lg" 
+                          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                          disabled={isUploading}
+                        >
+                          {isUploading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              Processing...
+                            </>
+                          ) : currentQuestionIndex < interview.questions.length - 1 ? (
+                            <>
+                              Next Question
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              Complete Interview
+                              <CheckCircleIcon className="w-5 h-5" />
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Video Panel */}
-              <div className="lg:col-span-1 flex flex-col space-y-3">
-                <div className="bg-gray-900 rounded-xl p-3 border border-gray-700 flex-1">
-                  <h3 className="text-white font-medium mb-2 text-center text-sm">Your Video</h3>
-                  <div className="relative aspect-square bg-black rounded-lg overflow-hidden border-2 border-[#0BC0DF]">
+              {/* Enhanced Side Panel */}
+              <div className="lg:col-span-1 flex flex-col space-y-4">
+                
+                {/* Video Preview */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-sm">Your Video</h3>
+                  </div>
+                  <div className="relative aspect-square bg-black rounded-xl overflow-hidden border-2 border-blue-200 shadow-inner">
                     <video
                       ref={(el) => {
                         if (el && stream && el.srcObject !== stream) {
@@ -820,31 +1020,113 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                       style={{ transform: 'scaleX(-1)' }}
                     />
                     {isRecording && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-red-500 text-white px-2 py-1 rounded text-xs">
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                         REC
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs text-center">
+                        Stay centered in frame
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interview Progress */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-sm">Progress</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Current Question</span>
+                      <span className="text-sm font-bold text-blue-600">{currentQuestionIndex + 1}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Total Questions</span>
+                      <span className="text-sm font-bold text-gray-800">{interview.questions.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Remaining</span>
+                      <span className="text-sm font-bold text-orange-600">{interview.questions.length - currentQuestionIndex - 1}</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-gray-600">Completion</span>
+                        <span className="text-sm font-bold text-indigo-600">{Math.round(progress)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Status */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-2 h-2 rounded-full ${violationCount === 0 ? 'bg-green-500' : violationCount === 1 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                    <h3 className="text-gray-800 font-semibold text-sm">Security</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Status</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                        violationCount === 0 ? 'bg-green-100 text-green-700' :
+                        violationCount === 1 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {violationCount === 0 ? 'SECURE' : 
+                         violationCount === 1 ? 'WARNING' : 'CRITICAL'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Violations</span>
+                      <span className={`text-sm font-bold ${violationCount >= 1 ? 'text-red-600' : 'text-green-600'}`}>
+                        {violationCount}/2
+                      </span>
+                    </div>
+                    {violationCount > 0 && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-xs text-red-700 font-medium">
+                          ⚠️ {2 - violationCount} violation{2 - violationCount !== 1 ? 's' : ''} remaining
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-gray-900 rounded-xl p-3 border border-gray-700">
-                  <h3 className="text-white font-medium mb-2 text-sm">Status</h3>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Current:</span>
-                      <span className="text-[#0BC0DF]">{currentQuestionIndex + 1}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Remaining:</span>
-                      <span className="text-yellow-400">{interview.questions.length - currentQuestionIndex - 1}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Violations:</span>
-                      <span className={violationCount >= 1 ? 'text-red-400' : 'text-green-400'}>
-                        {violationCount}/2
-                      </span>
-                    </div>
+                {/* Question Navigation */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-sm">Questions</h3>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {interview.questions.map((_: any, index: number) => (
+                      <div
+                        key={index}
+                        className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                          index === currentQuestionIndex
+                            ? index === 0 
+                              ? 'bg-green-500 text-white shadow-lg scale-110' // Introduction question active
+                              : 'bg-blue-500 text-white shadow-lg scale-110'   // Regular question active
+                            : index < currentQuestionIndex
+                            ? index === 0
+                              ? 'bg-green-100 text-green-700'  // Introduction completed
+                              : 'bg-blue-100 text-blue-700'    // Regular completed
+                            : 'bg-gray-100 text-gray-500'      // Not reached yet
+                        }`}
+                        title={index === 0 ? 'Introduction' : `Question ${index + 1}`}
+                      >
+                        {index === 0 ? 'I' : index + 1}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

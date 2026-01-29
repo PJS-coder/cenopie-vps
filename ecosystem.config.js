@@ -35,16 +35,17 @@ module.exports = {
     },
     {
       name: 'cenopie-frontend',
-      script: 'server.js',
-      cwd: '/var/www/cenopie-vps/frontend/.next/standalone',
+      script: 'npm',
+      args: 'run start:prod',
+      cwd: '/var/www/cenopie-vps/frontend',
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
         // Performance optimizations
         NODE_OPTIONS: '--max-old-space-size=512'
       },
-      instances: 2, // 2 instances for frontend
-      exec_mode: 'cluster',
+      instances: 1, // Single instance for Next.js
+      exec_mode: 'fork',
       max_memory_restart: '512M',
       min_uptime: '10s',
       max_restarts: 10,

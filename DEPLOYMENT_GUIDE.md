@@ -5,12 +5,21 @@
 1. **Backend**: Environment file not loading correctly (trying to connect to localhost instead of MongoDB Atlas)
 2. **Frontend**: Port 3000 conflict causing constant restarts
 3. **Redis**: Attempting to connect to localhost despite being disabled
+4. **API Connection**: Frontend "Failed to fetch" errors due to missing environment variables
 
 ## Quick Fix Commands
 
 Run these commands on your server (`root@cenopie:/var/www/cenopie-vps`):
 
-### 1. Stop All Services and Clear Ports
+### Option 1: Automated Fix (Recommended)
+```bash
+# Run the comprehensive fix script
+./fix-api-connection.sh
+```
+
+### Option 2: Manual Fix
+
+#### 1. Stop All Services and Clear Ports
 ```bash
 # Stop PM2 processes
 pm2 stop all
@@ -24,38 +33,39 @@ lsof -ti:4000 | xargs kill -9 2>/dev/null || true
 sleep 3
 ```
 
-### 2. Create Log Directories
+#### 2. Create Log Directories
 ```bash
 mkdir -p /var/log/pm2
 chown -R root:root /var/log/pm2
 ```
 
-### 3. Verify Environment Files
+#### 3. Set Up Environment Files
 ```bash
-# Check backend environment
-cat backend/.env.production | grep MONGODB_URI
-cat backend/.env.production | grep REDIS_DISABLED
+# Copy production environment files
+cp backend/.env.production backend/.env
+cp frontend/.env.production frontend/.env.local
 
-# Should show:
-# MONGODB_URI=mongodb+srv://pjs89079_db_user:adO1gs2LZryrCKbM@cenopie.ae8q9xo.mongodb.net/?retryWrites=true&w=majority&appName=Cenopie
-# REDIS_DISABLED=true
+# Verify frontend environment
+cat frontend/.env.local | grep NEXT_PUBLIC_API_URL
+# Should show: NEXT_PUBLIC_API_URL=https://cenopie.com
 ```
 
-### 4. Test Backend Manually (Optional)
+#### 4. Rebuild Frontend
 ```bash
-cd /var/www/cenopie-vps/backend
-NODE_ENV=production node src/server.js
-# Should connect to MongoDB Atlas, not localhost
-# Press Ctrl+C to stop
+cd /var/www/cenopie-vps/frontend
+rm -rf .next node_modules/.cache
+npm ci
+npm run build:prod
+cd ..
 ```
 
-### 5. Start Services with New Configuration
+#### 5. Start Services with New Configuration
 ```bash
-cd /var/www/cenopie-vps
 pm2 start ecosystem.config.js
+pm2 save
 ```
 
-### 6. Monitor Status
+#### 6. Monitor Status
 ```bash
 pm2 status
 pm2 logs --lines 50
@@ -66,8 +76,46 @@ pm2 logs --lines 50
 After running these commands, you should see:
 - Backend connecting to "Atlas Database" (not "Local Database")
 - No Redis connection errors (Redis disabled)
-- Frontend starting on port 3000 without conflicts
+- Frontend starting on port 3001 without conflicts
 - Both services showing stable uptime without restarts
+- **No "Failed to fetch" errors in browser console**
+- **API calls to `/api/upload/interview-video` and `/api/interviews/*/complete` working**
+
+## API Connection Verification
+
+Test the API endpoints that were failing:
+
+```bash
+# Test backend health
+curl -f http://localhost:4000/api/health
+
+# Test upload endpoint
+curl -f http://localhost:4000/api/upload/test
+
+# Check frontend environment variables
+cd /var/www/cenopie-vps/frontend
+node -e "console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)"
+
+# Debug API URL resolution
+node /var/www/cenopie-vps/debug-api-url.js
+```
+
+Should show:
+- Backend health: `{"status":"ok"}`
+- Upload test: `{"message":"Upload route is working!"}`
+- Frontend API URL: `https://cenopie.com`
+- Debug script showing correct URL resolution
+
+## Browser Console Debugging
+
+After deployment, check the browser console for:
+```
+🔗 API URL configured: https://cenopie.com
+Using API URL for video upload: https://cenopie.com
+Using API URL for interview completion: https://cenopie.com
+```
+
+If you see `undefined` or `localhost` URLs in production, the environment variables aren't being loaded correctly.
 
 ## Troubleshooting
 
@@ -104,11 +152,15 @@ pm2 logs --lines 100
 
 ## Success Indicators
 
-✅ Backend log shows: "✅ MongoDB Connected: cenopie.ae8q9xo.mongodb.net"
-✅ No "ENOTFOUND localhost" errors
-✅ No "EADDRINUSE" errors
-✅ PM2 status shows both services "online" with low restart counts
-✅ Services maintain stable uptime (not constantly restarting)
+✅ Backend log shows: "✅ MongoDB Connected: cenopie.ae8q9xo.mongodb.net"  
+✅ No "ENOTFOUND localhost" errors  
+✅ No "EADDRINUSE" errors  
+✅ PM2 status shows both services "online" with low restart counts  
+✅ Services maintain stable uptime (not constantly restarting)  
+✅ **No "Failed to fetch" errors in browser console**  
+✅ **Frontend environment shows `NEXT_PUBLIC_API_URL=https://cenopie.com`**  
+✅ **API endpoints respond correctly: `/api/health`, `/api/upload/test`**  
+✅ **Interview video upload and completion work without errors**
 
 ## Next Steps After Fix
 
