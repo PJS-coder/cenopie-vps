@@ -164,11 +164,11 @@ async function startServer() {
     // Create HTTP server with latest Node.js features
     server = createServer(app);
 
-    // Ultra-performance server settings
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
+    // Enhanced server settings for large file uploads
+    server.keepAliveTimeout = 300000; // 5 minutes
+    server.headersTimeout = 310000; // 5 minutes + 10 seconds
     server.maxConnections = 10000;
-    server.timeout = 120000;
+    server.timeout = 300000; // 5 minutes for large video uploads
 
     // Initialize Socket.IO with latest configuration
     if (!IS_PRODUCTION) {

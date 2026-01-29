@@ -11,12 +11,16 @@ const router = express.Router();
 const videoStorage = multer.memoryStorage();
 const videoUpload = multer({ 
   storage: videoStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  limits: { 
+    fileSize: 200 * 1024 * 1024, // Increased to 200MB for longer interviews
+    fieldSize: 200 * 1024 * 1024
+  },
   fileFilter: (req, file, cb) => {
     console.log('Video upload - File received:', {
       fieldname: file.fieldname,
       originalname: file.originalname,
-      mimetype: file.mimetype
+      mimetype: file.mimetype,
+      size: file.size ? `${(file.size / 1024 / 1024).toFixed(2)}MB` : 'Unknown'
     });
     
     // Allow video files and also allow files without mimetype (some browsers don't set it correctly)
@@ -118,9 +122,20 @@ router.post('/interview-video', protect, videoUpload.single('video'), async (req
         {
           resource_type: 'video',
           folder: 'interview-videos',
-          chunk_size: 6000000,
-          timeout: 120000,
-          public_id: `interview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          chunk_size: 20000000, // Increased to 20MB chunks for faster upload
+          timeout: 180000, // Reduced to 3 minutes (faster processing)
+          eager_async: true, // Process video asynchronously
+          public_id: `interview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          // Aggressive optimization for faster uploads
+          quality: 'auto:low', // Lower quality for faster upload
+          fetch_format: 'auto',
+          // Video compression settings
+          video_codec: 'h264', // H.264 for better compression
+          bit_rate: '1000k', // 1 Mbps bitrate
+          fps: 24, // Reduce FPS for smaller files
+          // Audio optimization
+          audio_codec: 'aac',
+          audio_frequency: 44100
         },
         (error, result) => {
           if (error) {
@@ -131,7 +146,10 @@ router.post('/interview-video', protect, videoUpload.single('video'), async (req
               url: result.secure_url,
               publicId: result.public_id,
               duration: result.duration,
-              format: result.format
+              format: result.format,
+              bytes: result.bytes,
+              sizeInMB: (result.bytes / 1024 / 1024).toFixed(2) + 'MB',
+              compressionRatio: ((result.bytes / req.file.size) * 100).toFixed(1) + '%'
             });
             resolve(result);
           }
