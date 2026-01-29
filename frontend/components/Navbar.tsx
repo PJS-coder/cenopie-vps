@@ -354,19 +354,10 @@ export default function Navbar() {
     return (
       <header className="sticky top-0 z-30 border-b bg-white/70 backdrop-blur dark:bg-black/50">
         <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 px-3 sm:px-4 xl:px-8 h-14 sm:h-16">
-          {/* Logo - Desktop Only */}
-          <Link href="/" className="hidden md:flex items-center shrink-0">
+          {/* Logo - Mobile and Desktop */}
+          <Link href="/" className="flex items-center shrink-0">
             <CenopieLogo />
           </Link>
-          
-          {/* Mobile App Title */}
-          <div className="flex md:hidden items-center">
-            <h1 className="text-lg font-bold text-gray-800 dark:text-white">
-              <span className="text-gray-800 dark:text-white">ceno</span>
-              <span className="text-[#0BC0DF]">pie</span>
-              <span className="ml-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">BETA</span>
-            </h1>
-          </div>
           
           {/* Right Section with Login/Signup Buttons */}
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
