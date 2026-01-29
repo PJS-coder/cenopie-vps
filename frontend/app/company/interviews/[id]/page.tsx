@@ -179,15 +179,33 @@ export default function InterviewReviewPage() {
               </h2>
               
               {interview.fullRecordingUrl ? (
-                <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden">
-                  <video
-                    src={interview.fullRecordingUrl}
-                    controls
-                    className="w-full h-full"
-                  >
-                    Your browser does not support video playback.
-                  </video>
-                </div>
+                interview.fullRecordingUrl.includes('mock-video') ? (
+                  // Show placeholder for mock videos in development
+                  <div className="aspect-video bg-gray-900 rounded-xl flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-9-4V8a2 2 0 012-2h8a2 2 0 012 2v2M5 18h14a2 2 0 002-2v-8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-white text-lg font-medium mb-2">Development Mode</p>
+                      <p className="text-gray-400 text-sm mb-4">Video uploaded successfully but not stored in development</p>
+                      <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg inline-block">
+                        ✅ Upload completed: {interview.fullRecordingUrl.split('/').pop()}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden">
+                    <video
+                      src={interview.fullRecordingUrl}
+                      controls
+                      className="w-full h-full"
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  </div>
+                )
               ) : (
                 <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center">
                   <p className="text-gray-500 dark:text-gray-400">

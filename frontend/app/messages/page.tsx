@@ -8,6 +8,7 @@ import { useMessaging } from '@/hooks/useMessaging';
 import { Conversation, Message } from '@/lib/messageApi';
 import { Button } from '@/components/ui/button';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { withTimeout, TIMEOUT_CONFIGS } from '@/lib/timeout';
 
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { ConversationSkeleton } from '@/components/LoadingSkeleton';
@@ -98,20 +99,33 @@ export default function MessagesPage() {
       const loadConversationMessages = async () => {
         setLoadingMessages(true);
         try {
-          // Use Promise.race to timeout after 3 seconds
-          const loadPromise = loadMessages(selectedConversation._id);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Loading timeout')), 3000)
+          // Use the timeout utility with normal timeout (10 seconds)
+          const response = await withTimeout(
+            loadMessages(selectedConversation._id),
+            TIMEOUT_CONFIGS.NORMAL,
+            'Loading messages timed out. Please check your connection and try again.'
           );
-          
-          const response = await Promise.race([loadPromise, timeoutPromise]);
           setHasMoreMessages(response.pagination.hasMore);
           
           // Mark conversation as read (don't wait for this)
           markConversationAsRead(selectedConversation._id).catch(console.error);
         } catch (error) {
           console.error('Failed to load messages:', error);
-          // Don't let loading errors block the UI - show empty state
+          
+          // Show user-friendly error message
+          if (error instanceof Error) {
+            if (error.message.includes('timeout') || error.message.includes('timed out')) {
+              // Handle timeout gracefully - don't block UI
+              console.warn('Message loading timed out, but continuing with cached data');
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
+              console.warn('Network error loading messages, using cached data if available');
+            } else {
+              console.warn('Error loading messages:', error.message);
+            }
+          }
+          
+          // Don't let loading errors block the UI - show empty state or cached data
+          // The UI will still be functional even if messages fail to load
         } finally {
           // Always reset loading state
           setLoadingMessages(false);
@@ -158,10 +172,20 @@ export default function MessagesPage() {
       const currentMessages = getConversationMessages(selectedConversation._id);
       const page = Math.ceil(currentMessages.length / 50) + 1;
       
-      const response = await loadMessages(selectedConversation._id, page);
+      // Add timeout for loading more messages too
+      const response = await withTimeout(
+        loadMessages(selectedConversation._id, page),
+        TIMEOUT_CONFIGS.NORMAL,
+        'Loading more messages timed out. Please try again.'
+      );
       setHasMoreMessages(response.pagination.hasMore);
     } catch (error) {
       console.error('Failed to load more messages:', error);
+      
+      // Handle timeout gracefully for load more
+      if (error instanceof Error && error.message.includes('timed out')) {
+        console.warn('Loading more messages timed out, but continuing with current messages');
+      }
     } finally {
       setLoadingMessages(false);
     }

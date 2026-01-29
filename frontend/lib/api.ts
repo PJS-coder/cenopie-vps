@@ -219,12 +219,17 @@ const performAuthenticatedRequest = async <T = any>(
   // For FormData requests, we should not set Content-Type header as browser will set it with boundary
   const isFormData = config.body instanceof FormData;
   
+  // Create AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+  
   const defaultConfig: RequestInit = {
     headers: {
       'Authorization': `Bearer ${token}`,
       // Only set Content-Type to application/json if it's not FormData
       ...(!isFormData && { 'Content-Type': 'application/json' }),
     },
+    signal: controller.signal, // Add abort signal
   };
   
   // Debug logging removed for production
@@ -253,8 +258,16 @@ const performAuthenticatedRequest = async <T = any>(
       
       try {
         response = await fetch(`${API_BASE_URL}${endpoint}`, finalConfig);
+        clearTimeout(timeoutId); // Clear timeout on successful response
       } catch (fetchError) {
+        clearTimeout(timeoutId); // Clear timeout on error
         console.error('Fetch error:', fetchError);
+        
+        // Handle abort error (timeout)
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        }
+        
         if (fetchError instanceof TypeError && fetchError.message === 'Failed to fetch') {
           throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
         }

@@ -779,66 +779,59 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           ))}
         </div>
 
-        {/* Enhanced Status Bar */}
-        <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 backdrop-blur-sm border-b border-red-500/30 p-3 text-white flex-shrink-0 shadow-lg">
-          <div className="flex items-center justify-between text-sm max-w-7xl mx-auto">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50" />
-                <span className="font-bold text-red-100">LIVE RECORDING</span>
+        {/* Compact Status Bar */}
+        <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 backdrop-blur-sm border-b border-red-500/30 p-2 text-white flex-shrink-0 shadow-lg">
+          <div className="flex items-center justify-between text-xs max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="font-bold">LIVE</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-red-200">Security Status:</span>
-                <span className={`font-bold px-2 py-1 rounded text-xs ${
+              <div className="flex items-center gap-1">
+                <span>Security:</span>
+                <span className={`font-bold px-1 py-0.5 rounded text-xs ${
                   violationCount === 0 ? 'bg-green-500/20 text-green-300' :
                   violationCount === 1 ? 'bg-yellow-500/20 text-yellow-300' :
                   'bg-red-500/20 text-red-300'
                 }`}>
-                  {violationCount === 0 ? 'SECURE' : 
-                   violationCount === 1 ? 'WARNING' : 'CRITICAL'}
+                  {violationCount === 0 ? 'OK' : violationCount === 1 ? 'WARN' : 'CRIT'}
                 </span>
               </div>
-              <div className="text-red-200">
-                Violations: <span className="font-bold text-white">{violationCount}/2</span>
-              </div>
+              <span>Violations: {violationCount}/2</span>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${cameraActive ? 'bg-green-400' : 'bg-red-400'}`} />
-                <span className={cameraActive ? 'text-green-300' : 'text-red-300'}>
-                  Camera {cameraActive ? 'Active' : 'Inactive'}
-                </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${cameraActive ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className={cameraActive ? 'text-green-300' : 'text-red-300'}>Cam</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${micActive ? 'bg-green-400' : 'bg-red-400'}`} />
-                <span className={micActive ? 'text-green-300' : 'text-red-300'}>
-                  Mic {micActive ? 'Active' : 'Inactive'}
-                </span>
+              <div className="flex items-center gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${micActive ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className={micActive ? 'text-green-300' : 'text-red-300'}>Mic</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6 overflow-hidden">
+        {/* Single Page Layout */}
+        <div className="flex-1 p-3 overflow-hidden">
           <div className="max-w-7xl mx-auto h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 h-full">
               
-              {/* Enhanced Question Area */}
-              <div className="lg:col-span-3 flex flex-col">
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 flex-1 flex flex-col overflow-hidden">
+              {/* Main Question Area - More Space */}
+              <div className="lg:col-span-4 flex flex-col">
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 flex-1 flex flex-col overflow-hidden">
                   
-                  {/* Question Header */}
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                          <span className="text-lg font-bold">{currentQuestionIndex + 1}</span>
+                  {/* Compact Question Header */}
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-t-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold">{currentQuestionIndex + 1}</span>
                         </div>
                         <div>
-                          <h2 className="text-lg font-semibold">Question {currentQuestionIndex + 1}</h2>
-                          <div className="flex items-center gap-2 text-blue-100 text-sm">
-                            <span>{interview.domain} Interview</span>
+                          <h2 className="text-sm font-semibold">Question {currentQuestionIndex + 1} of {interview.questions.length}</h2>
+                          <div className="flex items-center gap-2 text-blue-100 text-xs">
+                            <span>{interview.domain}</span>
                             {currentQuestion.category && (
                               <>
                                 <span>•</span>
@@ -848,7 +841,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                             {currentQuestion.difficulty && (
                               <>
                                 <span>•</span>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                <span className={`px-1 py-0.5 rounded text-xs ${
                                   currentQuestion.difficulty === 'Easy' ? 'bg-green-500/20 text-green-200' :
                                   currentQuestion.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-200' :
                                   'bg-red-500/20 text-red-200'
@@ -861,80 +854,58 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-blue-100">Progress</div>
-                        <div className="text-lg font-bold">{Math.round(progress)}%</div>
+                        <div className="text-xs text-blue-100">Progress</div>
+                        <div className="text-sm font-bold">{Math.round(progress)}%</div>
                       </div>
                     </div>
                     
-                    {/* Progress Bar */}
-                    <div className="w-full bg-white/20 rounded-full h-2 mb-2">
+                    {/* Compact Progress Bar */}
+                    <div className="w-full bg-white/20 rounded-full h-1.5">
                       <div 
-                        className="bg-white h-2 rounded-full transition-all duration-500 ease-out shadow-lg"
+                        className="bg-white h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-xs text-blue-100">
-                      <span>Question {currentQuestionIndex + 1} of {interview.questions.length}</span>
-                      <span>{interview.questions.length - currentQuestionIndex - 1} remaining</span>
-                    </div>
                   </div>
 
-                  {/* Question Content */}
-                  <div className="flex-1 p-8 flex flex-col">
+                  {/* Compact Question Content */}
+                  <div className="flex-1 p-4 flex flex-col">
                     <div className="flex-1 flex items-center justify-center">
                       <div className="max-w-4xl text-center">
-                        <div className="mb-6">
-                          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
+                        <div className="mb-3">
+                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-2 ${
                             currentQuestionIndex === 0 
                               ? 'bg-green-50 text-green-700 border border-green-200'
                               : 'bg-blue-50 text-blue-700 border border-blue-200'
                           }`}>
-                            {currentQuestionIndex === 0 ? (
-                              <>
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                </svg>
-                                Introduction & Experience
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                                </svg>
-                                Technical Question
-                              </>
-                            )}
+                            {currentQuestionIndex === 0 ? 'Introduction' : 'Technical Question'}
                           </div>
                         </div>
                         
-                        <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 leading-relaxed mb-8">
+                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 leading-relaxed mb-4">
                           {currentQuestion.question}
                         </h3>
                         
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                          <div className="flex items-start gap-4">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                              <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                          <div className="flex items-start gap-2">
+                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.894A1 1 0 0018 16V3z" clipRule="evenodd" />
                               </svg>
                             </div>
                             <div className="text-left">
-                              <h4 className="font-semibold text-gray-800 mb-2">Instructions</h4>
+                              <h4 className="font-semibold text-gray-800 mb-1 text-sm">Instructions</h4>
                               {currentQuestionIndex === 0 ? (
-                                <ul className="text-sm text-gray-600 space-y-1">
-                                  <li>• Introduce yourself professionally and confidently</li>
-                                  <li>• Mention your educational background and key experiences</li>
-                                  <li>• Explain your interest in this role and company</li>
-                                  <li>• Keep it concise but comprehensive (2-3 minutes)</li>
-                                  <li>• Maintain eye contact with the camera</li>
+                                <ul className="text-xs text-gray-600 space-y-0.5">
+                                  <li>• Introduce yourself professionally (2-3 minutes)</li>
+                                  <li>• Mention education, experience, and interest in role</li>
+                                  <li>• Maintain eye contact with camera</li>
                                 </ul>
                               ) : (
-                                <ul className="text-sm text-gray-600 space-y-1">
-                                  <li>• Take your time to think before answering</li>
-                                  <li>• Speak clearly and maintain eye contact with the camera</li>
+                                <ul className="text-xs text-gray-600 space-y-0.5">
+                                  <li>• Think before answering, speak clearly</li>
                                   <li>• Provide specific examples when possible</li>
-                                  <li>• Structure your answer logically</li>
-                                  <li>• Click "Next Question" when you're finished</li>
+                                  <li>• Click "Next Question" when finished</li>
                                 </ul>
                               )}
                             </div>
@@ -943,50 +914,36 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="mt-8 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                          Recording in progress
-                        </div>
+                    {/* Compact Action Buttons */}
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                        Recording
                       </div>
                       
-                      <div className="flex items-center gap-3">
-                        {currentQuestionIndex > 0 && (
-                          <button 
-                            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
-                            disabled
-                          >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Previous (Disabled)
-                          </button>
-                        )}
-                        
+                      <div className="flex items-center gap-2">
                         <Button 
                           onClick={handleNextQuestion} 
-                          size="lg" 
-                          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                          size="sm" 
+                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-1 text-sm"
                           disabled={isUploading}
                         >
                           {isUploading ? (
                             <>
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                               Processing...
                             </>
                           ) : currentQuestionIndex < interview.questions.length - 1 ? (
                             <>
                               Next Question
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                               </svg>
                             </>
                           ) : (
                             <>
                               Complete Interview
-                              <CheckCircleIcon className="w-5 h-5" />
+                              <CheckCircleIcon className="w-4 h-4" />
                             </>
                           )}
                         </Button>
@@ -996,16 +953,16 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                 </div>
               </div>
 
-              {/* Enhanced Side Panel */}
-              <div className="lg:col-span-1 flex flex-col space-y-4">
+              {/* Compact Side Panel */}
+              <div className="lg:col-span-1 flex flex-col space-y-2">
                 
-                {/* Video Preview */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-sm">Your Video</h3>
+                {/* Compact Video Preview */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2">
+                  <div className="flex items-center gap-1 mb-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-xs">Your Video</h3>
                   </div>
-                  <div className="relative aspect-square bg-black rounded-xl overflow-hidden border-2 border-blue-200 shadow-inner">
+                  <div className="relative aspect-square bg-black rounded-lg overflow-hidden border border-blue-200">
                     <video
                       ref={(el) => {
                         if (el && stream && el.srcObject !== stream) {
@@ -1020,111 +977,64 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                       style={{ transform: 'scaleX(-1)' }}
                     />
                     {isRecording && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-red-500 text-white px-1 py-0.5 rounded text-xs font-medium">
+                        <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
                         REC
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-xs text-center">
-                        Stay centered in frame
-                      </div>
-                    </div>
                   </div>
                 </div>
 
-                {/* Interview Progress */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-sm">Progress</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Current Question</span>
-                      <span className="text-sm font-bold text-blue-600">{currentQuestionIndex + 1}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Total Questions</span>
-                      <span className="text-sm font-bold text-gray-800">{interview.questions.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Remaining</span>
-                      <span className="text-sm font-bold text-orange-600">{interview.questions.length - currentQuestionIndex - 1}</span>
-                    </div>
-                    <div className="pt-2 border-t border-gray-200">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs text-gray-600">Completion</span>
-                        <span className="text-sm font-bold text-indigo-600">{Math.round(progress)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Security Status */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-2 h-2 rounded-full ${violationCount === 0 ? 'bg-green-500' : violationCount === 1 ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                    <h3 className="text-gray-800 font-semibold text-sm">Security</h3>
+                {/* Compact Progress Panel */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2">
+                  <div className="flex items-center gap-1 mb-2">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-xs">Progress</h3>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Status</span>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        violationCount === 0 ? 'bg-green-100 text-green-700' :
-                        violationCount === 1 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {violationCount === 0 ? 'SECURE' : 
-                         violationCount === 1 ? 'WARNING' : 'CRITICAL'}
-                      </span>
+                      <span className="text-xs text-gray-600">Current</span>
+                      <span className="text-xs font-bold text-blue-600">{currentQuestionIndex + 1}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Violations</span>
-                      <span className={`text-sm font-bold ${violationCount >= 1 ? 'text-red-600' : 'text-green-600'}`}>
-                        {violationCount}/2
-                      </span>
+                      <span className="text-xs text-gray-600">Total</span>
+                      <span className="text-xs font-bold text-gray-800">{interview.questions.length}</span>
                     </div>
-                    {violationCount > 0 && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-xs text-red-700 font-medium">
-                          ⚠️ {2 - violationCount} violation{2 - violationCount !== 1 ? 's' : ''} remaining
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Remaining</span>
+                      <span className="text-xs font-bold text-orange-600">{interview.questions.length - currentQuestionIndex - 1}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Question Navigation */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-sm">Questions</h3>
+                {/* Compact Question List */}
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-1 mb-2">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                    <h3 className="text-gray-800 font-semibold text-xs">Questions</h3>
                   </div>
-                  <div className="grid grid-cols-5 gap-1">
-                    {interview.questions.map((_: any, index: number) => (
-                      <div
+                  <div className="space-y-1 overflow-y-auto max-h-32">
+                    {interview.questions.map((q: any, index: number) => (
+                      <div 
                         key={index}
-                        className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                          index === currentQuestionIndex
-                            ? index === 0 
-                              ? 'bg-green-500 text-white shadow-lg scale-110' // Introduction question active
-                              : 'bg-blue-500 text-white shadow-lg scale-110'   // Regular question active
-                            : index < currentQuestionIndex
-                            ? index === 0
-                              ? 'bg-green-100 text-green-700'  // Introduction completed
-                              : 'bg-blue-100 text-blue-700'    // Regular completed
-                            : 'bg-gray-100 text-gray-500'      // Not reached yet
+                        className={`p-1.5 rounded-lg text-xs transition-all ${
+                          index === currentQuestionIndex 
+                            ? 'bg-blue-100 border border-blue-300 text-blue-800' 
+                            : index < currentQuestionIndex 
+                              ? 'bg-green-50 border border-green-200 text-green-700'
+                              : 'bg-gray-50 border border-gray-200 text-gray-600'
                         }`}
-                        title={index === 0 ? 'Introduction' : `Question ${index + 1}`}
                       >
-                        {index === 0 ? 'I' : index + 1}
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold">{index + 1}.</span>
+                          <span className="truncate">{q.question.substring(0, 30)}...</span>
+                        </div>
+                        {index < currentQuestionIndex && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <CheckCircleIcon className="w-3 h-3 text-green-500" />
+                            <span className="text-xs text-green-600">Completed</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

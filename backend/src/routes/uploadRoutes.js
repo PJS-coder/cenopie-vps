@@ -73,6 +73,32 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Upload route is working!' });
 });
 
+// Mock video endpoint for development
+router.get('/mock-video/:filename', (req, res) => {
+  const { filename } = req.params;
+  
+  // Set appropriate headers for video
+  res.setHeader('Content-Type', 'video/webm');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  
+  // Create a minimal WebM video response (just headers, no actual video data)
+  // This will show the video player but won't play actual content
+  const mockVideoData = Buffer.from([
+    0x1A, 0x45, 0xDF, 0xA3, // EBML header
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, // EBML size
+    0x42, 0x86, 0x81, 0x01, // EBMLVersion
+    0x42, 0xF7, 0x81, 0x01, // EBMLReadVersion  
+    0x42, 0xF2, 0x81, 0x04, // EBMLMaxIDLength
+    0x42, 0xF3, 0x81, 0x08, // EBMLMaxSizeLength
+    0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6D, // DocType: "webm"
+    0x42, 0x87, 0x81, 0x02, // DocTypeVersion
+    0x42, 0x85, 0x81, 0x02  // DocTypeReadVersion
+  ]);
+  
+  res.status(200).send(mockVideoData);
+});
+
 // Upload message attachment
 router.post('/message-attachment', protect, generalUpload.single('file'), uploadMessageAttachment);
 
@@ -114,6 +140,24 @@ router.post('/interview-video', protect, videoUpload.single('video'), async (req
       });
     }
 
+    // Check if Cloudinary is disabled
+    if (process.env.CLOUDINARY_DISABLED === 'true') {
+      console.log('⚠️  Cloudinary disabled - returning mock response for development');
+      
+      // Return a mock successful response for development
+      const mockResult = {
+        success: true,
+        url: `http://localhost:4000/mock-video/${req.file.originalname}`,
+        publicId: `mock-interview-${Date.now()}`,
+        duration: 120, // 2 minutes mock duration
+        format: 'webm',
+        message: 'Development mode - video not actually uploaded to Cloudinary'
+      };
+      
+      console.log('Mock upload response:', mockResult);
+      return res.json(mockResult);
+    }
+
     // Upload to Cloudinary
     console.log('Starting Cloudinary upload for interview video...');
     
@@ -122,20 +166,14 @@ router.post('/interview-video', protect, videoUpload.single('video'), async (req
         {
           resource_type: 'video',
           folder: 'interview-videos',
-          chunk_size: 20000000, // Increased to 20MB chunks for faster upload
-          timeout: 180000, // Reduced to 3 minutes (faster processing)
-          eager_async: true, // Process video asynchronously
+          chunk_size: 20000000, // 20MB chunks for faster upload
+          timeout: 180000, // 3 minutes timeout
           public_id: `interview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          // Aggressive optimization for faster uploads
-          quality: 'auto:low', // Lower quality for faster upload
+          // Let Cloudinary handle format optimization automatically
+          quality: 'auto:good',
           fetch_format: 'auto',
-          // Video compression settings
-          video_codec: 'h264', // H.264 for better compression
-          bit_rate: '1000k', // 1 Mbps bitrate
-          fps: 24, // Reduce FPS for smaller files
-          // Audio optimization
-          audio_codec: 'aac',
-          audio_frequency: 44100
+          // Remove codec-specific settings to avoid conflicts
+          // Cloudinary will choose the best codec for each format
         },
         (error, result) => {
           if (error) {

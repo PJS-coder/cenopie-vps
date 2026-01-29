@@ -2,6 +2,14 @@ import { v2 as cloudinary } from 'cloudinary';
 
 export function configCloudinary() {
   const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+  const IS_DISABLED = process.env.CLOUDINARY_DISABLED === 'true';
+  
+  if (IS_DISABLED) {
+    if (!IS_PRODUCTION) {
+      console.log('⚠️  Cloudinary is disabled - file uploads will not work');
+    }
+    return null;
+  }
   
   if (!IS_PRODUCTION) {
     console.log('Configuring Cloudinary with:');

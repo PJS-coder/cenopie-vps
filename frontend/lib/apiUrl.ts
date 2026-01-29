@@ -1,19 +1,26 @@
 // API URL utility with robust fallback logic
 export const getApiUrl = (): string => {
-  // In browser environment
+  // Force local development URL for now
   if (typeof window !== 'undefined') {
+    console.log('🔗 API URL Debug:', {
+      hostname: window.location.hostname,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+      NODE_ENV: process.env.NODE_ENV
+    });
+    
+    // Always use localhost:4000 for local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:4000';
+    }
+    
     // Check if we're on the production domain
     if (window.location.hostname === 'cenopie.com' || window.location.hostname === 'www.cenopie.com') {
       return 'https://cenopie.com';
     }
-    // For local development
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    }
   }
   
-  // Server-side or fallback
-  return process.env.NEXT_PUBLIC_API_URL || 'https://cenopie.com';
+  // Server-side or fallback - use localhost for development
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 };
 
 // Helper function to build full API endpoint URLs
