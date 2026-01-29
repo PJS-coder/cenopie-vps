@@ -6,10 +6,18 @@ export const createInterview = async (req, res) => {
   try {
     const { domain, companyId, jobId, applicationId } = req.body;
     
-    // Get all questions for the domain
+    // Define the standard introduction question (always first)
+    const introductionQuestion = {
+      question: "Please introduce yourself and walk me through your educational background, relevant experience, and what interests you about this role and our company.",
+      category: "Introduction & Experience",
+      difficulty: "Easy"
+    };
+    
+    // Get all questions for the domain (excluding introduction questions if any exist)
     const allQuestions = await InterviewQuestion.find({ 
       domain, 
-      isActive: true 
+      isActive: true,
+      category: { $ne: "Introduction & Experience" } // Exclude any existing intro questions
     });
     
     if (allQuestions.length === 0) {
@@ -18,11 +26,11 @@ export const createInterview = async (req, res) => {
       });
     }
     
-    // Shuffle and select 10 random questions
+    // Shuffle and select 9 random questions (since first is always introduction)
     const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
-    const selectedQuestions = shuffledQuestions.slice(0, Math.min(10, shuffledQuestions.length));
+    const selectedQuestions = shuffledQuestions.slice(0, Math.min(9, shuffledQuestions.length));
     
-    // Create interview with shuffled questions
+    // Create interview with introduction question first, then shuffled questions
     const interview = new Interview({
       user: req.user._id,
       company: companyId,
@@ -30,17 +38,20 @@ export const createInterview = async (req, res) => {
       application: applicationId,
       domain,
       title: `${domain} Interview`,
-      questions: selectedQuestions.map(q => ({
-        question: q.question,
-        category: q.category,
-        difficulty: q.difficulty
-      })),
+      questions: [
+        introductionQuestion, // Always first
+        ...selectedQuestions.map(q => ({
+          question: q.question,
+          category: q.category,
+          difficulty: q.difficulty
+        }))
+      ],
       status: 'scheduled'
     });
     
     await interview.save();
     
-    console.log(`✅ Created interview with ${selectedQuestions.length} shuffled questions for domain: ${domain}`);
+    console.log(`✅ Created interview with introduction + ${selectedQuestions.length} shuffled questions for domain: ${domain}`);
     
     res.status(201).json({
       success: true,
@@ -51,7 +62,8 @@ export const createInterview = async (req, res) => {
         questions: interview.questions.map((q, index) => ({
           index: index + 1,
           category: q.category,
-          difficulty: q.difficulty
+          difficulty: q.difficulty,
+          isIntroduction: index === 0
         }))
       }
     });
