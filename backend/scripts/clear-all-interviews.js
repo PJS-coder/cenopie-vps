@@ -145,7 +145,7 @@ async function clearAllInterviews() {
     log.success('🎉 Interview cleanup completed successfully!');
     log.info('📋 Summary:');
     log.info(`  • Database interviews deleted: ${deleteResult.deletedCount}`);
-    log.info(`  • Cloudinary videos deleted: ${videoUrls.length > 0 ? deletedVideos : 0}`);
+    log.info(`  • Cloudinary videos deleted: ${videoUrls.length > 0 ? (typeof deletedVideos !== 'undefined' ? deletedVideos : 0) : 0}`);
     log.info('  • Database is now clean and ready for new interviews');
     
   } catch (error) {
