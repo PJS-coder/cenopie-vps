@@ -213,9 +213,6 @@ function ShowcaseContent() {
           
           {/* Header */}
           <div className="mb-6 sm:mb-8 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Showcase
-            </h1>
           </div>
 
           {/* Three Posters - Carousel Style */}

@@ -273,7 +273,7 @@ export default function FeedPage() {
 
   return (
     <ProtectedRoute>
-      <div className="w-full flex justify-center px-4 lg:px-6 pb-0 lg:pb-8 pt-6">
+      <div className="w-full flex justify-center px-4 lg:px-6 pb-0 lg:pb-8 pt-2 lg:pt-6">
         <div className="w-full lg:w-[1200px] pb-0 lg:pb-0">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             
@@ -282,7 +282,7 @@ export default function FeedPage() {
               <div className="lg:sticky lg:top-[72px] space-y-6">
                 
                 {/* User Profile Card */}
-                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+                <div className="hidden lg:block bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="relative h-24 w-full cursor-pointer" onClick={() => {
                     const userId = currentUser?._id || currentUser?.id;
                     if (userId) {
@@ -364,7 +364,7 @@ export default function FeedPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="hidden md:block bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
+                <div className="hidden lg:block bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
@@ -714,7 +714,7 @@ export default function FeedPage() {
                   )}
                   {!hasMore && posts.length > 0 && (
                     <div className="text-center text-gray-500 dark:text-gray-400 text-sm mb-0 pb-0">
-                      You've reached the end of the feed
+                      You have reached end of feed
                     </div>
                   )}
                 </div>

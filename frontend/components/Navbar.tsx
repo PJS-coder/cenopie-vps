@@ -258,6 +258,8 @@ export default function Navbar() {
   const handleSelectSuggestion = (result: any) => {
     if (result.type === 'user') {
       router.push(`/profile/${result.id}`);
+    } else if (result.type === 'company') {
+      router.push(`/companies/${result.id}`);
     }
     setSearchQuery('');
     setIsSearchFocused(false);
@@ -437,7 +439,7 @@ export default function Navbar() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
                 className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 focus:outline-none text-sm border-0" 
-                placeholder="Search users..." 
+                placeholder="Search users, companies..." 
               />
             </form>
             {isSearchFocused && (

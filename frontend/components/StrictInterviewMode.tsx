@@ -133,6 +133,62 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   const router = useRouter();
   const { notifications, success, error, warning, info } = useInterviewNotifications();
   
+  // Check for previous session state
+  const [wasInterviewActive, setWasInterviewActive] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const activeInterviewId = localStorage.getItem('activeInterviewId');
+      const interviewStep = localStorage.getItem('interviewStep');
+      console.log('Checking localStorage:', { activeInterviewId, interviewStep, currentInterviewId: interviewId });
+      const isActive = activeInterviewId === interviewId && (interviewStep === 'interview' || interviewStep === 'setup');
+      console.log('Was interview active?', isActive);
+      
+      if (isActive) {
+        console.log('Interview was active - preparing cancellation');
+        
+        // Clear the session data and store cancellation info
+        localStorage.removeItem('activeInterviewId');
+        localStorage.removeItem('interviewStep');
+        
+        // Store cancellation info for interviews page
+        localStorage.setItem('interviewCancelled', 'true');
+        localStorage.setItem('cancellationReason', 'hard-refresh');
+        localStorage.setItem('cancellationMessage', 'Interview cancelled due to page refresh or browser restart');
+        localStorage.setItem('cancelledInterviewId', interviewId);
+        
+        console.log('Stored cancellation info');
+        setWasInterviewActive(true);
+        setShouldRedirect(true);
+      }
+    }
+  }, [interviewId]);
+
+  // Handle redirect in separate effect
+  useEffect(() => {
+    if (shouldRedirect) {
+      console.log('Redirecting to interviews page due to cancellation');
+      const timer = setTimeout(() => {
+        router.push('/interviews');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRedirect, router]);
+
+  // Show loading while redirecting
+  if (wasInterviewActive && shouldRedirect) {
+    return (
+      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Interview cancelled - redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+  
   // Basic states
   const [step, setStep] = useState<'device-check' | 'setup' | 'interview' | 'complete'>('device-check');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -158,11 +214,35 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   // VIOLATION DETECTION SYSTEM
   const [violations, setViolations] = useState<string[]>([]);
   const [violationCount, setViolationCount] = useState(0);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const [showFullscreenAlert, setShowFullscreenAlert] = useState(false);
   const lastViolationTimeRef = useRef(0);
 
-  // Add violation function
+  // Cleanup function to clear localStorage if component unmounts unexpectedly
+  useEffect(() => {
+    return () => {
+      const activeInterviewId = localStorage.getItem('activeInterviewId');
+      if (activeInterviewId === interviewId) {
+        localStorage.removeItem('activeInterviewId');
+        localStorage.removeItem('interviewStep');
+      }
+    };
+  }, [interviewId]);
+
+  // Handle redirect when interview is cancelled due to violations
+  useEffect(() => {
+    if (isCancelled && violationCount >= 2) {
+      console.log('Kicking out due to violations');
+      const timer = setTimeout(() => {
+        router.push('/interviews');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCancelled, violationCount, router]);
+
+  // Add violation function - STRICT VERSION
   const addViolation = useCallback((reason: string) => {
-    if (isSubmittingRef.current) return;
+    if (isSubmittingRef.current || isCancelled) return;
 
     const now = Date.now();
     if (now - lastViolationTimeRef.current < 1000) return;
@@ -178,23 +258,48 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     setViolationCount(prev => {
       const newCount = prev + 1;
       
-      if (newCount >= 2 && !isSubmittingRef.current) {
-        error('Maximum violations reached. Interview cancelled due to security violations.', 3000);
+      if (newCount >= 2) {
+        // IMMEDIATE KICK OUT - NO MERCY
+        setIsCancelled(true);
         isSubmittingRef.current = true;
         
-        setTimeout(() => {
-          submitInterview(true, 'Maximum violations reached - Interview cancelled due to cheating');
-        }, 1000);
-      } else if (newCount < 2) {
-        const remaining = 2 - newCount;
-        warning(`Security violation: ${reason}. ${remaining} remaining before interview ends.`, 4000);
+        // Stop everything immediately
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+        
+        // Clear session data
+        localStorage.removeItem('activeInterviewId');
+        localStorage.removeItem('interviewStep');
+        
+        // Submit interview as REJECTED to backend (so it's counted)
+        submitRejectedInterview('Interview rejected due to security violations');
+        
+        // Store simple cancellation message for UI
+        localStorage.setItem('interviewCancelled', 'true');
+        localStorage.setItem('cancellationMessage', 'you find doing useless things that\'s why we cancelled interview');
+        localStorage.setItem('cancelledInterviewId', interviewId);
+        
+        // Show immediate error message
+        error('you find doing useless things that\'s why we cancelled interview', 5000);
+        
+        // Redirect will be handled by useEffect
+      } else {
+        // First violation warning
+        warning(`Security violation detected: ${reason}. One more violation will cancel your interview.`, 4000);
       }
       
       return newCount;
     });
-  }, [error, warning]);
+  }, [warning, error, isCancelled, stream, interviewId]);
 
-  // Violation detection effects
+  // ULTRA STRICT violation detection
   useEffect(() => {
     if (step !== 'interview') return;
 
@@ -205,52 +310,73 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     };
 
     const handleWindowBlur = () => {
-      addViolation('Window lost focus');
+      addViolation('Window lost focus - attempted to switch applications');
     };
 
+    // ULTRA STRICT KEY BLOCKING - BLOCK SILENTLY (NO VIOLATIONS)
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block common shortcuts
+      // BLOCK ALL MODIFIER KEYS COMPLETELY - NO VIOLATION, JUST BLOCK
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+      }
+      
+      // BLOCK ALL FUNCTION KEYS - NO VIOLATION, JUST BLOCK
+      if (e.key.startsWith('F') && e.key.length <= 3) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+      }
+      
+      // BLOCK NAVIGATION AND SYSTEM KEYS - NO VIOLATION, JUST BLOCK
       const blockedKeys = [
-        'F12', // Dev tools
-        'F5',  // Refresh
-        'Tab', // Alt+Tab switching
+        'Tab', 'Escape', 'Insert', 'Delete', 'Home', 'End', 
+        'PageUp', 'PageDown', 'PrintScreen', 'ScrollLock', 'Pause'
       ];
       
-      const blockedCombos = [
-        e.ctrlKey && e.shiftKey && e.key === 'I', // Ctrl+Shift+I (Dev tools)
-        e.ctrlKey && e.shiftKey && e.key === 'J', // Ctrl+Shift+J (Console)
-        e.ctrlKey && e.key === 'u', // Ctrl+U (View source)
-        e.ctrlKey && e.key === 'r', // Ctrl+R (Refresh)
-        e.altKey && e.key === 'Tab', // Alt+Tab (Switch apps)
-        e.metaKey && e.key === 'Tab', // Cmd+Tab (Mac switch apps)
-        e.ctrlKey && e.key === 'w', // Ctrl+W (Close tab)
-        e.ctrlKey && e.key === 't', // Ctrl+T (New tab)
-        e.ctrlKey && e.shiftKey && e.key === 'T', // Ctrl+Shift+T (Reopen tab)
-      ];
-
-      if (blockedKeys.includes(e.key) || blockedCombos.some(combo => combo)) {
+      if (blockedKeys.includes(e.key)) {
         e.preventDefault();
-        addViolation(`Blocked keyboard shortcut: ${e.key}`);
+        e.stopImmediatePropagation();
+        return false;
+      }
+      
+      // BLOCK CONTEXT MENU KEY - NO VIOLATION, JUST BLOCK
+      if (e.key === 'ContextMenu') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // BROWSER EXIT = VIOLATION (actual cheating attempt)
+      e.preventDefault();
+      addViolation('Attempted to exit browser during interview');
+      
+      return 'Leaving will cancel your interview!';
+    };
+
+    // STRICT MOUSE CONTROL - BLOCK SILENTLY (NO VIOLATIONS)
+    const handleMouseDown = (e: MouseEvent) => {
+      // Block middle mouse and navigation buttons - NO VIOLATION, JUST BLOCK
+      if (e.button === 1 || e.button === 3 || e.button === 4) {
+        e.preventDefault();
       }
     };
 
     const handleContextMenu = (e: MouseEvent) => {
+      // Block right-click - NO VIOLATION, JUST BLOCK
       e.preventDefault();
-      addViolation('Right-click context menu blocked');
     };
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      addViolation('Attempted to leave page');
-      return 'Are you sure you want to leave the interview?';
-    };
-
-    // Add event listeners
+    // Add STRICT event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('mousedown', handleMouseDown);
 
     // Cleanup
     return () => {
@@ -259,6 +385,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('mousedown', handleMouseDown);
     };
   }, [step, addViolation]);
 
@@ -268,6 +395,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && step === 'interview') {
+        setShowFullscreenAlert(true);
         addViolation('Exited fullscreen mode');
       }
     };
@@ -325,6 +453,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     try {
       await document.documentElement.requestFullscreen();
       setIsFullscreen(true);
+      setShowFullscreenAlert(false); // Hide alert when back in fullscreen
     } catch (err) {
       error('Failed to enter fullscreen mode');
     }
@@ -332,6 +461,10 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
   // Start interview
   const handleStartInterview = () => {
+    // Track that user is now in interview mode
+    localStorage.setItem('activeInterviewId', interviewId);
+    localStorage.setItem('interviewStep', 'interview');
+    
     setStep('interview');
     startRecording();
   };
@@ -498,9 +631,114 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     return '';
   };
 
+  // Submit rejected interview to backend (so it's counted as rejected)
+  const submitRejectedInterview = async (reason: string) => {
+    try {
+      console.log('🔍 Submitting rejected interview:', reason);
+      console.log('🔍 Interview ID:', interviewId);
+      console.log('🔍 Start time ref:', startTimeRef.current);
+      
+      const totalDuration = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      console.log('🔍 Token exists:', !!token);
+      console.log('🔍 Total duration:', totalDuration);
+      
+      const rejectionData = {
+        status: 'rejected',
+        rejectionReason: reason,
+        totalDuration,
+        securityViolations: violations,
+        violationCount: violationCount,
+        completedAt: new Date().toISOString()
+      };
+      
+      console.log('📤 Submitting rejection data:', rejectionData);
+      
+      const apiUrl = getApiUrl();
+      console.log('🔍 API URL:', apiUrl);
+      
+      const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(rejectionData)
+      });
+
+      console.log('📥 Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to submit rejected interview:', response.status, errorText);
+      } else {
+        const result = await response.json();
+        console.log('✅ Rejected interview submitted successfully:', result);
+      }
+    } catch (err) {
+      console.error('❌ Error submitting rejected interview:', err);
+    }
+  };
+
+  // Cancel interview function
+  const cancelInterview = async (reason: string) => {
+    if (isSubmittingRef.current && !isCancelled) return;
+    
+    setIsUploading(false);
+    setIsCancelled(true);
+
+    try {
+      console.log('Cancelling interview:', reason);
+      
+      // Clear localStorage tracking
+      localStorage.removeItem('activeInterviewId');
+      localStorage.removeItem('interviewStep');
+      
+      // Store cancellation info for interviews page
+      localStorage.setItem('interviewCancelled', 'true');
+      localStorage.setItem('cancellationReason', 'browser-exit');
+      localStorage.setItem('cancellationMessage', 'Your interview gets cancelled. To start new interview press start new interview');
+      localStorage.setItem('cancelledInterviewId', interviewId);
+      
+      // Stop recording without uploading
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        setIsRecording(false);
+      }
+      
+      // Stop media streams
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      // Exit fullscreen
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+
+      // Don't upload anything to backend for cancelled interviews
+      console.log('Interview cancelled - no data uploaded to backend');
+      
+      // Show cancellation message and redirect to interviews page
+      setTimeout(() => {
+        error('Interview cancelled: ' + reason, 5000);
+        router.push('/interviews');
+      }, 500);
+      
+    } catch (err) {
+      console.error('Error during interview cancellation:', err);
+      // Still redirect even if there's an error
+      setTimeout(() => {
+        router.push('/interviews');
+      }, 1000);
+    }
+  };
+
   // Submit interview
   const submitInterview = async (forced = false, reason?: string) => {
     if (isSubmittingRef.current && !forced) return;
+    if (isCancelled) return; // Don't submit if cancelled
     
     if (!forced) {
       isSubmittingRef.current = true;
@@ -561,6 +799,10 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       const result = await response.json();
       console.log('Interview submission successful:', result);
 
+      // Clear localStorage tracking since interview completed successfully
+      localStorage.removeItem('activeInterviewId');
+      localStorage.removeItem('interviewStep');
+
       setStep('complete');
       setIsUploading(false);
       
@@ -586,6 +828,8 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
   // Next question
   const handleNextQuestion = () => {
+    if (isCancelled || isSubmittingRef.current) return;
+    
     if (currentQuestionIndex < interview.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
@@ -638,7 +882,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
             </Button>
             {isDesktop ? (
               <Button 
-                onClick={() => setStep('setup')} 
+                onClick={() => {
+                  // Track that user is now in setup mode
+                  localStorage.setItem('activeInterviewId', interviewId);
+                  localStorage.setItem('interviewStep', 'setup');
+                  setStep('setup');
+                }} 
                 className="flex-1"
               >
                 Continue
@@ -779,6 +1028,35 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           ))}
         </div>
 
+        {/* Fullscreen Exit Alert */}
+        {showFullscreenAlert && (
+          <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-red-900/95 border-2 border-red-500 rounded-xl p-6 max-w-md mx-4 text-center shadow-2xl">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ExclamationTriangleIcon className="w-8 h-8 text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">
+                Fullscreen Required!
+              </h3>
+              <p className="text-red-200 mb-6 text-sm">
+                You have exited fullscreen mode. This is a security violation. Please return to fullscreen to continue your interview.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={enterFullscreen}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <ArrowsPointingOutIcon className="w-4 h-4 mr-2" />
+                  Return to Fullscreen
+                </Button>
+              </div>
+              <p className="text-xs text-red-300 mt-3">
+                Violation {violationCount}/2 - Interview will be cancelled after 2 violations
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Compact Status Bar */}
         <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 backdrop-blur-sm border-b border-red-500/30 p-2 text-white flex-shrink-0 shadow-lg">
           <div className="flex items-center justify-between text-xs max-w-7xl mx-auto">
@@ -790,11 +1068,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
               <div className="flex items-center gap-1">
                 <span>Security:</span>
                 <span className={`font-bold px-1 py-0.5 rounded text-xs ${
+                  isCancelled ? 'bg-red-500/20 text-red-300' :
                   violationCount === 0 ? 'bg-green-500/20 text-green-300' :
                   violationCount === 1 ? 'bg-yellow-500/20 text-yellow-300' :
                   'bg-red-500/20 text-red-300'
                 }`}>
-                  {violationCount === 0 ? 'OK' : violationCount === 1 ? 'WARN' : 'CRIT'}
+                  {isCancelled ? 'CANCELLED' : violationCount === 0 ? 'OK' : violationCount === 1 ? 'WARN' : 'CRIT'}
                 </span>
               </div>
               <span>Violations: {violationCount}/2</span>
@@ -926,9 +1205,14 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                           onClick={handleNextQuestion} 
                           size="sm" 
                           className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-1 text-sm"
-                          disabled={isUploading}
+                          disabled={isUploading || isCancelled}
                         >
-                          {isUploading ? (
+                          {isCancelled ? (
+                            <>
+                              <XCircleIcon className="w-3 h-3" />
+                              Cancelled
+                            </>
+                          ) : isUploading ? (
                             <>
                               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                               Processing...
@@ -1057,35 +1341,29 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       </div>
 
       <div className="text-center max-w-md mx-4">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-          violationCount >= 2 
-            ? 'bg-red-100 dark:bg-red-900' 
-            : 'bg-green-100 dark:bg-green-900'
-        }`}>
-          {violationCount >= 2 ? (
-            <XCircleIcon className="w-12 h-12 text-red-500" />
-          ) : (
-            <CheckCircleIcon className="w-12 h-12 text-green-500" />
-          )}
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100 dark:bg-green-900">
+          <CheckCircleIcon className="w-12 h-12 text-green-500" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          {violationCount >= 2 ? 'Interview Cancelled!' : 'Interview Completed!'}
+          Interview Completed!
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-          {violationCount >= 2 
-            ? 'Your interview was cancelled due to security violations.' 
-            : 'Your interview has been submitted successfully.'
-          }
+          Your interview has been submitted successfully.
         </p>
         
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
           <p className="text-blue-800 dark:text-blue-200 text-sm">
-            {violationCount >= 2 
-              ? 'Please contact HR if you believe this was an error.'
-              : 'Our HR team will review your performance and contact you soon.'
-            }
+            Our HR team will review your performance and contact you soon.
           </p>
         </div>
+
+        <Button 
+          variant="outline" 
+          onClick={() => router.push('/interviews')}
+          className="w-full"
+        >
+          Back to Interviews
+        </Button>
       </div>
     </div>
   );

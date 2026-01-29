@@ -205,12 +205,7 @@ export default function UpdatesPage() {
             {/* Header */}
             <div className="mb-6">
               <div className="flex items-center gap-4">
-                <div className="bg-[#E6F7FC] p-3 rounded-xl">
-                  <BellIcon className="w-8 h-8 text-[#0BC0DF]" />
-                </div>
                 <div>
-                  <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Updates & Network</h1>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Stay connected with your professional network and never miss an update</p>
                 </div>
               </div>
             </div>

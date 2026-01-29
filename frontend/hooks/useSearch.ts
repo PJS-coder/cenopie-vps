@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { searchApi, SearchResult } from '@/lib/api';
 
-export type SearchType = 'users';
+export type SearchType = 'users' | 'companies' | 'all';
 
 interface UseSearchReturn {
   results: SearchResult[];
@@ -26,10 +26,8 @@ export const useSearch = (): UseSearchReturn => {
     setError(null);
 
     try {
-      const response = await searchApi.search(query, 'users');
-      // Only show users since we removed company search
-      const userResults = (response.data || []).filter(result => result.type === 'user');
-      setResults(userResults);
+      const response = await searchApi.search(query, 'all');
+      setResults(response.data || []);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while searching';
       setError(errorMessage);

@@ -53,7 +53,7 @@ const interviewSchema = new mongoose.Schema({
   // Status
   status: {
     type: String,
-    enum: ['scheduled', 'in-progress', 'completed', 'reviewed'],
+    enum: ['scheduled', 'in-progress', 'completed', 'rejected', 'reviewed'],
     default: 'scheduled'
   },
   
@@ -93,6 +93,7 @@ const interviewSchema = new mongoose.Schema({
     default: false
   },
   submissionReason: String,
+  rejectionReason: String,
   
   // HR Review
   hrReview: {

@@ -10,7 +10,8 @@ import {
   BuildingOfficeIcon,
   CheckCircleIcon,
   ClockIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
@@ -51,9 +52,24 @@ function InterviewsContent() {
   const router = useRouter();
   const [interview, setInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancellationMessage, setCancellationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInterview();
+    
+    // Check for cancellation message - only show once
+    const cancelled = localStorage.getItem('interviewCancelled');
+    const message = localStorage.getItem('cancellationMessage');
+    
+    if (cancelled === 'true' && message) {
+      setCancellationMessage(message);
+      
+      // Clear the cancellation data immediately so it only shows once
+      localStorage.removeItem('interviewCancelled');
+      localStorage.removeItem('cancellationMessage');
+      localStorage.removeItem('cancellationReason');
+      localStorage.removeItem('cancelledInterviewId');
+    }
   }, []);
 
   const fetchInterview = async () => {
@@ -75,11 +91,16 @@ function InterviewsContent() {
         const data = await response.json();
         // Get the most recent interview that's not rejected or completed with rejection
         if (data.interviews && data.interviews.length > 0) {
-          // Only show active interview (not rejected)
+          // Only show active interview (not rejected) and only if no cancellation message is being shown
           const activeInterview = data.interviews.find(
-            (i: Interview) => i.hrReview.decision !== 'rejected'
+            (i: Interview) => i.status !== 'rejected'
           );
-          if (activeInterview) {
+          
+          // If there's a cancellation message to show, don't show any interview
+          // This ensures the user sees the cancellation message first, then the domain selection
+          const hasCancellationMessage = localStorage.getItem('interviewCancelled') === 'true';
+          
+          if (activeInterview && !hasCancellationMessage) {
             setInterview(activeInterview);
           }
         }
@@ -298,10 +319,47 @@ function InterviewsContent() {
         </div>
 
         {/* Content Area */}
-        {!interview ? (
+        {cancellationMessage && (
+          // Show cancellation message
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg mb-6 sm:mb-8">
+            <div className="text-center">
+              <XCircleIcon className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-red-100 mb-3">
+                Interview Cancelled
+              </h3>
+              <p className="text-sm sm:text-base text-red-800 dark:text-red-200 mb-6 px-2">
+                {cancellationMessage}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setCancellationMessage(null)}
+                  className="w-full sm:w-auto border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  OK
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    setCancellationMessage(null);
+                    // After dismissing cancellation message, show domain selection
+                    router.push('/interviews/new');
+                  }}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                >
+                  <VideoCameraIcon className="w-5 h-5 mr-2" />
+                  Start New Interview
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {!interview && !cancellationMessage ? (
           // No interview - Show domain selection
           <DomainSelection />
-        ) : (
+        ) : interview ? (
           // Has interview - Show status
           <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg">
             {/* Interview Info */}
@@ -310,28 +368,12 @@ function InterviewsContent() {
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {interview.title}
                 </h2>
-                {/* Delete button for testing/resetting */}
-                {interview.status !== 'completed' && interview.hrReview.decision === 'pending' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      if (confirm('Delete this interview and start fresh?')) {
-                        try {
-                          const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-                          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interviews/${interview._id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          setInterview(null);
-                        } catch (error) {
-                        }
-                      }
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Reset
-                  </Button>
+                {/* Show cancellation status if interview was cancelled */}
+                {interview.status === 'rejected' && (
+                  <div className="flex items-center gap-2 text-red-600">
+                    <XCircleIcon className="w-5 h-5" />
+                    <span className="text-sm font-medium">Interview Cancelled</span>
+                  </div>
                 )}
               </div>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
@@ -346,6 +388,26 @@ function InterviewsContent() {
 
             {/* Status-based Content */}
             <div className="max-w-2xl mx-auto">
+              {interview.status === 'rejected' && (
+                <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-4 sm:p-6 lg:p-8 text-center">
+                  <XCircleIcon className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-red-100 mb-3">
+                    Interview Cancelled
+                  </h3>
+                  <p className="text-sm sm:text-base text-red-800 dark:text-red-200 mb-6 px-2">
+                    Your interview was cancelled due to security violations. You can start a new interview below.
+                  </p>
+                  <Button
+                    size="lg"
+                    onClick={() => router.push('/interviews/new')}
+                    className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                  >
+                    <VideoCameraIcon className="w-5 h-5 mr-2" />
+                    Start New Interview
+                  </Button>
+                </div>
+              )}
+
               {(interview.status === 'scheduled' || interview.status === 'in-progress') && (
                 <div className="text-center">
                   <div className="w-12 h-12 sm:w-16 sm:h-16 bg-cyan-100 dark:bg-cyan-900 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -501,6 +563,7 @@ function InterviewsContent() {
                   <Button
                     onClick={() => {
                       setInterview(null);
+                      router.push('/interviews/new');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="w-full sm:w-auto"
@@ -513,7 +576,7 @@ function InterviewsContent() {
 
             </div>
           </div>
-        )}
+        ) : null}
         </div>
       </div>
     </div>

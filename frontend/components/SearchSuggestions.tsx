@@ -2,7 +2,7 @@
 
 
 import { SearchResult } from '@/lib/api';
-import { UserIcon } from '@heroicons/react/24/outline';
+import { UserIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
 interface SearchSuggestionsProps {
   results: SearchResult[];
@@ -35,8 +35,12 @@ export default function SearchSuggestions({
             {results.slice(0, 8).map((result) => (
               <div
                 key={result.id}
-                className="flex items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                className="flex items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 cursor-pointer touch-manipulation"
                 onClick={() => onSelect(result)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  onSelect(result);
+                }}
               >
                 {result.profileImage ? (
                   <img
@@ -46,11 +50,20 @@ export default function SearchSuggestions({
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                    <UserIcon className="w-4 h-4 text-gray-500" />
+                    {result.type === 'company' ? (
+                      <BuildingOfficeIcon className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <UserIcon className="w-4 h-4 text-gray-500" />
+                    )}
                   </div>
                 )}
                 <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{result.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{result.name}</p>
+                    {result.type === 'company' && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Company</span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 truncate">{result.headline}</p>
                 </div>
               </div>
@@ -60,8 +73,12 @@ export default function SearchSuggestions({
           {results.length > 0 && (
             <div className="border-t border-gray-200 dark:border-gray-700 py-2">
               <button
-                className="w-full text-center text-sm text-brand hover:bg-gray-50 dark:hover:bg-gray-800 py-2"
+                className="w-full text-center text-sm text-brand hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 py-2 touch-manipulation"
                 onClick={() => onSearchAll(query)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  onSearchAll(query);
+                }}
               >
                 View all {results.length} results for "{query}"
               </button>

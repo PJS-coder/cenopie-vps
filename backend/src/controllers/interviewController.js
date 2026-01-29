@@ -227,6 +227,102 @@ export const completeInterview = async (req, res) => {
   }
 };
 
+// Reject interview (for security violations)
+export const rejectInterview = async (req, res) => {
+  try {
+    console.log('🔍 Reject interview request:', {
+      interviewId: req.params.id,
+      userId: req.user._id,
+      body: req.body
+    });
+    
+    const { status, rejectionReason, totalDuration, securityViolations, violationCount } = req.body;
+    
+    // First check if interview exists
+    const existingInterview = await Interview.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
+    
+    if (!existingInterview) {
+      console.log('❌ Interview not found:', req.params.id);
+      return res.status(404).json({ error: 'Interview not found' });
+    }
+    
+    console.log('✅ Found interview:', existingInterview._id, 'Status:', existingInterview.status);
+    
+    // Use findOneAndUpdate for atomic operation to avoid version conflicts
+    const updateData = {
+      status: 'rejected',
+      completedAt: new Date(),
+      rejectionReason: rejectionReason,
+      totalDuration: totalDuration || 0,
+      forcedSubmission: true,
+      submissionReason: rejectionReason
+    };
+    
+    if (securityViolations && Array.isArray(securityViolations)) {
+      updateData.securityViolations = securityViolations;
+    }
+    
+    if (typeof violationCount === 'number') {
+      updateData.violationCount = violationCount;
+    }
+    
+    console.log('💾 Updating interview with data:', updateData);
+    
+    const interview = await Interview.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user._id
+      },
+      updateData,
+      {
+        new: true, // Return updated document
+        runValidators: true // Run schema validation
+      }
+    );
+    
+    if (!interview) {
+      console.log('❌ Interview update failed for:', req.params.id);
+      return res.status(404).json({ error: 'Interview not found or update failed' });
+    }
+    
+    console.log(`✅ Interview ${interview._id} rejected: ${rejectionReason}`);
+    
+    // Update user interview statistics
+    try {
+      const User = (await import('../models/User.js')).default;
+      await User.updateInterviewStats(req.user._id);
+      console.log('✅ User stats updated successfully');
+    } catch (statsError) {
+      console.error('⚠️ Failed to update user stats:', statsError);
+      // Don't fail the whole request if stats update fails
+    }
+    
+    res.json({ 
+      success: true,
+      message: 'Interview rejected due to security violations',
+      interview: {
+        id: interview._id,
+        status: interview.status,
+        rejectionReason: interview.rejectionReason
+      }
+    });
+  } catch (error) {
+    console.error('❌ Reject interview error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      error: 'Failed to reject interview',
+      details: error.message 
+    });
+  }
+};
+
 // Delete interview
 export const deleteInterview = async (req, res) => {
   try {
@@ -259,5 +355,6 @@ export default {
   startInterview,
   submitAnswer,
   completeInterview,
+  rejectInterview,
   deleteInterview
 };

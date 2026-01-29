@@ -341,12 +341,6 @@ export default function JobsPage() {
           {/* Header */}
           <div className="mb-6 lg:mb-8 lg:ml-80">
             <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-br from-[#0BC0DF] to-[#0aa9c4] p-4 rounded-2xl shadow-lg">
-                <BriefcaseIcon className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
-                Find Your Dream <span className="text-[#0BC0DF]">Opportunity</span>
-              </h1>
             </div>
           </div>
 
