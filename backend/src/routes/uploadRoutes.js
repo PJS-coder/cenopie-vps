@@ -190,14 +190,19 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
         {
           resource_type: 'video',
           folder: 'interview-videos',
-          chunk_size: 20000000, // 20MB chunks for faster upload
-          timeout: 180000, // 3 minutes timeout
+          chunk_size: 6000000, // Reduced to 6MB chunks for better performance
+          timeout: 300000, // 5 minutes timeout
           public_id: `interview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          // Let Cloudinary handle format optimization automatically
-          quality: 'auto:good',
+          // Optimize for faster upload and processing
+          quality: 'auto:low', // Reduce quality for faster upload
           fetch_format: 'auto',
-          // Remove codec-specific settings to avoid conflicts
-          // Cloudinary will choose the best codec for each format
+          eager: [
+            { width: 1280, height: 720, crop: 'limit', quality: 'auto:good' },
+            { width: 640, height: 360, crop: 'limit', quality: 'auto:low' }
+          ],
+          eager_async: true, // Process transformations in background
+          // Disable unnecessary processing during upload
+          raw_convert: 'asynchronous'
         },
         (error, result) => {
           if (error) {
