@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -43,16 +43,7 @@ export default function HRAdminReviewPage() {
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
 
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      router.push('/hr-admin');
-      return;
-    }
-    fetchInterview();
-  }, [interviewId, router]);
-
-  const fetchInterview = async () => {
+  const fetchInterview = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
@@ -79,7 +70,16 @@ export default function HRAdminReviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      router.push('/hr-admin');
+      return;
+    }
+    fetchInterview();
+  }, [fetchInterview, router]);
 
   const handleReview = async () => {
     // Validate required fields

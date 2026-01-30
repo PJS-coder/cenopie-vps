@@ -82,109 +82,7 @@ export default function JobsPage() {
     urgent: false
   });
 
-  // Load jobs when applied filters or tab changes
-  useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
-
-  // Load saved jobs status - optimized to run in background
-  useEffect(() => {
-    if (jobs.length > 0) {
-      // Don't block UI - load saved status in background
-      loadSavedJobsStatus();
-    }
-  }, [jobs, loadSavedJobsStatus]);
-
-  const loadSavedJobsStatus = useCallback(async () => {
-    try {
-      const savedJobsSet = new Set<string>();
-      
-      // Check saved status for each job in batches to avoid blocking
-      const batchSize = 5;
-      for (let i = 0; i < jobs.length; i += batchSize) {
-        const batch = jobs.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (job) => {
-          try {
-            const response = await jobApi.isJobSaved(job.id);
-            const isSaved = response.data?.saved ?? response.saved;
-            
-            if (isSaved) {
-              savedJobsSet.add(job.id);
-            }
-          } catch (error) {
-            // Silently fail for individual jobs
-          }
-        }));
-        
-        // Update UI after each batch
-        setSavedJobs(new Set(savedJobsSet));
-        
-        // Small delay between batches to avoid overwhelming the API
-        if (i + batchSize < jobs.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading saved jobs status:', error);
-    }
-  }, [jobs]);
-
-  const handleSaveJob = async (jobId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    
-    try {
-      const response = await jobApi.saveJob(jobId);
-      
-      // Handle both response formats: response.data.saved or response.saved
-      const isSaved = response.data?.saved ?? response.saved;
-      
-      if (isSaved) {
-        setSavedJobs(prev => new Set([...prev, jobId]));
-      } else {
-        setSavedJobs(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(jobId);
-          return newSet;
-        });
-      }
-    } catch (error) {
-      console.error('Error saving/unsaving job:', error);
-      alert('Unable to save job at the moment. Please try again.');
-    }
-  };
-
-  const handleSearch = () => {
-    setAppliedFilters({
-      search: searchTerm,
-      location: locationFilter,
-      type: typeFilter,
-      experience: experienceFilter,
-      salary: salaryFilter,
-      remote: remoteFilter,
-      urgent: urgentFilter
-    });
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setLocationFilter('');
-    setTypeFilter('');
-    setExperienceFilter('');
-    setSalaryFilter('');
-    setRemoteFilter(false);
-    setUrgentFilter(false);
-    setAppliedFilters({
-      search: '',
-      location: '',
-      type: '',
-      experience: '',
-      salary: '',
-      remote: false,
-      urgent: false
-    });
-  };
-
+  // Define functions before useEffect calls to avoid initialization errors
   const loadJobs = useCallback(async () => {
     try {
       setLoading(true);
@@ -249,6 +147,109 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
+  }, [appliedFilters, activeTab]);
+
+  const loadSavedJobsStatus = useCallback(async () => {
+    try {
+      const savedJobsSet = new Set<string>();
+      
+      // Check saved status for each job in batches to avoid blocking
+      const batchSize = 5;
+      for (let i = 0; i < jobs.length; i += batchSize) {
+        const batch = jobs.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (job) => {
+          try {
+            const response = await jobApi.isJobSaved(job.id);
+            const isSaved = response.data?.saved ?? response.saved;
+            
+            if (isSaved) {
+              savedJobsSet.add(job.id);
+            }
+          } catch (error) {
+            // Silently fail for individual jobs
+          }
+        }));
+        
+        // Update UI after each batch
+        setSavedJobs(new Set(savedJobsSet));
+        
+        // Small delay between batches to avoid overwhelming the API
+        if (i + batchSize < jobs.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved jobs status:', error);
+    }
+  }, [jobs]);
+
+  // Load jobs when applied filters or tab changes
+  useEffect(() => {
+    loadJobs();
+  }, [loadJobs]);
+
+  // Load saved jobs status - optimized to run in background
+  useEffect(() => {
+    if (jobs.length > 0) {
+      // Don't block UI - load saved status in background
+      loadSavedJobsStatus();
+    }
+  }, [jobs, loadSavedJobsStatus]);
+
+  const handleSaveJob = async (jobId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    try {
+      const response = await jobApi.saveJob(jobId);
+      
+      // Handle both response formats: response.data.saved or response.saved
+      const isSaved = response.data?.saved ?? response.saved;
+      
+      if (isSaved) {
+        setSavedJobs(prev => new Set([...prev, jobId]));
+      } else {
+        setSavedJobs(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(jobId);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error saving/unsaving job:', error);
+      alert('Unable to save job at the moment. Please try again.');
+    }
+  };
+
+  const handleSearch = () => {
+    setAppliedFilters({
+      search: searchTerm,
+      location: locationFilter,
+      type: typeFilter,
+      experience: experienceFilter,
+      salary: salaryFilter,
+      remote: remoteFilter,
+      urgent: urgentFilter
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setLocationFilter('');
+    setTypeFilter('');
+    setExperienceFilter('');
+    setSalaryFilter('');
+    setRemoteFilter(false);
+    setUrgentFilter(false);
+    setAppliedFilters({
+      search: '',
+      location: '',
+      type: '',
+      experience: '',
+      salary: '',
+      remote: false,
+      urgent: false
+    });
   };
 
   const formatDate = (dateString: string) => {

@@ -192,6 +192,19 @@ export function useMessaging() {
     }
   }, [socket, isConnected, socketSendMessage]);
 
+  // Stop typing indicator
+  const stopTyping = useCallback((conversationId: string) => {
+    if (socket && isConnected) {
+      socket.emit('typing:stop', { conversationId });
+    }
+    
+    // Clear timeout
+    if (typingTimeouts.current[conversationId]) {
+      clearTimeout(typingTimeouts.current[conversationId]);
+      delete typingTimeouts.current[conversationId];
+    }
+  }, [socket, isConnected]);
+
   // Start typing indicator
   const startTyping = useCallback((conversationId: string) => {
     if (socket && isConnected) {
@@ -208,19 +221,6 @@ export function useMessaging() {
       }, 3000);
     }
   }, [socket, isConnected, stopTyping]);
-
-  // Stop typing indicator
-  const stopTyping = useCallback((conversationId: string) => {
-    if (socket && isConnected) {
-      socket.emit('typing:stop', { conversationId });
-    }
-    
-    // Clear timeout
-    if (typingTimeouts.current[conversationId]) {
-      clearTimeout(typingTimeouts.current[conversationId]);
-      delete typingTimeouts.current[conversationId];
-    }
-  }, [socket, isConnected]);
 
   // Mark conversation as read
   const markConversationAsRead = useCallback(async (conversationId: string) => {

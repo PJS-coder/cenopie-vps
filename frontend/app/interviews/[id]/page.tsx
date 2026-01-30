@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,7 @@ function InterviewDetailsContent() {
   const [interview, setInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInterview();
-  }, [interviewId]);
-
-  const fetchInterview = async () => {
+  const fetchInterview = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interviews/${interviewId}`, {
@@ -76,7 +72,11 @@ function InterviewDetailsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId, router]);
+
+  useEffect(() => {
+    fetchInterview();
+  }, [fetchInterview]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';

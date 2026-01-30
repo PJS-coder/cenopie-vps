@@ -24,6 +24,7 @@ export default function MessagingInitializer() {
     }
   }, [
     isAuthenticated, 
+    messaging, 
     messaging?.loading, 
     messaging?.conversations?.length, 
   ]);
@@ -44,6 +45,7 @@ export default function MessagingInitializer() {
     }
   }, [
     isAuthenticated, 
+    messaging,
     messaging?.loading, 
     messaging?.conversations?.length
   ]);

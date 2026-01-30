@@ -126,7 +126,7 @@ export default function ChatArea({
       }
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages.length, currentUserId, showScrollToBottom, scrollToBottom]);
+  }, [messages, currentUserId, showScrollToBottom, scrollToBottom]);
 
   // Simplified intersection observer - remove it since we're handling load more in scroll handler
   // The intersection observer was conflicting with manual scroll handling

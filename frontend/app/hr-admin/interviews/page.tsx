@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,19 +36,7 @@ export default function HRAdminInterviewsPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'shortlisted' | 'rejected'>('all');
   const [stats, setStats] = useState<any>(null);
 
-  useEffect(() => {
-    // Check authentication - use regular auth token
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      router.push('/hr-admin');
-      return;
-    }
-
-    fetchInterviews();
-    fetchStats();
-  }, [filter, router]);
-
-  const fetchInterviews = async () => {
+  const fetchInterviews = useCallback(async () => {
     try {
       const hrToken = localStorage.getItem('authToken');
       const url = filter === 'all'
@@ -74,9 +62,9 @@ export default function HRAdminInterviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, router]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const hrToken = localStorage.getItem('authToken');
       const response = await fetch(
@@ -95,7 +83,19 @@ export default function HRAdminInterviewsPage() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check authentication - use regular auth token
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      router.push('/hr-admin');
+      return;
+    }
+
+    fetchInterviews();
+    fetchStats();
+  }, [fetchInterviews, fetchStats, router]);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');

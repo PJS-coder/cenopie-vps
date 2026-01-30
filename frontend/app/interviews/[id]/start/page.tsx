@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import StrictInterviewMode from '@/components/StrictInterviewMode';
@@ -20,11 +20,7 @@ function InterviewStartContent() {
   const [interview, setInterview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInterview();
-  }, [interviewId]);
-
-  const fetchInterview = async () => {
+  const fetchInterview = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       const response = await fetch(
@@ -45,7 +41,11 @@ function InterviewStartContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId, router]);
+
+  useEffect(() => {
+    fetchInterview();
+  }, [fetchInterview]);
 
   const handleInterviewComplete = () => {
     // Redirect to interviews page after completion
