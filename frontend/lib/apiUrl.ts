@@ -15,7 +15,8 @@ export const getApiUrl = (): string => {
     
     // Check if we're on the production domain
     if (window.location.hostname === 'cenopie.com' || window.location.hostname === 'www.cenopie.com') {
-      return 'https://cenopie.com';
+      // Try different backend URLs for production
+      return process.env.NEXT_PUBLIC_API_URL || 'https://cenopie.com:4000';
     }
   }
   
@@ -30,7 +31,34 @@ export const buildApiUrl = (endpoint: string): string => {
   return `${baseUrl}${cleanEndpoint}`;
 };
 
+// Test API connectivity
+export const testApiConnection = async (): Promise<boolean> => {
+  try {
+    const apiUrl = getApiUrl();
+    console.log('🔍 Testing API connection to:', apiUrl);
+    
+    // Test health endpoint first
+    const healthResponse = await fetch(`${apiUrl}/api/health`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (healthResponse.ok) {
+      console.log('✅ API health check passed');
+      return true;
+    } else {
+      console.warn('⚠️ API health check failed:', healthResponse.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ API connection test failed:', error);
+    return false;
+  }
+};
+
 // Log API URL for debugging (development only)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   console.log('🔗 API URL configured:', getApiUrl());
+  // Test connection in development
+  testApiConnection();
 }
