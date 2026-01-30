@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { protect } from '../middlewares/authMiddleware.js';
 import { uploadMessageAttachment, uploadProfileImage, deleteFile } from '../controllers/uploadController.js';
+import { uploadErrorHandler, uploadSizeLogger } from '../middlewares/uploadErrorHandler.js';
 
 const router = express.Router();
 
@@ -12,8 +13,8 @@ const videoStorage = multer.memoryStorage();
 const videoUpload = multer({ 
   storage: videoStorage,
   limits: { 
-    fileSize: 200 * 1024 * 1024, // Increased to 200MB for longer interviews
-    fieldSize: 200 * 1024 * 1024
+    fileSize: process.env.VIDEO_UPLOAD_LIMIT || 200 * 1024 * 1024, // Configurable via env, default 200MB
+    fieldSize: process.env.VIDEO_UPLOAD_LIMIT || 200 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
     console.log('Video upload - File received:', {
@@ -43,7 +44,7 @@ const videoUpload = multer({
 const generalStorage = multer.memoryStorage();
 const generalUpload = multer({ 
   storage: generalStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  limits: { fileSize: process.env.GENERAL_UPLOAD_LIMIT || 50 * 1024 * 1024 }, // Configurable via env, default 50MB
   fileFilter: (req, file, cb) => {
     console.log('General upload - File received:', {
       fieldname: file.fieldname,
@@ -100,16 +101,16 @@ router.get('/mock-video/:filename', (req, res) => {
 });
 
 // Upload message attachment
-router.post('/message-attachment', protect, generalUpload.single('file'), uploadMessageAttachment);
+router.post('/message-attachment', protect, uploadSizeLogger, generalUpload.single('file'), uploadErrorHandler, uploadMessageAttachment);
 
 // Upload profile image  
-router.post('/profile-image', protect, generalUpload.single('image'), uploadProfileImage);
+router.post('/profile-image', protect, uploadSizeLogger, generalUpload.single('image'), uploadErrorHandler, uploadProfileImage);
 
 // Delete file
 router.delete('/file', protect, deleteFile);
 
 // Upload interview video
-router.post('/interview-video', protect, (req, res, next) => {
+router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
   console.log('=== INTERVIEW VIDEO UPLOAD - BEFORE MULTER ===');
   console.log('Content-Length:', req.headers['content-length']);
   console.log('Content-Type:', req.headers['content-type']);
@@ -117,18 +118,22 @@ router.post('/interview-video', protect, (req, res, next) => {
   
   // Check if content-length exceeds our limit
   const contentLength = parseInt(req.headers['content-length'] || '0');
-  if (contentLength > 200 * 1024 * 1024) { // 200MB
-    console.error('Content-Length exceeds 200MB limit:', contentLength);
+  const maxSize = process.env.VIDEO_UPLOAD_LIMIT || 200 * 1024 * 1024;
+  const maxSizeMB = Math.round(maxSize / 1024 / 1024);
+  
+  if (contentLength > maxSize) {
+    console.error(`Content-Length exceeds ${maxSizeMB}MB limit:`, contentLength);
     return res.status(413).json({
       success: false,
-      error: 'File too large. Maximum size is 200MB.',
-      maxSize: '200MB',
-      receivedSize: `${(contentLength / 1024 / 1024).toFixed(2)}MB`
+      error: `File too large. Maximum size is ${maxSizeMB}MB.`,
+      maxSize: `${maxSizeMB}MB`,
+      receivedSize: `${(contentLength / 1024 / 1024).toFixed(2)}MB`,
+      code: 'FILE_TOO_LARGE'
     });
   }
   
   next();
-}, videoUpload.single('video'), async (req, res) => {
+}, videoUpload.single('video'), uploadErrorHandler, async (req, res) => {
   try {
     console.log('=== INTERVIEW VIDEO UPLOAD REQUEST ===');
     console.log('User:', req.user?.email);
@@ -229,25 +234,6 @@ router.post('/interview-video', protect, (req, res, next) => {
 
   } catch (error) {
     console.error('Interview video upload error:', error);
-    
-    // Handle specific multer errors
-    if (error instanceof multer.MulterError) {
-      if (error.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({
-          success: false,
-          error: 'File too large. Maximum size is 200MB.',
-          code: 'FILE_TOO_LARGE',
-          maxSize: '200MB'
-        });
-      }
-      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid file type. Only video files are allowed.',
-          code: 'INVALID_FILE_TYPE'
-        });
-      }
-    }
     
     res.status(500).json({ 
       success: false,
