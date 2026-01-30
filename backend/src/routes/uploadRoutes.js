@@ -109,7 +109,26 @@ router.post('/profile-image', protect, generalUpload.single('image'), uploadProf
 router.delete('/file', protect, deleteFile);
 
 // Upload interview video
-router.post('/interview-video', protect, videoUpload.single('video'), async (req, res) => {
+router.post('/interview-video', protect, (req, res, next) => {
+  console.log('=== INTERVIEW VIDEO UPLOAD - BEFORE MULTER ===');
+  console.log('Content-Length:', req.headers['content-length']);
+  console.log('Content-Type:', req.headers['content-type']);
+  console.log('User-Agent:', req.headers['user-agent']);
+  
+  // Check if content-length exceeds our limit
+  const contentLength = parseInt(req.headers['content-length'] || '0');
+  if (contentLength > 200 * 1024 * 1024) { // 200MB
+    console.error('Content-Length exceeds 200MB limit:', contentLength);
+    return res.status(413).json({
+      success: false,
+      error: 'File too large. Maximum size is 200MB.',
+      maxSize: '200MB',
+      receivedSize: `${(contentLength / 1024 / 1024).toFixed(2)}MB`
+    });
+  }
+  
+  next();
+}, videoUpload.single('video'), async (req, res) => {
   try {
     console.log('=== INTERVIEW VIDEO UPLOAD REQUEST ===');
     console.log('User:', req.user?.email);
@@ -210,6 +229,26 @@ router.post('/interview-video', protect, videoUpload.single('video'), async (req
 
   } catch (error) {
     console.error('Interview video upload error:', error);
+    
+    // Handle specific multer errors
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          success: false,
+          error: 'File too large. Maximum size is 200MB.',
+          code: 'FILE_TOO_LARGE',
+          maxSize: '200MB'
+        });
+      }
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file type. Only video files are allowed.',
+          code: 'INVALID_FILE_TYPE'
+        });
+      }
+    }
+    
     res.status(500).json({ 
       success: false,
       error: 'Failed to upload interview video',
