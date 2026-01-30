@@ -101,10 +101,10 @@ router.get('/mock-video/:filename', (req, res) => {
 });
 
 // Upload message attachment
-router.post('/message-attachment', protect, uploadSizeLogger, generalUpload.single('file'), uploadErrorHandler, uploadMessageAttachment);
+router.post('/message-attachment', protect, uploadSizeLogger, generalUpload.single('file'), uploadMessageAttachment);
 
 // Upload profile image  
-router.post('/profile-image', protect, uploadSizeLogger, generalUpload.single('image'), uploadErrorHandler, uploadProfileImage);
+router.post('/profile-image', protect, uploadSizeLogger, generalUpload.single('image'), uploadProfileImage);
 
 // Delete file
 router.delete('/file', protect, deleteFile);
@@ -133,7 +133,7 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
   }
   
   next();
-}, videoUpload.single('video'), uploadErrorHandler, async (req, res) => {
+}, videoUpload.single('video'), async (req, res) => {
   try {
     console.log('=== INTERVIEW VIDEO UPLOAD REQUEST ===');
     console.log('User:', req.user?.email);
@@ -235,6 +235,28 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
   } catch (error) {
     console.error('Interview video upload error:', error);
     
+    // Handle multer errors
+    if (error instanceof multer.MulterError) {
+      const maxSize = process.env.VIDEO_UPLOAD_LIMIT || 200 * 1024 * 1024;
+      const maxSizeMB = Math.round(maxSize / 1024 / 1024);
+      
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          success: false,
+          error: `File too large. Maximum size is ${maxSizeMB}MB.`,
+          code: 'FILE_TOO_LARGE',
+          maxSize: `${maxSizeMB}MB`
+        });
+      }
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file type. Only video files are allowed.',
+          code: 'INVALID_FILE_TYPE'
+        });
+      }
+    }
+    
     res.status(500).json({ 
       success: false,
       error: 'Failed to upload interview video',
@@ -242,5 +264,49 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
     });
   }
 });
+
+// Add error handler for multer errors on upload routes
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('Multer error:', error);
+    
+    switch (error.code) {
+      case 'LIMIT_FILE_SIZE':
+        const maxSize = getMaxSizeForEndpoint(req.originalUrl);
+        const maxSizeMB = Math.round(maxSize / 1024 / 1024);
+        return res.status(413).json({
+          success: false,
+          error: `File too large. Maximum size is ${maxSizeMB}MB.`,
+          code: 'FILE_TOO_LARGE',
+          maxSize: `${maxSizeMB}MB`
+        });
+      
+      case 'LIMIT_UNEXPECTED_FILE':
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file field or file type.',
+          code: 'INVALID_FILE_TYPE'
+        });
+      
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'File upload error.',
+          code: 'UPLOAD_ERROR',
+          details: error.message
+        });
+    }
+  }
+  
+  next(error);
+});
+
+// Helper function to get max size based on endpoint
+function getMaxSizeForEndpoint(url) {
+  if (url.includes('/interview-video')) {
+    return process.env.VIDEO_UPLOAD_LIMIT || 200 * 1024 * 1024;
+  }
+  return process.env.GENERAL_UPLOAD_LIMIT || 50 * 1024 * 1024;
+}
 
 export default router;
