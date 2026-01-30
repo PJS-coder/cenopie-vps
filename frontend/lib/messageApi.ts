@@ -32,7 +32,7 @@ export interface Message {
     sender: User;
     type: string;
   };
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   reactions: Array<{
     user: string;
     emoji: string;
