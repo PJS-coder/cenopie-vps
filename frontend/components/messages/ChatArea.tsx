@@ -319,15 +319,16 @@ export default function ChatArea({
         </div>
       </div>
 
-      {/* Scrollable Messages Area - Only vertical scrolling allowed */}
+      {/* Scrollable Messages Area - Improved mobile performance */}
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-white dark:bg-gray-900"
         style={{ 
-          overscrollBehavior: 'none',
+          overscrollBehavior: 'contain',
           touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          scrollBehavior: 'smooth'
         }}
       >
         {/* Load more button */}

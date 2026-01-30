@@ -241,7 +241,7 @@ const useSocket = () => {
         setConnectionError('Authentication required');
       }
     }
-  }, [connectSocket]);
+  }, [connectSocket, hasConnectedOnce]);
 
   // Send message via socket
   const sendMessage = useCallback((data: {

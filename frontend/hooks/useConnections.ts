@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { connectionApi } from '@/lib/api';
 import useSocket from '@/hooks/useSocket';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +40,7 @@ export const useConnections = (userId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const { socket } = useSocket();
 
-  const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -51,11 +51,11 @@ export const useConnections = (userId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchConnections();
-  }, [userId]);
+  }, [fetchConnections]);
 
   // Listen for real-time connection updates
   useEffect(() => {
@@ -73,7 +73,7 @@ export const useConnections = (userId?: string) => {
       socket.off('connection:accepted', handleConnectionUpdate);
       socket.off('connection:status_update', handleConnectionUpdate);
     };
-  }, [socket]);
+  }, [socket, fetchConnections]);
 
   return {
     connections,
@@ -90,7 +90,7 @@ export const useConnectionRequests = (type: 'received' | 'sent' = 'received') =>
   const { socket } = useSocket();
   const { isAuthenticated } = useAuth();
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!isAuthenticated) {
       console.log('Not authenticated, skipping connection requests fetch');
       return;
@@ -110,11 +110,11 @@ export const useConnectionRequests = (type: 'received' | 'sent' = 'received') =>
     } finally {
       setLoading(false);
     }
-  };
+  }, [type, isAuthenticated]);
 
   useEffect(() => {
     fetchRequests();
-  }, [type]);
+  }, [fetchRequests]);
 
   // Listen for real-time connection request updates
   useEffect(() => {
@@ -148,7 +148,7 @@ export const useConnectionRequests = (type: 'received' | 'sent' = 'received') =>
       socket.off('connection:accepted', handleRequestUpdate);
       socket.off('connection:status_update', handleRequestUpdate);
     };
-  }, [socket, type]);
+  }, [socket, type, fetchRequests]);
 
   const acceptRequest = async (connectionId: string) => {
     try {
@@ -198,7 +198,7 @@ export const useConnectionStatus = (userId: string, currentUserId: string) => {
   const { socket } = useSocket();
   const { isAuthenticated } = useAuth();
 
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     if (!isAuthenticated || !userId || !currentUserId) {
       console.log('Not authenticated or missing user IDs, skipping connection status check');
       setStatus('not_connected');
@@ -220,11 +220,11 @@ export const useConnectionStatus = (userId: string, currentUserId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, userId, currentUserId]);
 
   useEffect(() => {
     checkStatus();
-  }, [userId, currentUserId]);
+  }, [checkStatus]);
 
   // Listen for real-time status updates
   useEffect(() => {

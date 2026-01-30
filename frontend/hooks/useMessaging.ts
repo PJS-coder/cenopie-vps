@@ -103,7 +103,7 @@ export function useMessaging() {
     }
   }, [messages]);
 
-  // Send a message - Optimized for speed
+  // Send a message - Simplified and more reliable
   const sendMessage = useCallback(async (data: SendMessageData) => {
     try {
       // Generate client ID for deduplication
@@ -126,7 +126,7 @@ export function useMessaging() {
         type: data.type || 'text',
         content: data.content,
         attachments: data.attachments || [],
-        status: 'sent',
+        status: 'sending',
         reactions: [],
         edited: false,
         createdAt: new Date().toISOString(),
@@ -150,16 +150,7 @@ export function useMessaging() {
         };
       });
       
-      // Prioritize socket for speed, fallback to API only if socket fails
-      if (socket && isConnected) {
-        const socketSent = socketSendMessage(messageData);
-        if (socketSent) {
-          // Socket sent successfully - wait for confirmation before API call
-          return tempMessage; // Return immediately for better UX
-        }
-      }
-      
-      // Fallback to API if socket failed or not connected
+      // Send via API (more reliable than socket for message sending)
       try {
         const response = await messageApi.sendMessage(messageData);
         const actualMessage = response.data;
@@ -169,18 +160,28 @@ export function useMessaging() {
           ...prev,
           [data.conversationId]: prev[data.conversationId]?.map(msg => {
             if (msg._id === tempMessage._id) {
-              return actualMessage;
+              return { ...actualMessage, status: 'sent' };
             }
             return msg;
           }) || [actualMessage]
         }));
         
+        // Also send via socket for real-time updates to other users
+        if (socket && isConnected) {
+          socketSendMessage(messageData);
+        }
+        
         return actualMessage;
       } catch (apiError) {
-        // Remove temp message if API failed
+        // Mark temp message as failed instead of removing it
         setMessages(prev => ({
           ...prev,
-          [data.conversationId]: prev[data.conversationId]?.filter(msg => msg._id !== tempMessage._id) || []
+          [data.conversationId]: prev[data.conversationId]?.map(msg => {
+            if (msg._id === tempMessage._id) {
+              return { ...msg, status: 'failed' };
+            }
+            return msg;
+          }) || []
         }));
         throw apiError;
       }
@@ -206,7 +207,7 @@ export function useMessaging() {
         stopTyping(conversationId);
       }, 3000);
     }
-  }, [socket, isConnected]);
+  }, [socket, isConnected, stopTyping]);
 
   // Stop typing indicator
   const stopTyping = useCallback((conversationId: string) => {
@@ -542,8 +543,9 @@ export function useMessaging() {
 
   // Cleanup typing timeouts on unmount
   useEffect(() => {
+    const timeouts = typingTimeouts.current;
     return () => {
-      Object.values(typingTimeouts.current).forEach(timeout => {
+      Object.values(timeouts).forEach(timeout => {
         clearTimeout(timeout);
       });
     };

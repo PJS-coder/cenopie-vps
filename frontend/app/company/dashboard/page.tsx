@@ -302,7 +302,12 @@ export default function CompanyDashboard() {
 
             if (statsResponse.ok) {
               const statsData = await statsResponse.json();
-              setStats(statsData.stats || stats);
+              setStats(statsData.stats || {
+                totalJobs: 0,
+                activeJobs: 0,
+                totalApplications: 0,
+                pendingApplications: 0
+              });
             }
           }
         }

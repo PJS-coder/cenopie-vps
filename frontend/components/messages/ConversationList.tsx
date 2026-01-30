@@ -160,11 +160,12 @@ export default function ConversationList({
               <div
                 key={conversation._id}
                 onClick={() => onSelectConversation(conversation)}
-                className={`p-3 md:p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors active:bg-gray-100 dark:active:bg-gray-600 ${
+                className={`p-3 md:p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors active:bg-gray-100 dark:active:bg-gray-600 touch-manipulation ${
                   selectedConversationId === conversation._id 
                     ? 'bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-500' 
                     : ''
                 }`}
+                style={{ minHeight: '72px' }} // Better touch target
               >
                 <div className="flex items-center gap-3">
                   {/* Avatar - Mobile optimized */}

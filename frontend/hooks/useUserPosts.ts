@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { feedApi } from '@/lib/api';
 
 export interface UserPost {
@@ -25,7 +25,7 @@ export const useUserPosts = (userId: string) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
-  const fetchUserPosts = async () => {
+  const fetchUserPosts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -46,7 +46,7 @@ export const useUserPosts = (userId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   const loadMore = async () => {
     // Since API doesn't support pagination, this is a no-op
@@ -58,7 +58,7 @@ export const useUserPosts = (userId: string) => {
       setHasMore(false);
       fetchUserPosts();
     }
-  }, [userId]);
+  }, [userId, fetchUserPosts]);
 
   return {
     posts,

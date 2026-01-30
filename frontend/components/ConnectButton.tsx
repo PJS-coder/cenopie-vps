@@ -58,7 +58,7 @@ export default function ConnectButton({
       updateConnectionStatus(userId, initialStatus);
       console.log(`✅ Using provided status "${initialStatus}" for user ${userId}`);
     }
-  }, [userId, currentUserId, initialStatus]);
+  }, [userId, currentUserId, initialStatus, getConnectionStatus, updateConnectionStatus]);
 
   // Socket.IO listeners for real-time connection updates
   useEffect(() => {

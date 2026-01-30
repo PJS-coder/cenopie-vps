@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeftIcon,
@@ -43,11 +43,7 @@ export default function InterviewReviewPage() {
   const [rating, setRating] = useState(0);
   const [comments, setComments] = useState('');
 
-  useEffect(() => {
-    fetchInterview();
-  }, [interviewId]);
-
-  const fetchInterview = async () => {
+  const fetchInterview = useCallback(async () => {
     try {
       const token = localStorage.getItem('companyAuthToken');
       const response = await fetch(
@@ -79,7 +75,11 @@ export default function InterviewReviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId, router]);
+
+  useEffect(() => {
+    fetchInterview();
+  }, [fetchInterview]);
 
   const handleReview = async () => {
     if (!decision || decision === 'pending') {

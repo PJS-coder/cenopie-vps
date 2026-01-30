@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState, useEffect, memo } from 'react';
+import React, { useRef, useState, useEffect, memo, useCallback } from 'react';
 import { PlayIcon, PauseIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/solid';
 import { ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
 
@@ -62,19 +62,19 @@ const MinimalVideoPlayer: React.FC<MinimalVideoPlayerProps> = ({
     }
   };
 
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
     if (!video || isDragging) return;
     
     setCurrentTime(video.currentTime);
-  };
+  }, [isDragging]);
 
-  const handleLoadedMetadata = () => {
+  const handleLoadedMetadata = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     
     setDuration(video.duration);
-  };
+  }, []);
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const video = videoRef.current;
@@ -109,7 +109,7 @@ const MinimalVideoPlayer: React.FC<MinimalVideoPlayerProps> = ({
       video.removeEventListener('timeupdate', handleTimeUpdateEvent);
       video.removeEventListener('loadedmetadata', handleLoadedMetadataEvent);
     };
-  }, [isDragging]);
+  }, [handleTimeUpdate, handleLoadedMetadata]);
 
   return (
     <div 

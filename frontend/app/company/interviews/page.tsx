@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -40,12 +40,7 @@ export default function CompanyInterviewsPage() {
   const [stats, setStats] = useState<any>(null);
   const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    fetchInterviews();
-    fetchStats();
-  }, [filter]);
-
-  const fetchInterviews = async () => {
+  const fetchInterviews = useCallback(async () => {
     try {
       const token = localStorage.getItem('companyAuthToken');
       
@@ -84,9 +79,9 @@ export default function CompanyInterviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('companyAuthToken');
       const response = await fetch(
@@ -105,7 +100,12 @@ export default function CompanyInterviewsPage() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchInterviews();
+    fetchStats();
+  }, [fetchInterviews, fetchStats]);
 
   const getDecisionBadge = (decision: string) => {
     const badges = {

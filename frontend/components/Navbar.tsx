@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -159,7 +159,7 @@ export default function Navbar() {
   }, [isCompanyAuthenticated]);
 
   // Fetch unread notification count
-  const fetchUnreadNotificationCount = async () => {
+  const fetchUnreadNotificationCount = useCallback(async () => {
     if (!isAuthenticated) return;
     
     try {
@@ -178,7 +178,7 @@ export default function Navbar() {
     } catch (error) {
       console.error('Error fetching notification count:', error);
     }
-  };
+  }, [isAuthenticated]);
 
   // Fetch notification count on mount and periodically
   useEffect(() => {
@@ -200,7 +200,7 @@ export default function Navbar() {
         window.removeEventListener('notificationUpdate', handleNotificationUpdate);
       };
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchUnreadNotificationCount]);
 
   // Handle search as user types (with debounce)
   useEffect(() => {

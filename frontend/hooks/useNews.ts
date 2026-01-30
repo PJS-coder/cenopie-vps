@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { newsApi, NewsArticle } from '@/lib/api';
 
 interface UseNewsReturn {
@@ -17,7 +17,7 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNews = async () => {
+  const fetchNews = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -46,13 +46,13 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit]);
 
-  const refreshNews = async () => {
+  const refreshNews = useCallback(async () => {
     // Clear cache on manual refresh
     newsCache = null;
     await fetchNews();
-  };
+  }, [fetchNews]);
 
   useEffect(() => {
     if (enabled) {
@@ -60,7 +60,7 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
     } else {
       setLoading(false);
     }
-  }, [enabled, limit]);
+  }, [enabled, fetchNews]);
 
   // Listen for news updates from other parts of the app
   useEffect(() => {
@@ -74,7 +74,7 @@ export const useNews = (enabled: boolean = true, limit: number = 5): UseNewsRetu
     return () => {
       window.removeEventListener('newsUpdated', handleNewsUpdate);
     };
-  }, []);
+  }, [fetchNews]);
 
   return {
     news,

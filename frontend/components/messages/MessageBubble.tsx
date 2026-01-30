@@ -50,15 +50,19 @@ export default function MessageBubble({
   };
 
   const getMessageStatus = () => {
-    if (message.status === 'failed') return 'Failed';
+    if (message.status === 'sending') return 'Sending';
+    if (message.status === 'failed') return 'Failed to send';
     if (message.readBy.length > 0) return 'Read';
     if (message.deliveredTo.length > 0) return 'Delivered';
     return 'Sent';
   };
 
   const getStatusIcon = () => {
+    if (message.status === 'sending') {
+      return <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />;
+    }
     if (message.status === 'failed') {
-      return <span className="text-red-500 text-xs">!</span>;
+      return <span className="text-red-500 text-xs font-bold">!</span>;
     }
     if (message.readBy.length > 0) {
       return <CheckCircleIcon className="w-3 h-3 text-blue-500" />;
@@ -130,7 +134,7 @@ export default function MessageBubble({
     return (
       <div className="mb-2 p-2 border-l-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 rounded-r">
         <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-          {message.replyTo.sender.name}
+          {message.replyTo.sender?.name || 'Unknown User'}
         </p>
         <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
           {message.replyTo.content || 'Attachment'}
@@ -148,11 +152,11 @@ export default function MessageBubble({
             <div className="flex-shrink-0 self-end">
               <Avatar className="w-7 h-7">
                 <AvatarImage 
-                  src={message.sender.profileImage} 
-                  alt={message.sender.name}
+                  src={message.sender?.profileImage} 
+                  alt={message.sender?.name || 'User'}
                 />
                 <AvatarFallback className="bg-[#0BC0DF] text-white text-xs">
-                  {message.sender.name.charAt(0).toUpperCase()}
+                  {message.sender?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
             </div>
@@ -164,9 +168,9 @@ export default function MessageBubble({
             {!isOwn && showAvatar && (
               <div className="flex items-center gap-1 mb-1 px-1">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {message.sender.name}
+                  {message.sender?.name || 'Unknown User'}
                 </span>
-                {message.sender.isVerified && (
+                {message.sender?.isVerified && (
                   <VerificationBadge isVerified={true} size="sm" />
                 )}
               </div>
@@ -210,6 +214,16 @@ export default function MessageBubble({
                       <DropdownMenuItem onClick={() => onReply(message)}>
                         <ArrowUturnLeftIcon className="w-4 h-4 mr-2" />
                         Reply
+                      </DropdownMenuItem>
+                    )}
+                    {isOwn && message.status === 'failed' && (
+                      <DropdownMenuItem onClick={() => {
+                        // Retry sending the message
+                        console.log('Retry sending message:', message._id);
+                        // TODO: Implement retry functionality
+                      }}>
+                        <ArrowUturnLeftIcon className="w-4 h-4 mr-2" />
+                        Retry
                       </DropdownMenuItem>
                     )}
                     {isOwn && onDelete && (

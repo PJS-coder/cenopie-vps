@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   BriefcaseIcon, 
@@ -85,7 +85,7 @@ export default function JobsPage() {
   // Load jobs when applied filters or tab changes
   useEffect(() => {
     loadJobs();
-  }, [appliedFilters, activeTab]);
+  }, [loadJobs]);
 
   // Load saved jobs status - optimized to run in background
   useEffect(() => {
@@ -93,9 +93,9 @@ export default function JobsPage() {
       // Don't block UI - load saved status in background
       loadSavedJobsStatus();
     }
-  }, [jobs]);
+  }, [jobs, loadSavedJobsStatus]);
 
-  const loadSavedJobsStatus = async () => {
+  const loadSavedJobsStatus = useCallback(async () => {
     try {
       const savedJobsSet = new Set<string>();
       
@@ -128,7 +128,7 @@ export default function JobsPage() {
     } catch (error) {
       console.error('Error loading saved jobs status:', error);
     }
-  };
+  }, [jobs]);
 
   const handleSaveJob = async (jobId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -185,7 +185,7 @@ export default function JobsPage() {
     });
   };
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     try {
       setLoading(true);
       

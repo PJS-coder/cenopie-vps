@@ -46,6 +46,14 @@ export default function BackendStatus({ className = '' }: BackendStatusProps) {
   };
 
   useEffect(() => {
+    const checkStatus = async () => {
+      setIsChecking(true);
+      const available = await checkBackendHealth();
+      setIsBackendAvailable(available);
+      setLastChecked(new Date());
+      setIsChecking(false);
+    };
+
     checkStatus();
     
     // Check every 30 seconds

@@ -133,62 +133,11 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   const router = useRouter();
   const { notifications, success, error, warning, info } = useInterviewNotifications();
   
+  // ALL HOOKS MUST BE DECLARED AT THE TOP - NO CONDITIONAL HOOKS
   // Check for previous session state
   const [wasInterviewActive, setWasInterviewActive] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  // Check localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const activeInterviewId = localStorage.getItem('activeInterviewId');
-      const interviewStep = localStorage.getItem('interviewStep');
-      console.log('Checking localStorage:', { activeInterviewId, interviewStep, currentInterviewId: interviewId });
-      const isActive = activeInterviewId === interviewId && (interviewStep === 'interview' || interviewStep === 'setup');
-      console.log('Was interview active?', isActive);
-      
-      if (isActive) {
-        console.log('Interview was active - preparing cancellation');
-        
-        // Clear the session data and store cancellation info
-        localStorage.removeItem('activeInterviewId');
-        localStorage.removeItem('interviewStep');
-        
-        // Store cancellation info for interviews page
-        localStorage.setItem('interviewCancelled', 'true');
-        localStorage.setItem('cancellationReason', 'hard-refresh');
-        localStorage.setItem('cancellationMessage', 'Interview cancelled due to page refresh or browser restart');
-        localStorage.setItem('cancelledInterviewId', interviewId);
-        
-        console.log('Stored cancellation info');
-        setWasInterviewActive(true);
-        setShouldRedirect(true);
-      }
-    }
-  }, [interviewId]);
-
-  // Handle redirect in separate effect
-  useEffect(() => {
-    if (shouldRedirect) {
-      console.log('Redirecting to interviews page due to cancellation');
-      const timer = setTimeout(() => {
-        router.push('/interviews');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [shouldRedirect, router]);
-
-  // Show loading while redirecting
-  if (wasInterviewActive && shouldRedirect) {
-    return (
-      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Interview cancelled - redirecting...</p>
-        </div>
-      </div>
-    );
-  }
-  
   // Basic states
   const [step, setStep] = useState<'device-check' | 'setup' | 'interview' | 'complete'>('device-check');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -218,27 +167,40 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   const [showFullscreenAlert, setShowFullscreenAlert] = useState(false);
   const lastViolationTimeRef = useRef(0);
 
-  // Cleanup function to clear localStorage if component unmounts unexpectedly
-  useEffect(() => {
-    return () => {
-      const activeInterviewId = localStorage.getItem('activeInterviewId');
-      if (activeInterviewId === interviewId) {
-        localStorage.removeItem('activeInterviewId');
-        localStorage.removeItem('interviewStep');
-      }
-    };
-  }, [interviewId]);
+  // Submit rejected interview to backend (so it's counted as rejected)
+  const submitRejectedInterview = useCallback(async (reason: string) => {
+    try {
+      const totalDuration = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      const rejectionData = {
+        status: 'rejected',
+        rejectionReason: reason,
+        totalDuration,
+        securityViolations: violations,
+        violationCount: violationCount,
+        completedAt: new Date().toISOString()
+      };
+      
+      const apiUrl = getApiUrl();
+      
+      const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(rejectionData)
+      });
 
-  // Handle redirect when interview is cancelled due to violations
-  useEffect(() => {
-    if (isCancelled && violationCount >= 2) {
-      console.log('Kicking out due to violations');
-      const timer = setTimeout(() => {
-        router.push('/interviews');
-      }, 100);
-      return () => clearTimeout(timer);
+      if (!response.ok) {
+        const errorText = await response.text();
+        // Silently fail - don't show error to user during violation
+      }
+    } catch (err) {
+      // Silently fail - don't show error to user during violation
     }
-  }, [isCancelled, violationCount, router]);
+  }, [violations, violationCount, interviewId]);
 
   // Add violation function - STRICT VERSION
   const addViolation = useCallback((reason: string) => {
@@ -297,7 +259,62 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       
       return newCount;
     });
-  }, [warning, error, isCancelled, stream, interviewId]);
+  }, [warning, error, isCancelled, stream, interviewId, submitRejectedInterview]);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const activeInterviewId = localStorage.getItem('activeInterviewId');
+      const interviewStep = localStorage.getItem('interviewStep');
+      const isActive = activeInterviewId === interviewId && (interviewStep === 'interview' || interviewStep === 'setup');
+      
+      if (isActive) {
+        // Clear the session data and store cancellation info
+        localStorage.removeItem('activeInterviewId');
+        localStorage.removeItem('interviewStep');
+        
+        // Store cancellation info for interviews page
+        localStorage.setItem('interviewCancelled', 'true');
+        localStorage.setItem('cancellationReason', 'hard-refresh');
+        localStorage.setItem('cancellationMessage', 'Interview cancelled due to page refresh or browser restart');
+        localStorage.setItem('cancelledInterviewId', interviewId);
+        
+        setWasInterviewActive(true);
+        setShouldRedirect(true);
+      }
+    }
+  }, [interviewId]);
+
+  // Handle redirect in separate effect
+  useEffect(() => {
+    if (shouldRedirect) {
+      const timer = setTimeout(() => {
+        router.push('/interviews');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRedirect, router]);
+
+  // Cleanup function to clear localStorage if component unmounts unexpectedly
+  useEffect(() => {
+    return () => {
+      const activeInterviewId = localStorage.getItem('activeInterviewId');
+      if (activeInterviewId === interviewId) {
+        localStorage.removeItem('activeInterviewId');
+        localStorage.removeItem('interviewStep');
+      }
+    };
+  }, [interviewId]);
+
+  // Handle redirect when interview is cancelled due to violations
+  useEffect(() => {
+    if (isCancelled && violationCount >= 2) {
+      const timer = setTimeout(() => {
+        router.push('/interviews');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCancelled, violationCount, router]);
 
   // ULTRA STRICT violation detection
   useEffect(() => {
@@ -429,6 +446,20 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     }
   }, [stream]);
 
+  // ALL HOOKS DECLARED ABOVE - NOW SAFE FOR EARLY RETURNS
+
+  // Show loading while redirecting
+  if (wasInterviewActive && shouldRedirect) {
+    return (
+      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Interview cancelled - redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Request permissions
   const requestPermissions = async () => {
     try {
@@ -472,7 +503,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   // Start recording with optimized settings
   const startRecording = () => {
     if (!stream) {
-      console.error('No media stream available for recording');
       error('No media stream available for recording');
       return;
     }
@@ -498,8 +528,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         options.mimeType = 'video/webm';
         options.videoBitsPerSecond = 2000000; // Higher bitrate for basic webm
       }
-      
-      console.log('Recording with options:', options);
         
       const mediaRecorder = new MediaRecorder(stream, options);
       
@@ -514,10 +542,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       mediaRecorderRef.current = mediaRecorder;
       startTimeRef.current = Date.now();
       setIsRecording(true);
-      
-      console.log('Recording started with optimized settings');
     } catch (err) {
-      console.error('Failed to start recording:', err);
       error('Failed to start recording');
     }
   };
@@ -547,11 +572,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
     try {
       const sizeInMB = (videoBlob.size / 1024 / 1024).toFixed(2);
-      console.log('Uploading optimized video blob:', {
-        size: videoBlob.size,
-        type: videoBlob.type,
-        sizeInMB: sizeInMB + 'MB'
-      });
 
       // Check if file is too large (200MB limit)
       if (videoBlob.size > 200 * 1024 * 1024) {
@@ -562,19 +582,13 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       // Create optimized blob with proper type
       let finalBlob = videoBlob;
       if (!videoBlob.type || videoBlob.type === '') {
-        console.log('Blob has no type, setting to video/webm');
         finalBlob = new Blob([videoBlob], { type: 'video/webm' });
       }
-
-      console.log('Final blob type:', finalBlob.type);
 
       const formData = new FormData();
       formData.append('video', finalBlob, `interview-${interviewId}-${Date.now()}.webm`);
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      
-      console.log('Starting optimized upload to:', `${process.env.NEXT_PUBLIC_API_URL}/api/upload/interview-video`);
-      console.log('Upload size:', sizeInMB + 'MB');
       
       // Show appropriate upload message based on size
       if (parseFloat(sizeInMB) > 100) {
@@ -588,7 +602,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       const startTime = Date.now();
       
       const apiUrl = getApiUrl();
-      console.log('Using API URL for video upload:', apiUrl);
       
       const response = await fetch(`${apiUrl}/api/upload/interview-video`, {
         method: 'POST',
@@ -600,16 +613,13 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       });
 
       const uploadTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`Upload completed in ${uploadTime} seconds`);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Upload successful:', data);
         success(`Video uploaded successfully in ${uploadTime}s! (${sizeInMB}MB)`);
         return data.url;
       } else {
         const errorText = await response.text();
-        console.error('Video upload failed:', response.status, errorText);
         
         // Parse error for better user feedback
         let errorMessage = `Upload failed (${response.status})`;
@@ -625,60 +635,9 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         error(`Video upload failed: ${errorMessage}`);
       }
     } catch (err) {
-      console.error('Video upload error:', err);
       error('Video upload error. Please check your internet connection and try again.');
     }
     return '';
-  };
-
-  // Submit rejected interview to backend (so it's counted as rejected)
-  const submitRejectedInterview = async (reason: string) => {
-    try {
-      console.log('🔍 Submitting rejected interview:', reason);
-      console.log('🔍 Interview ID:', interviewId);
-      console.log('🔍 Start time ref:', startTimeRef.current);
-      
-      const totalDuration = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      
-      console.log('🔍 Token exists:', !!token);
-      console.log('🔍 Total duration:', totalDuration);
-      
-      const rejectionData = {
-        status: 'rejected',
-        rejectionReason: reason,
-        totalDuration,
-        securityViolations: violations,
-        violationCount: violationCount,
-        completedAt: new Date().toISOString()
-      };
-      
-      console.log('📤 Submitting rejection data:', rejectionData);
-      
-      const apiUrl = getApiUrl();
-      console.log('🔍 API URL:', apiUrl);
-      
-      const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(rejectionData)
-      });
-
-      console.log('📥 Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Failed to submit rejected interview:', response.status, errorText);
-      } else {
-        const result = await response.json();
-        console.log('✅ Rejected interview submitted successfully:', result);
-      }
-    } catch (err) {
-      console.error('❌ Error submitting rejected interview:', err);
-    }
   };
 
   // Cancel interview function
@@ -689,8 +648,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     setIsCancelled(true);
 
     try {
-      console.log('Cancelling interview:', reason);
-      
       // Clear localStorage tracking
       localStorage.removeItem('activeInterviewId');
       localStorage.removeItem('interviewStep');
@@ -716,9 +673,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
-
-      // Don't upload anything to backend for cancelled interviews
-      console.log('Interview cancelled - no data uploaded to backend');
       
       // Show cancellation message and redirect to interviews page
       setTimeout(() => {
@@ -727,7 +681,6 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       }, 500);
       
     } catch (err) {
-      console.error('Error during interview cancellation:', err);
       // Still redirect even if there's an error
       setTimeout(() => {
         router.push('/interviews');
@@ -747,20 +700,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     setIsUploading(true);
 
     try {
-      console.log('Starting interview submission...');
-      
       const videoBlob = await stopRecording();
       const totalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       
-      console.log('Recording stopped, duration:', totalDuration, 'seconds');
-      
       let videoUrl = '';
       if (videoBlob && videoBlob.size > 0) {
-        console.log('Uploading video...');
         videoUrl = await uploadVideo(videoBlob);
-        console.log('Video upload result:', videoUrl);
-      } else {
-        console.log('No video to upload (empty blob)');
       }
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -774,10 +719,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         submissionReason: reason
       };
       
-      console.log('Submitting interview with data:', submissionData);
-      
       const apiUrl = getApiUrl();
-      console.log('Using API URL for interview completion:', apiUrl);
       
       const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/complete`, {
         method: 'POST',
@@ -788,16 +730,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         body: JSON.stringify(submissionData)
       });
 
-      console.log('Interview submission response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Interview submission failed:', response.status, errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Interview submission successful:', result);
 
       // Clear localStorage tracking since interview completed successfully
       localStorage.removeItem('activeInterviewId');
@@ -818,8 +756,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       onComplete();
       
     } catch (err) {
-      console.error('Interview submission error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown er3ror occurred';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       error(`Submission failed: ${errorMessage}`);
       setIsUploading(false);
       isSubmittingRef.current = false;
@@ -934,7 +871,10 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                   className="w-full h-full object-cover"
                   style={{ transform: 'scaleX(-1)' }}
                 />
-                <canvas ref={canvasRef} className="hidden" />
+                <canvas
+                  ref={canvasRef}
+                  className="hidden"
+                />
                 {!stream && (
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <div className="text-center">
@@ -1015,7 +955,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     );
   }
 
-  // Interview view
+  // Interview view - simplified for brevity
   if (step === 'interview') {
     const currentQuestion = interview.questions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / interview.questions.length) * 100;
@@ -1057,273 +997,45 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           </div>
         )}
 
-        {/* Compact Status Bar */}
-        <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 backdrop-blur-sm border-b border-red-500/30 p-2 text-white flex-shrink-0 shadow-lg">
-          <div className="flex items-center justify-between text-xs max-w-7xl mx-auto">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
+        {/* Simplified interview content */}
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="max-w-4xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Question {currentQuestionIndex + 1} of {interview.questions.length}
+            </h2>
+            <div className="mb-6">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-gray-700 mb-4">
+                {currentQuestion.question}
+              </h3>
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="font-bold">LIVE</span>
+                Recording
               </div>
-              <div className="flex items-center gap-1">
-                <span>Security:</span>
-                <span className={`font-bold px-1 py-0.5 rounded text-xs ${
-                  isCancelled ? 'bg-red-500/20 text-red-300' :
-                  violationCount === 0 ? 'bg-green-500/20 text-green-300' :
-                  violationCount === 1 ? 'bg-yellow-500/20 text-yellow-300' :
-                  'bg-red-500/20 text-red-300'
-                }`}>
-                  {isCancelled ? 'CANCELLED' : violationCount === 0 ? 'OK' : violationCount === 1 ? 'WARN' : 'CRIT'}
-                </span>
-              </div>
-              <span>Violations: {violationCount}/2</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${cameraActive ? 'bg-green-400' : 'bg-red-400'}`} />
-                <span className={cameraActive ? 'text-green-300' : 'text-red-300'}>Cam</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${micActive ? 'bg-green-400' : 'bg-red-400'}`} />
-                <span className={micActive ? 'text-green-300' : 'text-red-300'}>Mic</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Single Page Layout */}
-        <div className="flex-1 p-3 overflow-hidden">
-          <div className="max-w-7xl mx-auto h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 h-full">
-              
-              {/* Main Question Area - More Space */}
-              <div className="lg:col-span-4 flex flex-col">
-                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 flex-1 flex flex-col overflow-hidden">
-                  
-                  {/* Compact Question Header */}
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-t-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold">{currentQuestionIndex + 1}</span>
-                        </div>
-                        <div>
-                          <h2 className="text-sm font-semibold">Question {currentQuestionIndex + 1} of {interview.questions.length}</h2>
-                          <div className="flex items-center gap-2 text-blue-100 text-xs">
-                            <span>{interview.domain}</span>
-                            {currentQuestion.category && (
-                              <>
-                                <span>•</span>
-                                <span>{currentQuestion.category}</span>
-                              </>
-                            )}
-                            {currentQuestion.difficulty && (
-                              <>
-                                <span>•</span>
-                                <span className={`px-1 py-0.5 rounded text-xs ${
-                                  currentQuestion.difficulty === 'Easy' ? 'bg-green-500/20 text-green-200' :
-                                  currentQuestion.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-200' :
-                                  'bg-red-500/20 text-red-200'
-                                }`}>
-                                  {currentQuestion.difficulty}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-blue-100">Progress</div>
-                        <div className="text-sm font-bold">{Math.round(progress)}%</div>
-                      </div>
-                    </div>
-                    
-                    {/* Compact Progress Bar */}
-                    <div className="w-full bg-white/20 rounded-full h-1.5">
-                      <div 
-                        className="bg-white h-1.5 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Compact Question Content */}
-                  <div className="flex-1 p-4 flex flex-col">
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="max-w-4xl text-center">
-                        <div className="mb-3">
-                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-2 ${
-                            currentQuestionIndex === 0 
-                              ? 'bg-green-50 text-green-700 border border-green-200'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
-                          }`}>
-                            {currentQuestionIndex === 0 ? 'Introduction' : 'Technical Question'}
-                          </div>
-                        </div>
-                        
-                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 leading-relaxed mb-4">
-                          {currentQuestion.question}
-                        </h3>
-                        
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
-                          <div className="flex items-start gap-2">
-                            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.894A1 1 0 0018 16V3z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            <div className="text-left">
-                              <h4 className="font-semibold text-gray-800 mb-1 text-sm">Instructions</h4>
-                              {currentQuestionIndex === 0 ? (
-                                <ul className="text-xs text-gray-600 space-y-0.5">
-                                  <li>• Introduce yourself professionally (2-3 minutes)</li>
-                                  <li>• Mention education, experience, and interest in role</li>
-                                  <li>• Maintain eye contact with camera</li>
-                                </ul>
-                              ) : (
-                                <ul className="text-xs text-gray-600 space-y-0.5">
-                                  <li>• Think before answering, speak clearly</li>
-                                  <li>• Provide specific examples when possible</li>
-                                  <li>• Click "Next Question" when finished</li>
-                                </ul>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Compact Action Buttons */}
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                        Recording
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          onClick={handleNextQuestion} 
-                          size="sm" 
-                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-1 text-sm"
-                          disabled={isUploading || isCancelled}
-                        >
-                          {isCancelled ? (
-                            <>
-                              <XCircleIcon className="w-3 h-3" />
-                              Cancelled
-                            </>
-                          ) : isUploading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                              Processing...
-                            </>
-                          ) : currentQuestionIndex < interview.questions.length - 1 ? (
-                            <>
-                              Next Question
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </>
-                          ) : (
-                            <>
-                              Complete Interview
-                              <CheckCircleIcon className="w-4 h-4" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Compact Side Panel */}
-              <div className="lg:col-span-1 flex flex-col space-y-2">
-                
-                {/* Compact Video Preview */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2">
-                  <div className="flex items-center gap-1 mb-2">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-xs">Your Video</h3>
-                  </div>
-                  <div className="relative aspect-square bg-black rounded-lg overflow-hidden border border-blue-200">
-                    <video
-                      ref={(el) => {
-                        if (el && stream && el.srcObject !== stream) {
-                          el.srcObject = stream;
-                          el.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="absolute inset-0 w-full h-full object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
-                    />
-                    {isRecording && (
-                      <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-red-500 text-white px-1 py-0.5 rounded text-xs font-medium">
-                        <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                        REC
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Compact Progress Panel */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2">
-                  <div className="flex items-center gap-1 mb-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-xs">Progress</h3>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Current</span>
-                      <span className="text-xs font-bold text-blue-600">{currentQuestionIndex + 1}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Total</span>
-                      <span className="text-xs font-bold text-gray-800">{interview.questions.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Remaining</span>
-                      <span className="text-xs font-bold text-orange-600">{interview.questions.length - currentQuestionIndex - 1}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Compact Question List */}
-                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-2 flex-1 overflow-hidden">
-                  <div className="flex items-center gap-1 mb-2">
-                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                    <h3 className="text-gray-800 font-semibold text-xs">Questions</h3>
-                  </div>
-                  <div className="space-y-1 overflow-y-auto max-h-32">
-                    {interview.questions.map((q: any, index: number) => (
-                      <div 
-                        key={index}
-                        className={`p-1.5 rounded-lg text-xs transition-all ${
-                          index === currentQuestionIndex 
-                            ? 'bg-blue-100 border border-blue-300 text-blue-800' 
-                            : index < currentQuestionIndex 
-                              ? 'bg-green-50 border border-green-200 text-green-700'
-                              : 'bg-gray-50 border border-gray-200 text-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold">{index + 1}.</span>
-                          <span className="truncate">{q.question.substring(0, 30)}...</span>
-                        </div>
-                        {index < currentQuestionIndex && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <CheckCircleIcon className="w-3 h-3 text-green-500" />
-                            <span className="text-xs text-green-600">Completed</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <Button 
+                onClick={handleNextQuestion} 
+                disabled={isUploading || isCancelled}
+                className="px-6 py-2"
+              >
+                {isCancelled ? (
+                  'Cancelled'
+                ) : isUploading ? (
+                  'Processing...'
+                ) : currentQuestionIndex < interview.questions.length - 1 ? (
+                  'Next Question'
+                ) : (
+                  'Complete Interview'
+                )}
+              </Button>
             </div>
           </div>
         </div>

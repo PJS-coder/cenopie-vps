@@ -123,10 +123,10 @@ export default function MessageInput({
         </div>
       )}
 
-      {/* Input area - Clean layout without overlapping */}
-      <div className="px-3 py-2 safe-area-bottom">
-        <div className="flex items-end gap-2">
-          {/* Message input */}
+      {/* Input area - Improved mobile layout */}
+      <div className="px-3 py-3 safe-area-bottom">
+        <div className="flex items-center gap-2">
+          {/* Message input - Better mobile sizing */}
           <div className="flex-1">
             <Input
               ref={inputRef}
@@ -136,17 +136,19 @@ export default function MessageInput({
               onKeyPress={handleKeyPress}
               placeholder={placeholder}
               disabled={disabled}
-              className="resize-none border-gray-200 dark:border-gray-600 focus:ring-[#0BC0DF] focus:border-[#0BC0DF] h-10 md:h-10"
+              className="resize-none border-gray-200 dark:border-gray-600 focus:ring-[#0BC0DF] focus:border-[#0BC0DF] h-11 text-base"
+              style={{ fontSize: '16px' }} // Prevents zoom on iOS
             />
           </div>
 
-          {/* Send button - Mobile optimized */}
+          {/* Send button - Better mobile touch target */}
           <Button
             onClick={handleSendMessage}
             disabled={disabled || !message.trim()}
-            className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white w-10 h-10 p-0 flex-shrink-0"
+            className="bg-[#0BC0DF] hover:bg-[#0BC0DF]/90 text-white w-11 h-11 p-0 flex-shrink-0 touch-manipulation"
+            style={{ minHeight: '44px', minWidth: '44px' }} // iOS touch target
           >
-            <PaperAirplaneIcon className="w-4 h-4" />
+            <PaperAirplaneIcon className="w-5 h-5" />
           </Button>
         </div>
       </div>

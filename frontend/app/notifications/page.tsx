@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -121,23 +121,8 @@ export default function UpdatesPage() {
     }
   }, [activeTab]);
 
-  // Auto-mark notifications as read when they are viewed
-  useEffect(() => {
-    if (activeTab === 'notifications' && notifications.length > 0 && !notificationsLoading) {
-      const unreadNotifications = notifications.filter(n => !n.read);
-      if (unreadNotifications.length > 0) {
-        // Add a delay to ensure user actually sees the notifications
-        const timer = setTimeout(() => {
-          markAllAsRead();
-        }, 2000); // 2 seconds delay to ensure user has time to see notifications
-
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [activeTab, notifications, notificationsLoading]);
-
   // Mark all notifications as read (now used automatically)
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/notifications/read`, {
@@ -157,7 +142,22 @@ export default function UpdatesPage() {
     } catch (error) {
       console.error('Error marking notifications as read:', error);
     }
-  };
+  }, [notifications]);
+
+  // Auto-mark notifications as read when they are viewed
+  useEffect(() => {
+    if (activeTab === 'notifications' && notifications.length > 0 && !notificationsLoading) {
+      const unreadNotifications = notifications.filter(n => !n.read);
+      if (unreadNotifications.length > 0) {
+        // Add a delay to ensure user actually sees the notifications
+        const timer = setTimeout(() => {
+          markAllAsRead();
+        }, 2000); // 2 seconds delay to ensure user has time to see notifications
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab, notifications, notificationsLoading, markAllAsRead]);
 
   const handleAcceptRequest = async (connectionId: string) => {
     try {

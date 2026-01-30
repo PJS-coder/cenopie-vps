@@ -276,13 +276,22 @@ export default function MessagesPage() {
             <div className="w-full">
               {/* Header Skeleton */}
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse mb-3"></div>
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
               </div>
               
               {/* Conversations Skeleton */}
               <div className="overflow-y-auto">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <ConversationSkeleton key={i} />
+                  <div key={i} className="p-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
