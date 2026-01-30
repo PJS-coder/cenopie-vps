@@ -6,8 +6,6 @@ import { ErrorBoundary } from 'react-error-boundary';
 import ErrorFallback from '@/components/ErrorFallback';
 
 import { AuthProvider } from '@/context/AuthContext';
-import { MessageProvider } from '@/context/MessageContext';
-import MessagingInitializer from './MessagingInitializer';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -121,17 +119,14 @@ export default function Providers({ children }: ProvidersProps) {
       }}
     >
       <AuthProvider>
-        <MessageProvider>
-          <QueryClientProvider client={queryClient}>
-            <MessagingInitializer />
-            {children}
-            {process.env.NODE_ENV === 'development' && (
-              <ReactQueryDevtools 
-                initialIsOpen={false}
-              />
-            )}
-          </QueryClientProvider>
-        </MessageProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          {process.env.NODE_ENV === 'development' && (
+            <ReactQueryDevtools 
+              initialIsOpen={false}
+            />
+          )}
+        </QueryClientProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

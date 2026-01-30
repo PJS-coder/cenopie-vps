@@ -155,10 +155,14 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(720); // 12 minutes in seconds (720)
+  const [interviewStartTime, setInterviewStartTime] = useState<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const isSubmittingRef = useRef(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // VIOLATION DETECTION SYSTEM
   const [violations, setViolations] = useState<string[]>([]);
@@ -243,15 +247,48 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         // Submit interview as REJECTED to backend (so it's counted)
         submitRejectedInterview('Interview rejected due to security violations');
         
+        // Show prominent cancellation modal before redirect
+        const showCancellationModal = () => {
+          const modal = document.createElement('div');
+          modal.className = 'fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center';
+          modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl border-2 border-red-500">
+              <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Interview Cancelled</h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-6">Your interview is canceled, start new</p>
+              <div class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold">
+                Redirecting to New Interview...
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          // Remove modal after redirect
+          setTimeout(() => {
+            if (document.body.contains(modal)) {
+              document.body.removeChild(modal);
+            }
+          }, 3000);
+        };
+        
+        showCancellationModal();
+        
         // Store simple cancellation message for UI
         localStorage.setItem('interviewCancelled', 'true');
-        localStorage.setItem('cancellationMessage', 'you find doing useless things that\'s why we cancelled interview');
+        localStorage.setItem('cancellationMessage', 'Your interview is canceled, start new');
         localStorage.setItem('cancelledInterviewId', interviewId);
         
         // Show immediate error message
-        error('you find doing useless things that\'s why we cancelled interview', 5000);
+        error('Your interview is canceled, start new', 5000);
         
-        // Redirect will be handled by useEffect
+        // Redirect to new interview page instead of same interview
+        setTimeout(() => {
+          router.push(`/interviews/new`);
+        }, 2000);
       } else {
         // First violation warning
         warning(`Security violation detected: ${reason}. One more violation will cancel your interview.`, 4000);
@@ -264,6 +301,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   // Check localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Clear any previous cancellation messages when starting fresh
+      localStorage.removeItem('interviewCancelled');
+      localStorage.removeItem('cancellationMessage');
+      localStorage.removeItem('cancellationReason');
+      localStorage.removeItem('cancelledInterviewId');
+      
       const activeInterviewId = localStorage.getItem('activeInterviewId');
       const interviewStep = localStorage.getItem('interviewStep');
       const isActive = activeInterviewId === interviewId && (interviewStep === 'interview' || interviewStep === 'setup');
@@ -276,7 +319,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         // Store cancellation info for interviews page
         localStorage.setItem('interviewCancelled', 'true');
         localStorage.setItem('cancellationReason', 'hard-refresh');
-        localStorage.setItem('cancellationMessage', 'Interview cancelled due to page refresh or browser restart');
+        localStorage.setItem('cancellationMessage', 'Your interview is canceled, start new');
         localStorage.setItem('cancelledInterviewId', interviewId);
         
         setWasInterviewActive(true);
@@ -289,11 +332,29 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   useEffect(() => {
     if (shouldRedirect) {
       const timer = setTimeout(() => {
-        router.push('/interviews');
+        router.push(`/interviews/new`);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [shouldRedirect, router]);
+  }, [shouldRedirect, router, interviewId]);
+
+  // Upload protection - prevent page exit during upload
+  useEffect(() => {
+    if (!isUploading) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      const message = 'Your interview is still uploading! Leaving now will cancel your submission.';
+      e.returnValue = message;
+      return message;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isUploading]);
 
   // Cleanup function to clear localStorage if component unmounts unexpectedly
   useEffect(() => {
@@ -303,6 +364,11 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         localStorage.removeItem('activeInterviewId');
         localStorage.removeItem('interviewStep');
       }
+      
+      // Cleanup timer
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
     };
   }, [interviewId]);
 
@@ -310,11 +376,12 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
   useEffect(() => {
     if (isCancelled && violationCount >= 2) {
       const timer = setTimeout(() => {
-        router.push('/interviews');
+        // Redirect to new interview page instead of same interview
+        router.push(`/interviews/new`);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isCancelled, violationCount, router]);
+  }, [isCancelled, violationCount, router, interviewId]);
 
   // ULTRA STRICT violation detection
   useEffect(() => {
@@ -446,15 +513,53 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     }
   }, [stream]);
 
+  // Timer logic for 12-minute limit
+  useEffect(() => {
+    if (step === 'interview' && !isCancelled) {
+      // Start the timer
+      timerIntervalRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Time's up - auto submit
+            submitInterview(true, 'Time limit reached');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+      };
+    }
+  }, [step, isCancelled]);
+
+  // Format time remaining for display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // ALL HOOKS DECLARED ABOVE - NOW SAFE FOR EARLY RETURNS
 
-  // Show loading while redirecting
+  // Show loading while redirecting with cancellation message
   if (wasInterviewActive && shouldRedirect) {
     return (
-      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Interview cancelled - redirecting...</p>
+      <div className="fixed inset-0 z-[9999] h-screen w-screen bg-black/80 backdrop-blur-sm flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl border-2 border-red-500">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Interview Cancelled</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">Your interview is canceled, start new</p>
+          <div className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold">
+            Redirecting to New Interview...
+          </div>
         </div>
       </div>
     );
@@ -495,6 +600,11 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     // Track that user is now in interview mode
     localStorage.setItem('activeInterviewId', interviewId);
     localStorage.setItem('interviewStep', 'interview');
+    
+    // Initialize timer
+    const startTime = Date.now();
+    setInterviewStartTime(startTime);
+    setTimeRemaining(720); // Reset to 12 minutes
     
     setStep('interview');
     startRecording();
@@ -566,78 +676,116 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     });
   };
 
-  // Upload video with compression and parallel processing
-  const uploadVideo = async (videoBlob: Blob): Promise<string> => {
-    if (videoBlob.size === 0) return '';
+  // New simplified upload process with progress tracking
+  const uploadVideoNew = async (videoBlob: Blob): Promise<string> => {
+    if (!videoBlob || videoBlob.size === 0) {
+      warning('No video data to upload');
+      return '';
+    }
 
     try {
       const sizeInMB = (videoBlob.size / 1024 / 1024).toFixed(2);
+      info(`Preparing to upload video (${sizeInMB}MB)...`);
+      setUploadProgress(0);
 
-      // Check if file is too large (200MB limit)
-      if (videoBlob.size > 200 * 1024 * 1024) {
-        error('Video file is too large. Maximum size is 200MB.');
-        return '';
+      // Ensure the blob has the correct MIME type
+      let correctedBlob = videoBlob;
+      if (!videoBlob.type || videoBlob.type === '' || videoBlob.type === 'text/plain') {
+        console.log('Correcting video blob MIME type to video/webm');
+        correctedBlob = new Blob([videoBlob], { type: 'video/webm' });
       }
 
-      // Create optimized blob with proper type
-      let finalBlob = videoBlob;
-      if (!videoBlob.type || videoBlob.type === '') {
-        finalBlob = new Blob([videoBlob], { type: 'video/webm' });
-      }
-
+      // Create form data with the video
       const formData = new FormData();
-      formData.append('video', finalBlob, `interview-${interviewId}-${Date.now()}.webm`);
+      const timestamp = Date.now();
+      const fileName = `interview-${interviewId}-${timestamp}.webm`;
+      formData.append('video', correctedBlob, fileName);
+      formData.append('interviewId', interviewId);
+      formData.append('timestamp', timestamp.toString());
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      
-      // Show appropriate upload message based on size
-      if (parseFloat(sizeInMB) > 100) {
-        warning(`Uploading large video (${sizeInMB}MB). Estimated time: 2-3 minutes...`, 8000);
-      } else if (parseFloat(sizeInMB) > 50) {
-        warning(`Uploading video (${sizeInMB}MB). Estimated time: 1-2 minutes...`, 6000);
-      } else {
-        success(`Uploading video (${sizeInMB}MB). This should be quick...`, 4000);
+      if (!token) {
+        throw new Error('No authentication token found');
       }
-      
-      const startTime = Date.now();
-      
+
+      // Upload with progress tracking using XMLHttpRequest
       const apiUrl = getApiUrl();
+      const uploadStartTime = Date.now();
       
-      const response = await fetch(`${apiUrl}/api/upload/interview-video`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type, let browser set it with boundary for FormData
-        },
-        body: formData
+      info(`Uploading video... (${sizeInMB}MB)`);
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentComplete);
+            
+            // Update info message with progress
+            if (percentComplete < 100) {
+              info(`Uploading video... ${percentComplete}% (${sizeInMB}MB)`);
+            }
+          }
+        });
+
+        // Handle completion
+        xhr.addEventListener('load', () => {
+          const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(1);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              
+              if (!result.url) {
+                reject(new Error('No video URL returned from server'));
+                return;
+              }
+
+              success(`Video uploaded successfully in ${uploadDuration}s!`);
+              setUploadProgress(100);
+              resolve(result.url);
+            } catch (e) {
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            let errorMessage = `Upload failed (${xhr.status})`;
+            
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch (e) {
+              // Use default message
+            }
+            
+            reject(new Error(errorMessage));
+          }
+        });
+
+        // Handle errors
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
+
+        // Handle timeout
+        xhr.addEventListener('timeout', () => {
+          reject(new Error('Upload timeout'));
+        });
+
+        // Configure and send request
+        xhr.open('POST', `${apiUrl}/api/upload/interview-video`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.timeout = 300000; // 5 minutes timeout
+        xhr.send(formData);
       });
 
-      const uploadTime = ((Date.now() - startTime) / 1000).toFixed(1);
-
-      if (response.ok) {
-        const data = await response.json();
-        success(`Video uploaded successfully in ${uploadTime}s! (${sizeInMB}MB)`);
-        return data.url;
-      } else {
-        const errorText = await response.text();
-        
-        // Parse error for better user feedback
-        let errorMessage = `Upload failed (${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (e) {
-          // Use default message
-        }
-        
-        error(`Video upload failed: ${errorMessage}`);
-      }
     } catch (err) {
-      error('Video upload error. Please check your internet connection and try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
+      error(`Video upload error: ${errorMessage}`);
+      setUploadProgress(0);
+      throw err;
     }
-    return '';
   };
 
   // Cancel interview function
@@ -647,6 +795,11 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     setIsUploading(false);
     setIsCancelled(true);
 
+    // Clear timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
     try {
       // Clear localStorage tracking
       localStorage.removeItem('activeInterviewId');
@@ -655,7 +808,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       // Store cancellation info for interviews page
       localStorage.setItem('interviewCancelled', 'true');
       localStorage.setItem('cancellationReason', 'browser-exit');
-      localStorage.setItem('cancellationMessage', 'Your interview gets cancelled. To start new interview press start new interview');
+      localStorage.setItem('cancellationMessage', 'Your interview is canceled, start new');
       localStorage.setItem('cancelledInterviewId', interviewId);
       
       // Stop recording without uploading
@@ -674,21 +827,21 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
         document.exitFullscreen();
       }
       
-      // Show cancellation message and redirect to interviews page
+      // Show cancellation message and redirect to new interview page
       setTimeout(() => {
-        error('Interview cancelled: ' + reason, 5000);
-        router.push('/interviews');
+        error('Your interview is canceled, start new', 5000);
+        router.push(`/interviews/new`);
       }, 500);
       
     } catch (err) {
       // Still redirect even if there's an error
       setTimeout(() => {
-        router.push('/interviews');
+        router.push(`/interviews/new`);
       }, 1000);
     }
   };
 
-  // Submit interview
+  // Submit interview with new upload process
   const submitInterview = async (forced = false, reason?: string) => {
     if (isSubmittingRef.current && !forced) return;
     if (isCancelled) return; // Don't submit if cancelled
@@ -697,30 +850,41 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       isSubmittingRef.current = true;
     }
     
+    // Clear timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    
     setIsUploading(true);
+    setUploadProgress(0);
 
     try {
+      // Stop recording and get video blob
       const videoBlob = await stopRecording();
       const totalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       
+      // Upload video using new process
       let videoUrl = '';
       if (videoBlob && videoBlob.size > 0) {
-        videoUrl = await uploadVideo(videoBlob);
+        videoUrl = await uploadVideoNew(videoBlob);
       }
 
+      // Prepare submission data
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      
       const submissionData = {
         totalDuration,
         videoUrl,
         securityViolations: violations,
         violationCount: violationCount,
         forcedSubmission: forced,
-        submissionReason: reason
+        submissionReason: reason,
+        timeRemaining: timeRemaining,
+        completedQuestions: currentQuestionIndex + 1,
+        totalQuestions: 5 // Fixed to 5 questions
       };
       
+      // Submit to backend
       const apiUrl = getApiUrl();
-      
       const response = await fetch(`${apiUrl}/api/interviews/${interviewId}/complete`, {
         method: 'POST',
         headers: {
@@ -732,7 +896,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`Submission failed: HTTP ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -741,17 +905,19 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       localStorage.removeItem('activeInterviewId');
       localStorage.removeItem('interviewStep');
 
-      setStep('complete');
-      setIsUploading(false);
-      
+      // Clean up media streams
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
 
+      // Exit fullscreen
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
 
+      setStep('complete');
+      setIsUploading(false);
+      setUploadProgress(0);
       success('Interview submitted successfully!');
       onComplete();
       
@@ -759,15 +925,16 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       error(`Submission failed: ${errorMessage}`);
       setIsUploading(false);
+      setUploadProgress(0);
       isSubmittingRef.current = false;
     }
   };
 
-  // Next question
+  // Next question (exactly 5 questions)
   const handleNextQuestion = () => {
     if (isCancelled || isSubmittingRef.current) return;
     
-    if (currentQuestionIndex < interview.questions.length - 1) {
+    if (currentQuestionIndex < 4) { // Stop at index 4 (5 questions total: 0,1,2,3,4)
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       submitInterview();
@@ -812,7 +979,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           <div className="flex gap-3">
             <Button 
               variant="outline" 
-              onClick={() => router.push('/interviews')}
+              onClick={() => router.push('/interviews/new')}
               className="flex-1"
             >
               Cancel
@@ -855,7 +1022,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
             Strict Interview Setup
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-center mb-4">
-            {interview.domain} • {interview.questions.length} Questions
+            {interview.domain} • 5 Questions • 12 Minutes
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -955,10 +1122,11 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
     );
   }
 
-  // Interview view - simplified for brevity
+  // Interview view - with timer and exactly 5 questions
   if (step === 'interview') {
     const currentQuestion = interview.questions[currentQuestionIndex];
-    const progress = ((currentQuestionIndex + 1) / interview.questions.length) * 100;
+    const progress = ((currentQuestionIndex + 1) / 5) * 100; // Fixed to 5 questions
+    const isTimeRunningOut = timeRemaining <= 180; // Last 3 minutes for 12-minute interview
     
     return (
       <div className="fixed inset-0 z-[9999] h-screen w-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 flex flex-col overflow-hidden">
@@ -966,6 +1134,17 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           {notifications.map((notification) => (
             <InterviewNotification key={notification.id} {...notification} />
           ))}
+        </div>
+
+        {/* Timer Display */}
+        <div className="fixed top-4 left-4 z-50">
+          <div className={`px-4 py-2 rounded-lg font-mono text-lg font-bold ${
+            isTimeRunningOut 
+              ? 'bg-red-900/90 text-red-100 border-2 border-red-500 animate-pulse' 
+              : 'bg-black/50 text-white border border-gray-600'
+          }`}>
+            ⏱️ {formatTime(timeRemaining)}
+          </div>
         </div>
 
         {/* Fullscreen Exit Alert */}
@@ -997,12 +1176,21 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
           </div>
         )}
 
-        {/* Simplified interview content */}
+        {/* Interview content */}
         <div className="flex-1 p-4 flex items-center justify-center">
           <div className="max-w-4xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Question {currentQuestionIndex + 1} of {interview.questions.length}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Question {currentQuestionIndex + 1} of 5
+              </h2>
+              <div className="text-sm text-gray-600">
+                {isTimeRunningOut && (
+                  <span className="text-red-600 font-bold animate-pulse">
+                    ⚠️ Time running out!
+                  </span>
+                )}
+              </div>
+            </div>
             <div className="mb-6">
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
@@ -1017,10 +1205,50 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
               </h3>
             </div>
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                Recording
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  Recording
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Time: {formatTime(timeRemaining)}</span>
+                </div>
               </div>
+              
+              {/* Upload Progress Bar */}
+              {isUploading && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Uploading Interview</span>
+                    <span className="text-sm font-medium text-gray-700">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 text-center">
+                    Please wait while your interview is being uploaded...
+                  </div>
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-3 rounded">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800">
+                          Don't quit! Your interview is uploading.
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Closing this page or browser will cancel your interview submission.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <Button 
                 onClick={handleNextQuestion} 
                 disabled={isUploading || isCancelled}
@@ -1030,7 +1258,7 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
                   'Cancelled'
                 ) : isUploading ? (
                   'Processing...'
-                ) : currentQuestionIndex < interview.questions.length - 1 ? (
+                ) : currentQuestionIndex < 4 ? ( // Fixed to 4 for 5 questions (0,1,2,3,4)
                   'Next Question'
                 ) : (
                   'Complete Interview'
@@ -1071,10 +1299,10 @@ const StrictInterviewMode: React.FC<StrictInterviewModeProps> = ({
 
         <Button 
           variant="outline" 
-          onClick={() => router.push('/interviews')}
+          onClick={() => router.push('/interviews/new')}
           className="w-full"
         >
-          Back to Interviews
+          Start New Interview
         </Button>
       </div>
     </div>

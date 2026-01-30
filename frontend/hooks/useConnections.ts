@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { connectionApi } from '@/lib/api';
-import useSocket from '@/hooks/useSocket';
+import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/context/AuthContext';
 
 interface Connection {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserPlusIcon, CheckIcon, XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { connectionApi } from '@/lib/api';
-import useSocket from '@/hooks/useSocket';
+import { useSocket } from '@/hooks/useSocket';
 import { useConnectionSync } from '@/hooks/useConnectionSync';
 import { useToastContext } from '@/components/ToastProvider';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -58,7 +58,7 @@ export default function ConnectButton({
       updateConnectionStatus(userId, initialStatus);
       console.log(`✅ Using provided status "${initialStatus}" for user ${userId}`);
     }
-  }, [userId, currentUserId, initialStatus, getConnectionStatus, updateConnectionStatus]);
+  }, [userId, currentUserId, initialStatus]); // Removed getConnectionStatus and updateConnectionStatus from dependencies
 
   // Socket.IO listeners for real-time connection updates
   useEffect(() => {

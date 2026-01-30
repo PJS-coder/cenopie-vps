@@ -7,7 +7,7 @@ import Job from '../models/Job.js';
 import Application from '../models/Application.js';
 import { protect, admin } from '../middlewares/authMiddleware.js';
 import Connection from '../models/Connection.js';
-import MessageNew from '../models/MessageNew.js';
+import ChatMessage from '../models/ChatMessage.js';
 import Notification from '../models/Notification.js';
 
 const router = express.Router();
@@ -178,7 +178,7 @@ router.delete('/delete-all-data', protect, admin, async (req, res) => {
     console.log(`✅ Deleted ${companiesDeleted.deletedCount} companies`);
     
     // Delete Messages
-    const messagesDeleted = await MessageNew.deleteMany({});
+    const messagesDeleted = await ChatMessage.deleteMany({});
     deletionResults.messages = messagesDeleted.deletedCount;
     console.log(`✅ Deleted ${messagesDeleted.deletedCount} messages`);
     
@@ -302,7 +302,7 @@ router.get('/stats', protect, admin, async (req, res) => {
       jobs: await Job.countDocuments(),
       applications: await Application.countDocuments(),
       connections: await Connection.countDocuments(),
-      messages: await MessageNew.countDocuments(),
+      messages: await ChatMessage.countDocuments(),
       notifications: await Notification.countDocuments()
     };
     

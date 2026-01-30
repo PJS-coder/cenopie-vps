@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import useSocket from '@/hooks/useSocket';
+import { useSocket } from '@/hooks/useSocket';
 
 interface ConnectionStatus {
   [userId: string]: 'none' | 'pending_sent' | 'pending_received' | 'accepted';

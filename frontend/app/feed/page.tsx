@@ -204,13 +204,10 @@ export default function FeedPage() {
   };
 
   const handleMessage = useCallback((userId: string) => {
-    localStorage.setItem('messageTargetUserId', userId);
-    const storedUsers = JSON.parse(localStorage.getItem('recentUsers') || '{}');
-    if (!storedUsers[userId]) {
-      storedUsers[userId] = 'Unknown User';
-      localStorage.setItem('recentUsers', JSON.stringify(storedUsers));
-    }
-    router.push(`/messages?user=${userId}`);
+    console.log('🔔 Message button clicked for user ID:', userId);
+    // Store the target user ID for the chat system
+    localStorage.setItem('chatTargetUserId', userId);
+    router.push(`/chats?user=${userId}`);
   }, [router]);
 
   const handleComment = async (postId: string, commentText?: string) => {

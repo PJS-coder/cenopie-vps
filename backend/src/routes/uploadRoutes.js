@@ -24,17 +24,31 @@ const videoUpload = multer({
       size: file.size ? `${(file.size / 1024 / 1024).toFixed(2)}MB` : 'Unknown'
     });
     
-    // Allow video files and also allow files without mimetype (some browsers don't set it correctly)
-    if (file.mimetype.startsWith('video/') || 
+    // Check file extension first (more reliable than MIME type)
+    const allowedExtensions = ['.webm', '.mp4', '.mov', '.avi'];
+    const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+    
+    // Allow based on file extension or MIME type
+    if (allowedExtensions.includes(fileExtension) ||
+        file.mimetype.startsWith('video/') || 
         file.mimetype === 'application/octet-stream' || 
+        file.mimetype === 'text/plain' || // Some browsers incorrectly set this for video files
         file.mimetype === '' || 
-        !file.mimetype ||
-        file.originalname.endsWith('.webm') ||
-        file.originalname.endsWith('.mp4')) {
-      console.log('Video file accepted');
+        !file.mimetype) {
+      
+      // Override incorrect MIME type based on file extension
+      if (fileExtension === '.webm' && file.mimetype !== 'video/webm') {
+        console.log('Correcting MIME type from', file.mimetype, 'to video/webm');
+        file.mimetype = 'video/webm';
+      } else if (fileExtension === '.mp4' && file.mimetype !== 'video/mp4') {
+        console.log('Correcting MIME type from', file.mimetype, 'to video/mp4');
+        file.mimetype = 'video/mp4';
+      }
+      
+      console.log('Video file accepted with corrected MIME type:', file.mimetype);
       cb(null, true);
     } else {
-      console.error('Invalid file type for video upload:', file.mimetype);
+      console.error('Invalid file type for video upload:', file.mimetype, 'Extension:', fileExtension);
       cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Only video files are allowed for interview uploads'));
     }
   }
@@ -190,19 +204,13 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
         {
           resource_type: 'video',
           folder: 'interview-videos',
-          chunk_size: 6000000, // Reduced to 6MB chunks for better performance
-          timeout: 300000, // 5 minutes timeout
           public_id: `interview-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          // Optimize for faster upload and processing
-          quality: 'auto:low', // Reduce quality for faster upload
-          fetch_format: 'auto',
-          eager: [
-            { width: 1280, height: 720, crop: 'limit', quality: 'auto:good' },
-            { width: 640, height: 360, crop: 'limit', quality: 'auto:low' }
-          ],
-          eager_async: true, // Process transformations in background
-          // Disable unnecessary processing during upload
-          raw_convert: 'asynchronous'
+          // Configuration optimized for larger videos (12-minute interviews)
+          quality: 'auto',
+          format: req.file.originalname.endsWith('.webm') ? 'webm' : 'auto',
+          // Enable asynchronous processing for large videos (no eager transformations needed)
+          eager_async: true,
+          timeout: 300000 // 5 minutes timeout
         },
         (error, result) => {
           if (error) {
@@ -215,8 +223,7 @@ router.post('/interview-video', protect, uploadSizeLogger, (req, res, next) => {
               duration: result.duration,
               format: result.format,
               bytes: result.bytes,
-              sizeInMB: (result.bytes / 1024 / 1024).toFixed(2) + 'MB',
-              compressionRatio: ((result.bytes / req.file.size) * 100).toFixed(1) + '%'
+              sizeInMB: (result.bytes / 1024 / 1024).toFixed(2) + 'MB'
             });
             resolve(result);
           }

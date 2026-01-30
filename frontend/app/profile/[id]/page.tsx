@@ -722,7 +722,7 @@ function ProfilePage() {
     const userName = profile.name && profile.name !== 'User' && profile.name !== 'Unknown User' 
       ? encodeURIComponent(profile.name) 
       : '';
-    router.push(`/messages?user=${profile.id}${userName ? `&name=${userName}` : ''}`);
+    router.push(`/chats?user=${profile.id}${userName ? `&name=${userName}` : ''}`);
   };
 
   const handleShareProfile = () => {

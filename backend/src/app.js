@@ -10,7 +10,7 @@ import swaggerSpec from './utils/swagger.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import postRoutes from './routes/postRoutes.js';
-import messageRoutes from './routes/messageRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import profileRoutes from './routes/profileRoutes.js'; // Keep profile routes for general functionality
@@ -241,7 +241,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/chats', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/profile', profileRoutes); // Add profile routes

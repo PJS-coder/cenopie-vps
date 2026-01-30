@@ -6,7 +6,12 @@ import LandingFooter from '@/components/LandingFooter';
 export default function ConditionalFooter() {
   const pathname = usePathname();
   
-  // Hide footer on messages page and any message-related routes
+  // Hide footer on chats page and any chat-related routes
+  if (pathname === '/chats' || pathname.startsWith('/chats/')) {
+    return null;
+  }
+  
+  // Hide footer on messages page and any message-related routes (legacy)
   if (pathname === '/messages' || pathname.startsWith('/messages/')) {
     return null;
   }

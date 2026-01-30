@@ -214,6 +214,9 @@ async function startServer() {
     // Initialize socket handlers
     initSocket(io);
 
+    // Attach Socket.IO instance to Express app for use in controllers
+    app.set('io', io);
+
     // Start server
     server.listen(PORT, () => {
       const bootTime = Date.now() - startTime;

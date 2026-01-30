@@ -506,7 +506,7 @@ export default function UpdatesPage() {
                             </div>
                           </div>
                           <div className="flex space-x-2">
-                            <Link href={`/messages?user=${connection.user._id}`}>
+                            <Link href={`/chats?user=${connection.user._id}`}>
                               <Button size="sm" variant="outline" className="flex-1">
                                 Message
                               </Button>

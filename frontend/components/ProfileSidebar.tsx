@@ -86,7 +86,7 @@ export default function ProfileSidebar({ userId, currentUserId }: ProfileSidebar
     const userName = profile.name && profile.name !== 'User' && profile.name !== 'Unknown User' 
       ? encodeURIComponent(profile.name) 
       : '';
-    router.push(`/messages?user=${profile.id}${userName ? `&name=${userName}` : ''}`);
+    router.push(`/chats?user=${profile.id}${userName ? `&name=${userName}` : ''}`);
   };
 
   if (loading) {

@@ -332,7 +332,7 @@ const PostCard = ({
       ? encodeURIComponent(author)
       : '';
 
-    router.push(`/messages?user=${postAuthorId}${userName ? `&name=${userName}` : ''}`);
+    router.push(`/chats?user=${postAuthorId}${userName ? `&name=${userName}` : ''}`);
   }, [author, onMessage, postAuthorId, router]);
 
   const handleViewProfile = useCallback(() => {

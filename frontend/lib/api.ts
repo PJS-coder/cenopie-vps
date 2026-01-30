@@ -221,7 +221,7 @@ const performAuthenticatedRequest = async <T = any>(
   
   // Create AbortController for timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
   
   const defaultConfig: RequestInit = {
     headers: {
@@ -265,7 +265,7 @@ const performAuthenticatedRequest = async <T = any>(
         
         // Handle abort error (timeout)
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Request timed out. Please check your connection and try again.');
+          throw new Error('Request timed out. The server may be experiencing high load. Please try again later.');
         }
         
         if (fetchError instanceof TypeError && fetchError.message === 'Failed to fetch') {
