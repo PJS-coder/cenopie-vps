@@ -194,6 +194,25 @@ async function startServer() {
       connectionStateRecovery: {
         maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
         skipMiddlewares: true,
+      },
+      // Production optimizations
+      serveClient: false,
+      cookie: false,
+      // Enhanced polling for production
+      allowRequest: (req, callback) => {
+        const origin = req.headers.origin;
+        const allowedOrigins = [
+          'http://localhost:3000',
+          'https://cenopie.com',
+          'https://www.cenopie.com'
+        ];
+        
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.warn('❌ Socket.IO connection rejected from origin:', origin);
+          callback('Origin not allowed', false);
+        }
       }
     });
 
