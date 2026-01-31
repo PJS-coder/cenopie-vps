@@ -11,6 +11,7 @@ interface Chat {
     id: string;
     name: string;
     profileImage?: string;
+    isVerified?: boolean;
   }[];
   lastMessage?: {
     content: string;
