@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { FeedPost } from '@/hooks/useFeed';
 import { jobApi } from '@/lib/api';
 import VerificationBadge from '@/components/VerificationBadge';
+import { useToastContext } from '@/components/ToastProvider';
 
 interface SavedPost extends FeedPost {
   savedAt: string;
@@ -42,6 +43,7 @@ type TabType = 'posts' | 'jobs';
 
 export default function SavedItemsPage() {
   const router = useRouter();
+  const toast = useToastContext();
   const [activeTab, setActiveTab] = useState<TabType>('posts');
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
@@ -148,10 +150,10 @@ export default function SavedItemsPage() {
       window.dispatchEvent(new Event('savedPostsUpdated'));
       
       // Show success message
-      alert('Post removed from saved items');
+      toast.success('Post removed from saved items');
     } catch (error) {
       console.error('Error unsaving post:', error);
-      alert('Failed to remove post from saved items');
+      toast.error('Failed to remove post from saved items');
     }
   };
 
@@ -168,7 +170,7 @@ export default function SavedItemsPage() {
   const handleShare = (postId: string) => {
     // Share functionality would be implemented here
     console.log('Sharing post:', postId);
-    alert(`Share post ${postId}`);
+    toast.info(`Share functionality coming soon!`);
   };
 
   const handleRepost = async (postId: string, repostComment?: string) => {
@@ -189,7 +191,7 @@ export default function SavedItemsPage() {
     } catch (error) {
       console.error('Error unsaving job:', error);
       // Show user-friendly message without technical details
-      alert('Unable to remove job at the moment. Please try again.');
+      toast.error('Unable to remove job at the moment. Please try again.');
     }
   };
 

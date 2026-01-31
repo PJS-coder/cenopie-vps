@@ -15,6 +15,7 @@ import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import VerificationBadge from '@/components/VerificationBadge';
 import { authenticatedFetchWithRetry, handleApiResponse } from '@/lib/apiUtils';
 import { jobApi } from '@/lib/api';
+import { useToastContext } from '@/components/ToastProvider';
 
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { JobCardSkeleton } from '@/components/LoadingSkeleton';
@@ -58,6 +59,7 @@ interface JobFilters {
 
 export default function JobsPage() {
   const router = useRouter();
+  const toast = useToastContext();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -217,7 +219,7 @@ export default function JobsPage() {
       }
     } catch (error) {
       console.error('Error saving/unsaving job:', error);
-      alert('Unable to save job at the moment. Please try again.');
+      toast.error('Unable to save job at the moment. Please try again.');
     }
   };
 

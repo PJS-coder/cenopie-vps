@@ -16,8 +16,10 @@ import { isPasskeyAuthenticated } from '@/lib/passkeyAuth';
 import { profileApi } from '@/lib/api';
 import { type CompanyData, type UserData } from '@/lib/types';
 import VerificationBadge from '@/components/VerificationBadge';
+import { useToastContext } from '@/components/ToastProvider';
 
 export default function SecureAdminDashboard() {
+  const toast = useToastContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'make-admin' | 'hr-management' | 'showcase-banners'>('companies');
   const [companySubTab, setCompanySubTab] = useState<'pending' | 'approved' | 'blacklisted'>('pending');
@@ -291,42 +293,41 @@ export default function SecureAdminDashboard() {
   };
 
   const handleReject = async (companyId: string) => {
-    if (confirm('Are you sure you want to reject this company? This action cannot be undone.')) {
-      try {
-        console.log('Rejecting company:', companyId);
-        
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No admin token found');
-        }
-        
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/companies/${companyId}/status`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            status: 'rejected',
-            adminNotes: 'Company registration rejected'
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to reject company');
-        }
-
-        loadData();
-      } catch (error) {
-        console.error('Error rejecting company:', error);
-        let errorMessage = 'Failed to reject company. Please try again.';
-        
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-        
-        alert(`Failed to reject company: ${errorMessage}`);
+    try {
+      console.log('Rejecting company:', companyId);
+      
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No admin token found');
       }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/companies/${companyId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          status: 'rejected',
+          adminNotes: 'Company registration rejected'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject company');
+      }
+
+      toast.success('Company rejected successfully');
+      loadData();
+    } catch (error) {
+      console.error('Error rejecting company:', error);
+      let errorMessage = 'Failed to reject company. Please try again.';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(`Failed to reject company: ${errorMessage}`);
     }
   };
 
@@ -778,10 +779,6 @@ export default function SecureAdminDashboard() {
   };
 
   const handleDeleteBanner = async (bannerId: string) => {
-    if (!confirm('Are you sure you want to delete this banner?')) {
-      return;
-    }
-
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -796,15 +793,15 @@ export default function SecureAdminDashboard() {
       });
 
       if (response.ok) {
-        alert('Banner deleted successfully!');
+        toast.success('Banner deleted successfully!');
         loadData(); // Refresh banners
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete banner');
+        toast.error(data.error || 'Failed to delete banner');
       }
     } catch (error) {
       console.error('Error deleting banner:', error);
-      alert('Failed to delete banner. Please try again.');
+      toast.error('Failed to delete banner. Please try again.');
     }
   };
 

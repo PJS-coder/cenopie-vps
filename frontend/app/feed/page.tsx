@@ -92,7 +92,7 @@ export default function FeedPage() {
     try {
       const maxSize = 50 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert(`File too large. Max 50MB.`);
+        toast.error(`File too large. Max 50MB.`);
         e.target.value = '';
         return;
       }
@@ -102,7 +102,7 @@ export default function FeedPage() {
       setPreviewUrls([url]);
     } catch (error) {
       console.error('Error processing file:', error);
-      alert('Error processing file.');
+      toast.error('Error processing file.');
     }
     e.target.value = '';
   };
@@ -185,28 +185,33 @@ export default function FeedPage() {
       if (isAlreadySaved) {
         const updatedSavedPosts = existingSavedPosts.filter((savedPost: any) => savedPost.id !== postId);
         localStorage.setItem('savedPosts', JSON.stringify(updatedSavedPosts));
-        alert('Post removed from saved items');
+        toast.success('Post removed from saved items');
       } else {
         const savedPost = { ...postToSave, savedAt: new Date().toISOString(), isSaved: true };
         const updatedSavedPosts = [savedPost, ...existingSavedPosts];
         localStorage.setItem('savedPosts', JSON.stringify(updatedSavedPosts));
-        alert('Post saved successfully!');
+        toast.success('Post saved successfully!');
       }
       
       window.dispatchEvent(new Event('savedPostsUpdated'));
     } catch (err) { 
-      alert('Failed to save post'); 
+      toast.error('Failed to save post'); 
     }
   };
 
-  const handleShare = (postId: string) => alert(`Share post ${postId}`);
+  const handleShare = (postId: string) => toast.info(`Share functionality coming soon!`);
 
   const handleDelete = async (postId: string) => {
-    try { if (window.confirm('Delete this post?')) await deletePost(postId); } catch (err) { toast.error('Failed to delete post'); }
+    try { 
+      await deletePost(postId);
+      toast.success('Post deleted successfully');
+    } catch (err) { 
+      toast.error('Failed to delete post'); 
+    }
   };
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
-    try { await deleteComment(postId, commentId); } catch (err) { alert('Failed to delete comment'); }
+    try { await deleteComment(postId, commentId); } catch (err) { toast.error('Failed to delete comment'); }
   };
 
   const handleMessage = useCallback((userId: string) => {
@@ -236,7 +241,7 @@ export default function FeedPage() {
       // Only show error if user is still authenticated
       const token = localStorage.getItem('authToken');
       if (token) {
-        alert('Failed to load/add comment'); 
+        toast.error('Failed to load/add comment'); 
       }
     }
   };
