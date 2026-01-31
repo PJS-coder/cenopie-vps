@@ -21,8 +21,8 @@ export function useSocket() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         socketUrl = 'http://localhost:4000';
       } else {
-        // Production - try multiple configurations
-        socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}`;
+        // Production - use port 4000 explicitly
+        socketUrl = 'https://cenopie.com:4000';
       }
     } else {
       socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';

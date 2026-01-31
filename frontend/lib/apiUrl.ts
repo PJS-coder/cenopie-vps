@@ -15,7 +15,7 @@ export const getApiUrl = (): string => {
     
     // Check if we're on the production domain
     if (window.location.hostname === 'cenopie.com' || window.location.hostname === 'www.cenopie.com') {
-      // Try different backend URLs for production
+      // Use port 4000 for production backend
       return process.env.NEXT_PUBLIC_API_URL || 'https://cenopie.com:4000';
     }
   }
