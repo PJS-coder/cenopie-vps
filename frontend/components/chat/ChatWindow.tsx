@@ -65,6 +65,7 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   useEffect(() => {
     if (chatId && currentUser) {
+      setLoading(true); // Show skeleton every time chatId changes
       fetchMessages();
       markAsRead();
     }
@@ -210,7 +211,7 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Hide skeleton after messages are loaded
     }
   };
 
@@ -332,8 +333,79 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col h-full">
+        {/* Skeleton Header */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex items-center">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            
+            <div className="flex items-center">
+              {/* Skeleton Avatar */}
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse mr-3"></div>
+              
+              <div className="flex items-center gap-2">
+                {/* Skeleton Name */}
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Action Button */}
+          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+        </div>
+
+        {/* Skeleton Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-white dark:bg-gray-900">
+          {/* Generate multiple skeleton messages */}
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="flex items-start gap-3">
+              {/* Skeleton Avatar */}
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+              </div>
+
+              {/* Skeleton Message Content */}
+              <div className="flex-1 min-w-0">
+                {/* Skeleton Header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-12"></div>
+                </div>
+                
+                {/* Skeleton Message Text */}
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
+                  {index % 3 === 0 && (
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Message Input */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex items-center space-x-3">
+            {/* Skeleton Attachment Button */}
+            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+            
+            {/* Skeleton Input */}
+            <div className="flex-1 h-12 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+            
+            {/* Skeleton Send Button */}
+            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -371,7 +443,9 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               <h2 className="font-semibold text-gray-900 dark:text-white">
                 {otherUser?.name || `${otherUser?.firstName || ''} ${otherUser?.lastName || ''}`.trim() || 'User'}
               </h2>
-              <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+              {otherUser?.isVerified && (
+                <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+              )}
             </div>
           </div>
         </div>
@@ -458,8 +532,10 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                       {senderName}
                     </span>
                     
-                    {/* Cenopie Verification Badge */}
-                    <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+                    {/* Verification Badge - Only show if user is verified */}
+                    {(isOwn ? currentUser?.isVerified : otherUser?.isVerified) && (
+                      <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+                    )}
                     
                     <span className="text-gray-400 dark:text-gray-500">•</span>
                     

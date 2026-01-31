@@ -257,7 +257,9 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
                         <h3 className="font-medium text-gray-900 dark:text-white truncate">
                           {otherParticipant?.name || 'Unknown User'}
                         </h3>
-                        <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+                        {otherParticipant?.isVerified && (
+                          <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+                        )}
                       </div>
                       {chat.lastMessage && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">

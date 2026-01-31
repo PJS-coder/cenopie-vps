@@ -11,7 +11,7 @@ export const getChats = async (req, res) => {
     const chats = await Chat.find({
       participants: userId
     })
-    .populate('participants', 'name profileImage')
+    .populate('participants', 'name profileImage isVerified')
     .populate('lastMessage')
     .sort({ lastActivity: -1 });
 
@@ -28,7 +28,8 @@ export const getChats = async (req, res) => {
         participants: chat.participants.map(p => ({
           id: p._id.toString(),
           name: p.name,
-          profileImage: p.profileImage
+          profileImage: p.profileImage,
+          isVerified: p.isVerified
         })),
         lastMessage: chat.lastMessage,
         unreadCount
@@ -52,7 +53,7 @@ export const getChatMessages = async (req, res) => {
     const chat = await Chat.findOne({
       _id: chatId,
       participants: userId
-    }).populate('participants', 'name profileImage');
+    }).populate('participants', 'name profileImage isVerified');
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });

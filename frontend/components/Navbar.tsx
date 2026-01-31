@@ -21,12 +21,13 @@ import CenopieLogo from './CenopieLogo';
 import { useSearch } from '@/hooks/useSearch';
 import { useSocket } from '@/hooks/useSocket';
 
-// Bottom navigation items for mobile - exactly 4 items (removed chats)
+// Bottom navigation items for mobile - 5 items (Feed, Updates, Jobs, Interviews, Showcase)
 const bottomNav = [
   { href: '/feed', label: 'Feed', icon: HomeIcon, disabled: false },
   { href: '/notifications', label: 'Updates', icon: BellIcon, disabled: false },
   { href: '/jobs', label: 'Jobs', icon: BriefcaseIcon, disabled: false },
   { href: '/interviews', label: 'Interviews', icon: MicrophoneIcon, disabled: false },
+  { href: '/showcase', label: 'Showcase', icon: SparklesIcon, disabled: false },
 ];
 
 // All navigation items for desktop
@@ -578,9 +579,9 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation - 4 Items */}
+      {/* Mobile Bottom Navigation - 5 Items */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t dark:bg-black/95 dark:border-gray-800">
-        <nav className="bottom-nav-4-items px-1 py-2 safe-area-pb">
+        <nav className="bottom-nav-5-items px-1 py-2 safe-area-pb">
             {bottomNav.map((n) => (
               n.disabled ? (
                 <div 

@@ -81,7 +81,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
       if (pageNum === 1 && !forceRefresh && feedCache[cacheKey] && 
           Date.now() - feedCache[cacheKey].timestamp < CACHE_DURATION) {
         setPosts(feedCache[cacheKey].data);
-        setHasMore(feedCache[cacheKey].data.length >= 10);
+        setHasMore(feedCache[cacheKey].data.length >= 50);
         setLoading(false);
         return;
       }
@@ -133,7 +133,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
           setPosts(prev => [...prev, ...transformedPosts]);
         }
         
-        setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
+        setHasMore(response.pagination?.hasMore || transformedPosts.length === 50);
       } else {
         console.error('Invalid feed response format:', response);
         throw new Error('Invalid response format from feed API');
@@ -597,7 +597,7 @@ export const useFeed = ({ filter = 'all' }: UseFeedProps = {}) => {
             console.log('Initial reposts:', transformedPosts.filter((p: FeedPost) => p.isRepost).length);
             
             setPosts(transformedPosts);
-            setHasMore(response.pagination?.hasMore || transformedPosts.length === 10);
+            setHasMore(response.pagination?.hasMore || transformedPosts.length === 50);
             
             // Update cache
             feedCache[cacheKey] = { 

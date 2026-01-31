@@ -521,10 +521,10 @@ const PostCard = ({
         </div>
       )}
 
-      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden">
+      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none lg:rounded-lg shadow-sm overflow-hidden mx-0 lg:mx-0">
         {/* Repost header - only show if this is a repost */}
         {isRepost && originalPost && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 px-3 pt-2 pb-1.5 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 px-4 lg:px-3 pt-2 pb-1.5 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
             <ArrowsRightLeftIcon className="h-3.5 w-3.5 text-brand" />
             <span className="font-medium text-brand">{author}</span>
             <span>reposted</span>
@@ -533,7 +533,7 @@ const PostCard = ({
           </div>
         )}
 
-        <CardHeader className="pb-2 px-3 pt-2">
+        <CardHeader className="pb-2 px-4 lg:px-3 pt-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div
@@ -632,7 +632,7 @@ const PostCard = ({
         <CardContent className="pb-2 px-0">
           {/* Main post content */}
           {content && (
-            <p className="text-sm leading-relaxed break-words px-3 pb-2">{content}</p>
+            <p className="text-sm leading-relaxed break-words px-4 lg:px-3 pb-2">{content}</p>
           )}
 
           {/* Main post image - Single image only */}
@@ -712,7 +712,7 @@ const PostCard = ({
 
           {/* Original post content for reposts */}
           {isRepost && originalPost && (
-            <Card className="border-l-2 border-l-brand bg-gray-50 dark:bg-gray-900/30 rounded-md mx-3 mt-2">
+            <Card className="border-l-2 border-l-brand bg-gray-50 dark:bg-gray-900/30 rounded-md mx-4 lg:mx-3 mt-2">
               <CardContent className="p-3">
                 <div className="flex items-center gap-3 mb-2">
                   <Avatar className="h-10 w-10">

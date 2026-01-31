@@ -724,7 +724,7 @@ export const feedApi = {
     // Fetch from API with filter and pagination parameters
     const filterParam = filter ? `filter=${filter}` : '';
     const pageParam = `page=${page}`;
-    const limitParam = `limit=10`;
+    const limitParam = `limit=50`; // Increased from 10 to 50 posts per page
     
     const queryParams = [filterParam, pageParam, limitParam].filter(Boolean).join('&');
     const queryString = queryParams ? `?${queryParams}` : '';

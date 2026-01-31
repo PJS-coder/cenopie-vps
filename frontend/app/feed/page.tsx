@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { PhotoIcon, VideoCameraIcon, DocumentTextIcon, BookmarkIcon, NewspaperIcon, EyeIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, VideoCameraIcon, DocumentTextIcon, BookmarkIcon, NewspaperIcon, EyeIcon, HeartIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { mediaApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -70,6 +70,7 @@ export default function FeedPage() {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isArticleMode, setIsArticleMode] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [showFullPostModal, setShowFullPostModal] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Quick actions - simplified to only show saved items
@@ -133,13 +134,18 @@ export default function FeedPage() {
         await createPost(finalContent, uploadResult.url, uploadResult.mediaType);
       }
       
+      // Clear form and close modal on success
       setPostContent('');
       setSelectedFiles([]);
       setPreviewUrls([]);
       setIsArticleMode(false);
+      setShowFullPostModal(false);
+      
+      // Show success message
+      toast.success('Post created successfully!');
     } catch (err) {
       console.error('Failed to create post:', err);
-      alert('Failed to create post: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      toast.error('Failed to create post: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setIsPosting(false);
     }
@@ -243,6 +249,42 @@ export default function FeedPage() {
     }
   }, [loading, posts.length]);
 
+  // Set up infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '100px', // Load more when 100px from bottom
+      threshold: 0.1
+    });
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => {
+      if (loaderRef.current) {
+        observer.unobserve(loaderRef.current);
+      }
+      observer.disconnect();
+    };
+  }, [handleObserver]);
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showFullPostModal) {
+        setShowFullPostModal(false);
+        setPostContent('');
+        setSelectedFiles([]);
+        setPreviewUrls([]);
+        setIsArticleMode(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showFullPostModal]);
+
   if (loading && posts.length === 0 && !hasLoadedOnce) {
     return (
       <ProtectedRoute>
@@ -270,7 +312,7 @@ export default function FeedPage() {
 
   return (
     <ProtectedRoute>
-      <div className="w-full flex justify-center px-4 lg:px-6 pb-0 lg:pb-8 pt-2 lg:pt-6">
+      <div className="w-full flex justify-center px-0 lg:px-6 pb-0 lg:pb-8 pt-2 lg:pt-6">
         <div className="w-full lg:w-[1200px] pb-0 lg:pb-0">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             
@@ -390,10 +432,10 @@ export default function FeedPage() {
               
               {/* Create Post */}
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex flex-col gap-4 w-full">
+                <div className="p-3 sm:p-4">
+                  <div className="flex flex-col gap-3 sm:gap-4 w-full">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold flex-shrink-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold flex-shrink-0">
                         {currentUser?.profileImage ? (
                           <Image 
                             src={currentUser.profileImage} 
@@ -403,7 +445,7 @@ export default function FeedPage() {
                             height={40} 
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#0BC0DF] text-sm font-semibold">
+                          <div className="w-full h-full flex items-center justify-center text-[#0BC0DF] text-xs sm:text-sm font-semibold">
                             {getUserInitials(currentUser?.name || 'User')}
                           </div>
                         )}
@@ -453,19 +495,19 @@ export default function FeedPage() {
                       <div className="mt-2">
                         <div className="relative group bg-gray-50 dark:bg-gray-800">
                           {selectedFiles[0]?.type.startsWith('video/') ? (
-                            <CustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain" />
+                            <CustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain max-h-48 sm:max-h-[300px]" />
                           ) : (
                             <Image 
                               src={previewUrls[0]} 
                               alt="Preview" 
-                              className="w-full h-auto max-h-[300px] object-contain" 
+                              className="w-full h-auto max-h-48 sm:max-h-[300px] object-contain" 
                               width={400} 
                               height={300} 
                             />
                           )}
                           <button 
                             type="button" 
-                            className="absolute top-2 right-2 bg-black/70 text-white p-1.5 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 rounded-full" 
+                            className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 bg-black/70 text-white p-1 sm:p-1.5 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 rounded-full" 
                             onClick={() => { 
                               setSelectedFiles([]); 
                               previewUrls.forEach(url => URL.revokeObjectURL(url)); 
@@ -473,7 +515,7 @@ export default function FeedPage() {
                             }} 
                             title="Remove file"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
                           </button>
@@ -482,60 +524,14 @@ export default function FeedPage() {
                     )}
 
                     <div className="flex items-start">
-                      <form onSubmit={handlePostSubmit} className="flex-1 ml-12">
-                        {isArticleMode ? (
-                          <textarea 
-                            id="post-input" 
-                            placeholder="Share your thoughts..." 
-                            className="w-full bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all min-h-[80px]" 
-                            value={postContent} 
-                            onChange={(e) => setPostContent(e.target.value)} 
-                          />
-                        ) : (
-                          <input 
-                            id="post-input" 
-                            type="text" 
-                            placeholder="Share your thoughts..." 
-                            className="w-full bg-gray-50 dark:bg-gray-800 rounded-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-1 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all pr-10" 
-                            value={postContent} 
-                            onChange={(e) => setPostContent(e.target.value)} 
-                          />
-                        )}
-                        <div className="flex justify-between items-center mt-2">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {selectedFiles.length > 0 ? (
-                              <div className="flex items-center gap-1">
-                                <span>{selectedFiles.length} file selected</span>
-                                {!postContent.trim() && <span className="text-red-500 dark:text-red-400 text-xs">• Text required</span>}
-                              </div>
-                            ) : isArticleMode ? (
-                              <span>Article • {postContent.length} chars</span>
-                            ) : (
-                              postContent.trim() ? (
-                                <span className="text-green-600 dark:text-green-400">Ready • {postContent.length} chars</span>
-                              ) : (
-                                <span className="text-red-500 dark:text-red-400">Text required</span>
-                              )
-                            )}
-                          </div>
-                          <button 
-                            type="submit" 
-                            disabled={!postContent.trim() || isPosting} 
-                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                              postContent.trim() && !isPosting 
-                                ? 'bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white' 
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                            }`}
-                          >
-                            {isPosting ? (
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                <span>Posting...</span>
-                              </div>
-                            ) : 'Post'}
-                          </button>
+                      <div 
+                        className="flex-1 ml-8 sm:ml-12 cursor-pointer"
+                        onClick={() => setShowFullPostModal(true)}
+                      >
+                        <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 hover:border-[#0BC0DF] transition-all min-h-[36px] sm:min-h-[40px] flex items-center">
+                          <span className="text-gray-500 dark:text-gray-400">Share your thoughts...</span>
                         </div>
-                      </form>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -587,7 +583,7 @@ export default function FeedPage() {
               </div>
 
               {/* Posts Content */}
-              <div className="space-y-4">
+              <div className="space-y-0 lg:space-y-4">
                 {loading && posts.length === 0 && (
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
@@ -704,14 +700,38 @@ export default function FeedPage() {
                   })
                 ) : null}
 
+                {/* Load More Button */}
+                {hasMore && posts.length > 0 && !loading && (
+                  <div className="flex justify-center py-6">
+                    <Button 
+                      onClick={loadMore}
+                      variant="outline"
+                      className="px-8 py-3 text-sm font-medium bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-[#0BC0DF] hover:text-[#0BC0DF] transition-all duration-200 rounded-full shadow-sm hover:shadow-md"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                      Load More Posts
+                    </Button>
+                  </div>
+                )}
+
                 {/* Infinite scroll loader */}
                 <div ref={loaderRef} className="flex justify-center -mb-4 lg:mb-0">
                   {loading && posts.length > 0 && (
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 py-4"></div>
+                    <div className="flex flex-col items-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#0BC0DF] mb-2"></div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Loading more posts...</span>
+                    </div>
                   )}
                   {!hasMore && posts.length > 0 && (
-                    <div className="text-center text-gray-500 dark:text-gray-400 text-sm mb-0 pb-0">
-                      You have reached end of feed
+                    <div className="text-center py-6">
+                      <div className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+                        <svg className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">You've reached the end of your feed</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -867,6 +887,188 @@ export default function FeedPage() {
           </div>
         </div>
       </div>
+
+      {/* Full Page Post Modal */}
+      {showFullPostModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-0">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Create Post</h2>
+              <button
+                onClick={() => {
+                  setShowFullPostModal(false);
+                  setPostContent('');
+                  setSelectedFiles([]);
+                  setPreviewUrls([]);
+                  setIsArticleMode(false);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors touch-manipulation"
+              >
+                <XMarkIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-6 max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)] overflow-y-auto overscroll-contain">
+              {/* User Info */}
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#E6F7FC] dark:bg-[#0a4d5c] flex items-center justify-center text-[#0BC0DF] font-semibold flex-shrink-0">
+                  {currentUser?.profileImage ? (
+                    <Image 
+                      src={currentUser.profileImage} 
+                      alt={currentUser.name || 'User'} 
+                      className="w-full h-full rounded-full object-cover" 
+                      width={48} 
+                      height={48} 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[#0BC0DF] font-semibold text-sm">
+                      {getUserInitials(currentUser?.name || 'User')}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm sm:text-base">
+                    {currentUser?.name || 'User'}
+                    <VerificationBadge isVerified={currentUser?.isVerified} size="sm" />
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    {currentUser?.role || 'Professional'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Post Type Toggle */}
+              <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 sm:pb-0">
+                <button 
+                  type="button" 
+                  className={`px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap touch-manipulation ${
+                    !isArticleMode 
+                      ? 'bg-[#0BC0DF] text-white' 
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`} 
+                  onClick={() => setIsArticleMode(false)}
+                >
+                  Regular Post
+                </button>
+                <button 
+                  type="button" 
+                  className={`px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap touch-manipulation ${
+                    isArticleMode 
+                      ? 'bg-[#0BC0DF] text-white' 
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`} 
+                  onClick={() => setIsArticleMode(true)}
+                >
+                  Article
+                </button>
+              </div>
+
+              {/* Post Content */}
+              <form onSubmit={handlePostSubmit} className="space-y-4">
+                <textarea 
+                  placeholder={isArticleMode ? "Write your article..." : "What's on your mind?"}
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-lg px-3 sm:px-4 py-3 text-sm sm:text-base border border-gray-200 dark:border-gray-700 focus:border-[#0BC0DF] focus:ring-2 focus:ring-[#E6F7FC] dark:focus:ring-[#0a4d5c] outline-none transition-all resize-none touch-manipulation"
+                  value={postContent} 
+                  onChange={(e) => setPostContent(e.target.value)}
+                  rows={isArticleMode ? 10 : 6}
+                  style={{ minHeight: isArticleMode ? '240px' : '144px' }}
+                  autoFocus
+                />
+
+                {/* File Preview */}
+                {previewUrls.length > 0 && (
+                  <div className="relative group bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    {selectedFiles[0]?.type.startsWith('video/') ? (
+                      <CustomVideoPlayer src={previewUrls[0]} className="w-full h-auto object-contain max-h-60 sm:max-h-80" />
+                    ) : (
+                      <Image 
+                        src={previewUrls[0]} 
+                        alt="Preview" 
+                        className="w-full h-auto max-h-60 sm:max-h-80 object-contain" 
+                        width={600} 
+                        height={320} 
+                      />
+                    )}
+                    <button 
+                      type="button" 
+                      className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-black/70 text-white p-1.5 sm:p-2 hover:bg-black/90 transition-colors opacity-0 group-hover:opacity-100 touch:opacity-100 rounded-full touch-manipulation" 
+                      onClick={() => { 
+                        setSelectedFiles([]); 
+                        previewUrls.forEach(url => URL.revokeObjectURL(url)); 
+                        setPreviewUrls([]); 
+                      }} 
+                      title="Remove file"
+                    >
+                      <XMarkIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Media Buttons */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                    <input 
+                      type="file" 
+                      id="modal-file-upload" 
+                      className="hidden" 
+                      accept="image/*,video/*" 
+                      onChange={handleFileChange} 
+                    />
+                    <label htmlFor="modal-file-upload" className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors cursor-pointer whitespace-nowrap touch-manipulation">
+                      <PhotoIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm">Photo</span>
+                    </label>
+                    <button 
+                      type="button" 
+                      className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors whitespace-nowrap touch-manipulation" 
+                      onClick={() => { 
+                        const input = document.getElementById('modal-file-upload') as HTMLInputElement; 
+                        if (input) { 
+                          input.accept = 'video/*'; 
+                          input.click(); 
+                        } 
+                      }}
+                    >
+                      <VideoCameraIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm">Video</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      {postContent.length} characters
+                    </div>
+                    <button 
+                      type="submit" 
+                      disabled={!postContent.trim() || isPosting} 
+                      className={`px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base touch-manipulation ${
+                        postContent.trim() && !isPosting 
+                          ? 'bg-[#0BC0DF] hover:bg-[#0aa9c4] text-white shadow-lg hover:shadow-xl' 
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {isPosting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="hidden sm:inline">Publishing...</span>
+                          <span className="sm:hidden">...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline">Publish Post</span>
+                          <span className="sm:hidden">Publish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }
