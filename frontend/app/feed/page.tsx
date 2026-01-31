@@ -215,7 +215,6 @@ export default function FeedPage() {
   };
 
   const handleMessage = useCallback((userId: string) => {
-    console.log('🔔 Message button clicked for user ID:', userId);
     // Store the target user ID for the chat system
     localStorage.setItem('chatTargetUserId', userId);
     router.push(`/chats?user=${userId}`);
@@ -226,7 +225,6 @@ export default function FeedPage() {
       // Check if user is still authenticated
       const token = localStorage.getItem('authToken');
       if (!token) {
-        console.log('User not authenticated, skipping comment operation');
         return;
       }
 
@@ -638,38 +636,6 @@ export default function FeedPage() {
                 {/* Feed Posts */}
                 {posts && posts.length > 0 ? (
                   posts.map((post: any, index: number) => {
-                    // Debug logging for all posts
-                    console.log(`Post ${index + 1}:`, {
-                      id: post.id,
-                      author: post.author,
-                      content: post.content,
-                      contentLength: post.content?.length || 0,
-                      isRepost: post.isRepost,
-                      hasOriginalPost: !!post.originalPost,
-                      originalPostAuthor: post.originalPost?.author,
-                      willRender: !!(post.id && post.author && (post.content || post.isRepost))
-                    });
-                    
-                    // Debug logging for reposts
-                    if (post.isRepost) {
-                      console.log('✅ REPOST DETECTED:', {
-                        id: post.id,
-                        author: post.author,
-                        content: `"${post.content}"`,
-                        contentEmpty: !post.content,
-                        isRepost: post.isRepost,
-                        originalPost: post.originalPost,
-                        willRender: !!(post.id && post.author && (post.content || post.isRepost))
-                      });
-                    } else if (post.originalPost) {
-                      console.log('⚠️ HAS ORIGINAL POST BUT isRepost=false:', {
-                        id: post.id,
-                        author: post.author,
-                        isRepost: post.isRepost,
-                        originalPost: post.originalPost
-                      });
-                    }
-                    
                     return post.id && post.author && (post.content || post.isRepost) ? (
                       <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden">
                         <PostCard

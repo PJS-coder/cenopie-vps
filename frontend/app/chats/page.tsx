@@ -58,8 +58,6 @@ function ChatsContent() {
       
       console.log('👤 User info retrieved:', userInfo);
       
-      toast.success(`Starting chat with ${userName}...`);
-      
       // Create or get existing chat
       const chat = await createOrGetChat(userId);
       
@@ -70,8 +68,6 @@ function ChatsContent() {
       
       // Clean up URL
       router.replace('/chats', { scroll: false });
-      
-      toast.success(`Chat with ${userName} is ready!`);
     } catch (error) {
       console.error('Error starting chat:', error);
       toast.error('Failed to start chat: ' + (error instanceof Error ? error.message : 'Unknown error'));

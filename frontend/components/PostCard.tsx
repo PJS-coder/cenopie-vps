@@ -187,48 +187,18 @@ const PostCard = ({
   const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
-  // Debug logging
-  console.log(`PostCard ${id} - Props received:`, {
-    id,
-    author,
-    isRepost,
-    hasOriginalPost: !!originalPost,
-    originalPostAuthor: originalPost?.author,
-    commentDetails: commentDetails?.length || 0,
-    comments,
-    showCommentInput
-  });
-
-  if (isRepost && originalPost) {
-    console.log(`✅ PostCard ${id} - REPOST PROPS:`, {
-      isRepost,
-      originalPost: {
-        id: originalPost.id,
-        author: originalPost.author,
-        content: originalPost.content?.substring(0, 50) + '...'
-      }
-    });
-  } else if (isRepost && !originalPost) {
-    console.log(`❌ PostCard ${id} - REPOST WITHOUT ORIGINAL POST:`, { isRepost, originalPost });
-  }
-
   // Check if the current user is the author of the post
   const isPostAuthor = currentUserId && postAuthorId && currentUserId === postAuthorId;
 
   const handleLike = useCallback(() => {
-    console.log('PostCard handleLike clicked for post:', id);
-    console.log('Current isLiked state:', isLiked);
-    console.log('Current likes count:', likes);
-
     if (onLike) {
       onLike(id);
     }
-  }, [id, isLiked, likes, onLike]);
+  }, [id, onLike]);
 
   // Load comments for preview if they exist but aren't loaded yet
   useEffect(() => {
     if (comments > 0 && commentDetails.length === 0 && onComment) {
-      console.log(`Auto-loading comments for preview - post ${id}`);
       onComment(id); // Load comments for preview
     }
   }, [comments, commentDetails.length, id, onComment]);
@@ -239,7 +209,6 @@ const PostCard = ({
     if (onComment) {
       // If there are no comment details but comments count > 0, load them
       if (comments > 0 && commentDetails.length === 0) {
-        console.log(`Loading comments for post ${id} - count: ${comments}, details: ${commentDetails.length}`);
         await onComment(id); // Load comments without text
       } else {
         onComment(id); // Just notify that comment section was opened
@@ -257,7 +226,6 @@ const PostCard = ({
         // Check if user is still authenticated
         const token = localStorage.getItem('authToken');
         if (!token) {
-          console.log('User not authenticated, skipping comment submission');
           return;
         }
 
