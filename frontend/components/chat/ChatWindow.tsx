@@ -25,7 +25,7 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { socket } = useSocket();
+  const { socket, isConnected, connectionStatus } = useSocket();
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Get current user from localStorage
@@ -263,6 +263,11 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 {otherUser?.name || `${otherUser?.firstName || ''} ${otherUser?.lastName || ''}`.trim() || 'User'}
               </h2>
               <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
+              
+              {/* Connection Status Indicator */}
+              <div className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' : connectionStatus === 'reconnecting' ? 'bg-yellow-500' : 'bg-red-500'
+              }`} title={`Socket: ${connectionStatus}`} />
             </div>
           </div>
         </div>
