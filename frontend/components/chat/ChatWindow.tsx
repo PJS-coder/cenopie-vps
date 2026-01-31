@@ -27,7 +27,7 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [otherUser, setOtherUser] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [newMessageIndicatorIndex, setNewMessageIndicatorIndex] = useState<number | null>(null);
   const [indicatorTimer, setIndicatorTimer] = useState<NodeJS.Timeout | null>(null);
@@ -156,6 +156,20 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     };
   }, [indicatorTimer]);
 
+  // Fallback: Refresh messages periodically if socket is not connected
+  useEffect(() => {
+    if (!socket || !isConnected) {
+      // If socket is not connected, poll for new messages every 3 seconds
+      const pollInterval = setInterval(() => {
+        if (chatId && currentUser) {
+          fetchMessages();
+        }
+      }, 3000);
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [socket, isConnected, chatId, currentUser]);
+
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -251,6 +265,13 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       if (response.ok) {
         const data = await response.json();
         // Message will be added via socket event
+        
+        // Fallback: If socket is not connected, manually refresh messages
+        if (!socket || !isConnected) {
+          setTimeout(() => {
+            fetchMessages();
+          }, 500); // Small delay to ensure message is saved
+        }
       } else {
         const errorData = await response.text();
         console.error('Failed to send message:', response.status, errorData);
