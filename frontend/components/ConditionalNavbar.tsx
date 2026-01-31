@@ -28,6 +28,6 @@ export default function ConditionalNavbar() {
     return null; // Don't render navbar during interviews
   }
   
-  // Show navbar on all other pages
+  // Show navbar on all pages including chat pages
   return <Navbar />;
 }

@@ -554,6 +554,13 @@ img {
       align-items: center;
     }
     
+    /* Optimize 4-item bottom navigation layout */
+    .bottom-nav-4-items {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    
     .bottom-nav-item {
       flex: 1;
       display: flex;

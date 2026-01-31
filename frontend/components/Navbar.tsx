@@ -21,13 +21,12 @@ import CenopieLogo from './CenopieLogo';
 import { useSearch } from '@/hooks/useSearch';
 import { useSocket } from '@/hooks/useSocket';
 
-// Bottom navigation items for mobile - exactly 5 items
+// Bottom navigation items for mobile - exactly 4 items (removed chats)
 const bottomNav = [
   { href: '/feed', label: 'Feed', icon: HomeIcon, disabled: false },
   { href: '/notifications', label: 'Updates', icon: BellIcon, disabled: false },
   { href: '/jobs', label: 'Jobs', icon: BriefcaseIcon, disabled: false },
   { href: '/interviews', label: 'Interviews', icon: MicrophoneIcon, disabled: false },
-  { href: '/chats', label: 'Chats', icon: ChatBubbleLeftRightIcon, disabled: false },
 ];
 
 // All navigation items for desktop
@@ -556,17 +555,32 @@ export default function Navbar() {
             <ProfileDropdown />
           </div>
 
-          {/* Mobile Right Section - Profile Only */}
+          {/* Mobile Right Section - Profile and Chats */}
           <div className="flex md:hidden items-center gap-2">
+            {/* Chats Button - Mobile Only */}
+            <Link 
+              href="/chats"
+              className={`relative p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${
+                pathname === '/chats' ? 'text-brand' : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              <ChatBubbleLeftRightIcon className="w-5 h-5" />
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
+                  {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                </span>
+              )}
+            </Link>
+            
             {/* Profile Dropdown */}
             <ProfileDropdown />
           </div>
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation - 5 Items */}
+      {/* Mobile Bottom Navigation - 4 Items */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t dark:bg-black/95 dark:border-gray-800">
-        <nav className="bottom-nav-5-items px-1 py-2 safe-area-pb">
+        <nav className="bottom-nav-4-items px-1 py-2 safe-area-pb">
             {bottomNav.map((n) => (
               n.disabled ? (
                 <div 

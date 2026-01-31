@@ -92,7 +92,7 @@ function ChatsContent() {
   };
 
   return (
-    <div className="flex bg-white dark:bg-gray-900 fixed top-14 sm:top-16 left-0 right-0 bottom-16 lg:bottom-0 z-40">
+    <div className="flex bg-white dark:bg-gray-900 fixed top-14 sm:top-16 left-0 right-0 bottom-0 z-40">
       {/* Loading overlay when creating chat */}
       {isCreatingChat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
