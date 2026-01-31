@@ -19,6 +19,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/context/AuthContext';
 import CenopieLogo from './CenopieLogo';
 import { useSearch } from '@/hooks/useSearch';
+import { useSocket } from '@/hooks/useSocket';
 
 // Bottom navigation items for mobile - exactly 5 items
 const bottomNav = [
@@ -48,6 +49,7 @@ export default function Navbar() {
   // Call hooks unconditionally
   const authContext = useAuth();
   const searchHook = useSearch();
+  const { socket } = useSocket();
   
   // Extract values safely
   const isAuthenticated = authContext?.isAuthenticated || false;
@@ -56,6 +58,7 @@ export default function Navbar() {
 
   
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -172,27 +175,85 @@ export default function Navbar() {
     }
   }, [isAuthenticated]);
 
+  // Fetch unread chat count
+  const fetchUnreadChatCount = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.cenopie.com'}/api/chats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const totalUnreadCount = data.chats?.reduce((total: number, chat: any) => {
+          return total + (chat.unreadCount || 0);
+        }, 0) || 0;
+        setUnreadChatCount(totalUnreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching chat count:', error);
+    }
+  }, [isAuthenticated]);
+
   // Fetch notification count on mount and periodically
   useEffect(() => {
     if (isAuthenticated) {
       fetchUnreadNotificationCount();
+      fetchUnreadChatCount();
       
-      // Refresh count every 30 seconds
-      const interval = setInterval(fetchUnreadNotificationCount, 30000);
+      // Refresh counts every 30 seconds
+      const interval = setInterval(() => {
+        fetchUnreadNotificationCount();
+        fetchUnreadChatCount();
+      }, 30000);
       
       // Listen for notification updates
       const handleNotificationUpdate = () => {
         fetchUnreadNotificationCount();
       };
       
+      // Listen for chat updates
+      const handleChatUpdate = () => {
+        fetchUnreadChatCount();
+      };
+      
       window.addEventListener('notificationUpdate', handleNotificationUpdate);
+      window.addEventListener('chatUpdate', handleChatUpdate);
       
       return () => {
         clearInterval(interval);
         window.removeEventListener('notificationUpdate', handleNotificationUpdate);
+        window.removeEventListener('chatUpdate', handleChatUpdate);
       };
     }
-  }, [isAuthenticated, fetchUnreadNotificationCount]);
+  }, [isAuthenticated, fetchUnreadNotificationCount, fetchUnreadChatCount]);
+
+  // Socket listeners for real-time chat updates
+  useEffect(() => {
+    if (!socket || !isAuthenticated) return;
+
+    const handleNewMessage = (data: any) => {
+      // Update chat count when new message arrives
+      fetchUnreadChatCount();
+    };
+
+    const handleMessageRead = (data: any) => {
+      // Update chat count when messages are read
+      fetchUnreadChatCount();
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('messages_read', handleMessageRead);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('messages_read', handleMessageRead);
+    };
+  }, [socket, isAuthenticated, fetchUnreadChatCount]);
 
   // Handle search as user types (with debounce)
   useEffect(() => {
@@ -479,6 +540,11 @@ export default function Navbar() {
                       {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                     </span>
                   )}
+                  {n.href === '/chats' && unreadChatCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-500 rounded-full">
+                      {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                    </span>
+                  )}
                 </Link>
               )
             ))}
@@ -533,6 +599,11 @@ export default function Navbar() {
                     {n.href === '/notifications' && unreadNotificationCount > 0 && (
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
                         {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                      </span>
+                    )}
+                    {n.href === '/chats' && unreadChatCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
+                        {unreadChatCount > 9 ? '9+' : unreadChatCount}
                       </span>
                     )}
                   </div>

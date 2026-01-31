@@ -68,7 +68,11 @@ export const getChatMessages = async (req, res) => {
       content: message.content,
       senderId: message.senderId.toString(),
       createdAt: message.createdAt,
-      type: message.type
+      type: message.type,
+      readBy: message.readBy?.map(read => ({
+        userId: read.userId.toString(),
+        readAt: read.readAt
+      })) || []
     }));
 
     // Get other participant info

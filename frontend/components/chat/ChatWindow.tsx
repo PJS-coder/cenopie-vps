@@ -11,6 +11,7 @@ interface Message {
   senderId: string;
   createdAt: string;
   type: 'text' | 'image';
+  readBy?: Array<{ userId: string; readAt: string }>;
 }
 
 interface ChatWindowProps {
@@ -25,8 +26,30 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { socket, isConnected, connectionStatus } = useSocket();
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { socket } = useSocket();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [newMessageIndicatorIndex, setNewMessageIndicatorIndex] = useState<number | null>(null);
+  const [indicatorTimer, setIndicatorTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Helper function to set indicator with auto-disappear timer
+  const setIndicatorWithTimer = (index: number) => {
+    // Clear any existing timer
+    if (indicatorTimer) {
+      clearTimeout(indicatorTimer);
+    }
+    
+    // Set the indicator
+    setNewMessageIndicatorIndex(index);
+    
+    // Set new timer to remove indicator after 10 seconds
+    const timer = setTimeout(() => {
+      setNewMessageIndicatorIndex(null);
+      markAsRead(); // Also mark as read when timer expires
+    }, 10000); // 10 seconds
+    
+    setIndicatorTimer(timer);
+  };
 
   // Get current user from localStorage
   useEffect(() => {
@@ -41,30 +64,52 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   }, []);
 
   useEffect(() => {
-    if (chatId) {
+    if (chatId && currentUser) {
       fetchMessages();
       markAsRead();
     }
-  }, [chatId]);
+  }, [chatId, currentUser]);
 
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      // Always jump to bottom instantly - no scrolling animation
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }
   }, [messages]);
 
   useEffect(() => {
     if (!socket || !chatId) return;
 
-    console.log('Setting up socket listeners for chat:', chatId);
-
     // Join the specific chat room
     socket.emit('chat:join', chatId);
 
     const handleNewMessage = (data: any) => {
-      console.log('📨 Received new message event:', data);
       if (data.chatId === chatId) {
-        console.log('✅ Message is for current chat, adding to messages');
+        // Check if this message is from the current user (sender)
+        const isFromCurrentUser = data.senderId === currentUser?.id;
+        
+        // Only show indicator if message is NOT from current user (i.e., we are the receiver)
+        let shouldShowIndicator = false;
+        
+        if (!isFromCurrentUser) {
+          // Check if user is scrolled up
+          const container = messagesContainerRef.current;
+          if (container) {
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+            
+            // Consider user scrolled up if they're more than 100px from bottom
+            shouldShowIndicator = distanceFromBottom > 100;
+          }
+        }
+        
+        // Add new message
         setMessages(prev => {
-          console.log('Previous messages count:', prev.length);
           const newMessages = [...prev, {
             id: data.id,
             content: data.content,
@@ -72,25 +117,30 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             createdAt: data.createdAt,
             type: data.type || 'text'
           }];
-          console.log('New messages count:', newMessages.length);
           return newMessages;
         });
+        
+        // Set indicator only if we should show it (receiver + scrolled up)
+        if (shouldShowIndicator) {
+          setTimeout(() => {
+            setIndicatorWithTimer(messages.length);
+          }, 50);
+        }
+        
         markAsRead();
-      } else {
-        console.log('❌ Message is for different chat:', data.chatId, 'current:', chatId);
       }
     };
 
     const handleChatJoined = (data: any) => {
-      console.log('✅ Joined chat room:', data.chatId);
+      // Chat joined successfully
     };
 
     const handleConnect = () => {
-      console.log('🔌 Socket connected');
+      // Socket connected
     };
 
     const handleDisconnect = () => {
-      console.log('🔌 Socket disconnected');
+      // Socket disconnected
     };
 
     socket.on('new_message', handleNewMessage);
@@ -99,7 +149,6 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     socket.on('disconnect', handleDisconnect);
     
     return () => {
-      console.log('🧹 Cleaning up socket listeners for chat:', chatId);
       socket.off('new_message', handleNewMessage);
       socket.off('chat:joined', handleChatJoined);
       socket.off('connect', handleConnect);
@@ -107,7 +156,16 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       // Leave the chat room when component unmounts or chatId changes
       socket.emit('chat:leave', chatId);
     };
-  }, [socket, chatId]);
+  }, [socket, chatId, messages.length]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (indicatorTimer) {
+        clearTimeout(indicatorTimer);
+      }
+    };
+  }, [indicatorTimer]);
 
   const fetchMessages = async () => {
     try {
@@ -118,8 +176,33 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Keep normal order (oldest to newest)
         setMessages(data.messages || []);
         setOtherUser(data.otherUser);
+        
+        // Simple approach: Show line before the last message if there are messages
+        // and the last message is from someone else
+        const messages = data.messages || [];
+        if (messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          const isLastMessageFromOther = lastMessage.senderId !== currentUser?.id;
+          
+          if (isLastMessageFromOther) {
+            setIndicatorWithTimer(messages.length - 1);
+          } else {
+            setNewMessageIndicatorIndex(null);
+          }
+        } else {
+          setNewMessageIndicatorIndex(null);
+        }
+        
+        // Immediately jump to bottom (where newest messages are)
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        }, 0);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -131,10 +214,22 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const markAsRead = async () => {
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      await fetch(`${getApiUrl()}/api/chats/${chatId}/read`, {
+      const response = await fetch(`${getApiUrl()}/api/chats/${chatId}/read`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      if (response.ok) {
+        // Clear timer and remove the line indicator when messages are marked as read
+        if (indicatorTimer) {
+          clearTimeout(indicatorTimer);
+          setIndicatorTimer(null);
+        }
+        setNewMessageIndicatorIndex(null);
+        
+        // Dispatch event to update navbar chat count
+        window.dispatchEvent(new CustomEvent('chatUpdate'));
+      }
     } catch (error) {
       console.error('Error marking as read:', error);
     }
@@ -147,8 +242,6 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     const messageContent = newMessage.trim();
     setNewMessage('');
     setSending(true);
-
-    console.log('📤 Sending message:', messageContent, 'to chat:', chatId);
 
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -165,24 +258,17 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Message sent successfully:', data);
         // Message will be added via socket event
       } else {
-        console.error('❌ Failed to send message:', response.status, response.statusText);
         // Restore message on error
         setNewMessage(messageContent);
       }
     } catch (error) {
-      console.error('❌ Error sending message:', error);
+      console.error('Error sending message:', error);
       setNewMessage(messageContent);
     } finally {
       setSending(false);
     }
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const formatTime = (dateString: string) => {
@@ -263,11 +349,6 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 {otherUser?.name || `${otherUser?.firstName || ''} ${otherUser?.lastName || ''}`.trim() || 'User'}
               </h2>
               <VerificationBadge isVerified={true} size="sm" showTooltip={false} />
-              
-              {/* Connection Status Indicator */}
-              <div className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-green-500' : connectionStatus === 'reconnecting' ? 'bg-yellow-500' : 'bg-red-500'
-              }`} title={`Socket: ${connectionStatus}`} />
             </div>
           </div>
         </div>
@@ -284,7 +365,11 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-white dark:bg-gray-900">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-6 bg-white dark:bg-gray-900"
+        style={{ scrollBehavior: 'auto' }}
+      >
         {messages.map((message, index) => {
           // Validate message structure
           if (!message.id) {
@@ -312,6 +397,17 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                   <span className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400 rounded-full font-medium">
                     {formatDate(message.createdAt)}
                   </span>
+                </div>
+              )}
+              
+              {/* Show simple line indicator where new messages start */}
+              {newMessageIndicatorIndex === index && (
+                <div className="flex items-center my-4">
+                  <div className="flex-1 h-px bg-blue-300 dark:bg-blue-600"></div>
+                  <div className="px-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  </div>
+                  <div className="flex-1 h-px bg-blue-300 dark:bg-blue-600"></div>
                 </div>
               )}
               
@@ -359,6 +455,7 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             </div>
           );
         })}
+
         <div ref={messagesEndRef} />
       </div>
 
