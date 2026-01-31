@@ -458,20 +458,19 @@ export default function FeedPage() {
                           accept="image/*,video/*" 
                           onChange={handleFileChange} 
                         />
-                        <label htmlFor="file-upload" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer" title="Add photo">
+                        <button 
+                          type="button"
+                          className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer" 
+                          title="Add photo"
+                          onClick={() => setShowFullPostModal(true)}
+                        >
                           <PhotoIcon className="w-4 h-4" />
-                        </label>
+                        </button>
                         <button 
                           type="button" 
                           className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors" 
                           title="Add video" 
-                          onClick={() => { 
-                            const input = document.getElementById('file-upload') as HTMLInputElement; 
-                            if (input) { 
-                              input.accept = 'video/*'; 
-                              input.click(); 
-                            } 
-                          }}
+                          onClick={() => setShowFullPostModal(true)}
                         >
                           <VideoCameraIcon className="w-4 h-4" />
                         </button>
@@ -483,7 +482,10 @@ export default function FeedPage() {
                               : 'text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'
                           }`} 
                           title="Write article" 
-                          onClick={() => setIsArticleMode(!isArticleMode)}
+                          onClick={() => {
+                            setIsArticleMode(true);
+                            setShowFullPostModal(true);
+                          }}
                         >
                           <DocumentTextIcon className="w-4 h-4" />
                         </button>
