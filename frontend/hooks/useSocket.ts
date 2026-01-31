@@ -9,11 +9,12 @@ export function useSocket() {
   useEffect(() => {
     const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!token) {
-      console.log('No auth token found for socket connection');
+      console.log('❌ No auth token found for socket connection');
       return;
     }
 
     console.log('🔑 Connecting to socket with token:', token.substring(0, 20) + '...');
+    console.log('🔑 Full token length:', token.length);
 
     // Determine the correct socket URL based on environment
     let socketUrl;
@@ -38,18 +39,21 @@ export function useSocket() {
       forceNew: true,
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 5, // Reduced attempts for faster debugging
       // Production-specific options
       upgrade: true,
       rememberUpgrade: false,
       // Add query parameters for debugging
       query: {
-        transport: 'polling'
+        transport: 'polling',
+        token: token // Also send token in query as backup
       }
     });
 
     socketInstance.on('connect', () => {
       console.log('✅ Socket connected successfully');
+      console.log('🔌 Socket ID:', socketInstance.id);
+      setSocket(socketInstance);
       setIsConnected(true);
       setConnectionStatus('connected');
     });
@@ -58,16 +62,20 @@ export function useSocket() {
       console.log('❌ Socket disconnected:', reason);
       setIsConnected(false);
       setConnectionStatus('disconnected');
+      setSocket(null);
     });
 
     socketInstance.on('connect_error', (error) => {
       console.error('❌ Socket connection error:', error.message);
+      console.error('❌ Error details:', error);
       console.log('🔄 Will retry connection...');
       setConnectionStatus('error');
+      setSocket(null);
     });
 
     socketInstance.on('reconnect', (attemptNumber) => {
       console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+      setSocket(socketInstance);
       setIsConnected(true);
       setConnectionStatus('connected');
     });
@@ -81,33 +89,16 @@ export function useSocket() {
       console.log('✅ Socket connection confirmed by server:', data);
     });
 
-    // Debug transport changes
-    socketInstance.io.engine.on('upgrade', () => {
-      console.log('⬆️ Transport upgraded to:', socketInstance.io.engine.transport.name);
-    });
-
-    socketInstance.io.engine.on('upgradeError', (error: any) => {
-      console.warn('⚠️ Transport upgrade failed:', error);
-    });
-
     // Test message handler
     socketInstance.on('test_message', (data) => {
       console.log('🧪 Test message received:', data);
     });
 
-    // Production debugging - ping test
-    const pingInterval = setInterval(() => {
-      if (socketInstance.connected) {
-        console.log('🏓 Ping test - Socket still connected');
-        socketInstance.emit('ping', { timestamp: Date.now() });
-      }
-    }, 30000); // Every 30 seconds
-
-    setSocket(socketInstance);
+    // Don't set socket until it's actually connected
+    // setSocket(socketInstance); // Remove this line
 
     return () => {
       console.log('🔌 Disconnecting socket...');
-      clearInterval(pingInterval);
       socketInstance.disconnect();
     };
   }, []);

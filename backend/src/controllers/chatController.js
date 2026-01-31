@@ -1,6 +1,7 @@
 import Chat from '../models/Chat.js';
 import ChatMessage from '../models/ChatMessage.js';
 import User from '../models/User.js';
+import mongoose from 'mongoose';
 
 // Get all chats for a user
 export const getChats = async (req, res) => {
@@ -57,10 +58,9 @@ export const getChatMessages = async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Get messages
+    // Get ALL messages (removed limit)
     const messages = await ChatMessage.find({ chatId })
-      .sort({ createdAt: 1 })
-      .limit(100); // Limit to last 100 messages
+      .sort({ createdAt: 1 });
 
     // Transform messages to ensure proper ID serialization
     const transformedMessages = messages.map(message => ({
@@ -88,7 +88,31 @@ export const getChatMessages = async (req, res) => {
   }
 };
 
-// Send a message
+// Test message saving (temporary debug endpoint)
+export const testSaveMessage = async (req, res) => {
+  try {
+    const testMessage = new ChatMessage({
+      chatId: '697ceb225fdf19fa9ade2432',
+      senderId: '69566d0712f2a47872633c76',
+      content: 'Test message from debug endpoint - ' + new Date().toISOString(),
+      type: 'text'
+    });
+
+    const savedMessage = await testMessage.save();
+    const messages = await ChatMessage.find({ chatId: '697ceb225fdf19fa9ade2432' }).limit(5);
+
+    res.json({ 
+      success: true, 
+      message: savedMessage,
+      totalMessages: messages.length,
+      dbState: mongoose.connection.readyState,
+      dbName: mongoose.connection.name
+    });
+  } catch (error) {
+    console.error('Test message save failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
 export const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -134,12 +158,6 @@ export const sendMessage = async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      console.log(`📤 Emitting message to chat_${chatId}:`, {
-        id: message._id.toString(),
-        content,
-        senderId: userId
-      });
-      
       io.to(`chat_${chatId}`).emit('new_message', {
         id: message._id.toString(),
         chatId,
@@ -148,8 +166,6 @@ export const sendMessage = async (req, res) => {
         senderId: userId,
         createdAt: message.createdAt
       });
-    } else {
-      console.log('❌ Socket.IO instance not found');
     }
 
     res.status(201).json({ message });

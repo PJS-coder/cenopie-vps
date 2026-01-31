@@ -81,7 +81,9 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   }, [messages]);
 
   useEffect(() => {
-    if (!socket || !chatId) return;
+    if (!socket || !chatId) {
+      return;
+    }
 
     // Join the specific chat room
     socket.emit('chat:join', chatId);
@@ -135,28 +137,15 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       // Chat joined successfully
     };
 
-    const handleConnect = () => {
-      // Socket connected
-    };
-
-    const handleDisconnect = () => {
-      // Socket disconnected
-    };
-
     socket.on('new_message', handleNewMessage);
     socket.on('chat:joined', handleChatJoined);
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
     
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('chat:joined', handleChatJoined);
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      // Leave the chat room when component unmounts or chatId changes
       socket.emit('chat:leave', chatId);
     };
-  }, [socket, chatId, messages.length]);
+  }, [socket, chatId]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -245,7 +234,9 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      const response = await fetch(`${getApiUrl()}/api/chats/${chatId}/messages`, {
+      const url = `${getApiUrl()}/api/chats/${chatId}/messages`;
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -256,15 +247,26 @@ export default function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           type: 'text'
         })
       });
-
+      
       if (response.ok) {
+        const data = await response.json();
         // Message will be added via socket event
       } else {
+        const errorData = await response.text();
+        console.error('Failed to send message:', response.status, errorData);
         // Restore message on error
         setNewMessage(messageContent);
+        
+        // Try to parse error as JSON
+        try {
+          const errorJson = JSON.parse(errorData);
+          console.error('Error details:', errorJson);
+        } catch (e) {
+          console.error('Raw error response:', errorData);
+        }
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Network error sending message:', error);
       setNewMessage(messageContent);
     } finally {
       setSending(false);

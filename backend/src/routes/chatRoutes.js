@@ -6,7 +6,8 @@ import {
   sendMessage,
   markAsRead,
   createOrGetChat,
-  testSocket
+  testSocket,
+  testSaveMessage
 } from '../controllers/chatController.js';
 
 const router = express.Router();
@@ -26,6 +27,9 @@ router.get('/test-socket', (req, res) => {
     res.status(500).json({ error: 'Failed to test socket' });
   }
 });
+
+// Test message saving (no auth required for testing)
+router.get('/test-save', testSaveMessage);
 
 // All routes below require authentication
 router.use(protect);
