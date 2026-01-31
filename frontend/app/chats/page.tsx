@@ -9,6 +9,34 @@ import { useSocket } from '@/hooks/useSocket';
 import { createOrGetChat, getUserById } from '@/lib/chatUtils';
 import { useToastContext } from '@/components/ToastProvider';
 
+// Debug component for Socket.IO
+function SocketDebugInfo() {
+  const { socket, isConnected, connectionStatus } = useSocket();
+  
+  return (
+    <div className="space-y-2">
+      <div>Status: {connectionStatus}</div>
+      <div>Connected: {isConnected ? 'Yes' : 'No'}</div>
+      <div>Socket ID: {socket?.id || 'None'}</div>
+      <div>URL: {typeof window !== 'undefined' ? window.location.hostname : 'N/A'}</div>
+      <div>Token: {localStorage.getItem('authToken')?.substring(0, 10) + '...' || 'None'}</div>
+      <div>Transport: {socket?.io?.engine?.transport?.name || 'None'}</div>
+      <div>Timestamp: {new Date().toLocaleTimeString()}</div>
+      {socket && (
+        <button
+          onClick={() => {
+            console.log('🧪 Manual test message sent');
+            socket.emit('test_message', { test: 'manual test' });
+          }}
+          className="bg-blue-500 text-white px-2 py-1 rounded text-xs mt-2"
+        >
+          Test Message
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ChatsPage() {
   return (
     <ProtectedRoute>
@@ -21,6 +49,7 @@ function ChatsContent() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToastContext();
@@ -93,6 +122,22 @@ function ChatsContent() {
 
   return (
     <div className="flex bg-white dark:bg-gray-900 fixed top-14 sm:top-16 left-0 right-0 bottom-16 lg:bottom-0 z-40">
+      {/* Debug Panel Toggle */}
+      <button
+        onClick={() => setShowDebug(!showDebug)}
+        className="fixed top-20 right-4 z-50 bg-red-500 text-white px-2 py-1 rounded text-xs"
+      >
+        Debug
+      </button>
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="fixed top-32 right-4 z-50 bg-black text-green-400 p-4 rounded max-w-md max-h-96 overflow-y-auto text-xs font-mono">
+          <h3 className="text-white mb-2">Socket.IO Debug</h3>
+          <SocketDebugInfo />
+        </div>
+      )}
+
       {/* Loading overlay when creating chat */}
       {isCreatingChat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

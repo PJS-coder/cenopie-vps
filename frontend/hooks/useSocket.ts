@@ -30,6 +30,9 @@ export function useSocket() {
 
     console.log('🔌 Connecting to Socket.IO server:', socketUrl);
     console.log('🌐 Current location:', typeof window !== 'undefined' ? window.location.href : 'server-side');
+    console.log('🔑 Token available:', !!token);
+    console.log('🌍 Environment:', process.env.NODE_ENV);
+    console.log('📍 Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
 
     const socketInstance = io(socketUrl, {
       auth: { token },

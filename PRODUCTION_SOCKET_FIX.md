@@ -1,18 +1,96 @@
 # Production Socket.IO Debugging Guide
 
-## Quick Diagnosis Steps
+## Manual Browser Console Test
 
-### 1. Test Socket.IO Connection
-Visit: `https://cenopie.com/socket-test`
+Since the `/socket-test` page is showing blank, you can test Socket.IO directly in the browser console on cenopie.com/chats:
 
-This page will automatically test different Socket.IO configurations and show you:
-- Which connection method works (if any)
-- Detailed connection logs
-- Transport type (polling vs websocket)
-- Error messages
+### Step 1: Open Browser Console
+1. Go to `https://cenopie.com/chats`
+2. Press F12 or right-click → Inspect
+3. Go to Console tab
 
-### 2. Check Browser Console
-On cenopie.com/chats, open DevTools Console and look for:
+### Step 2: Look for Connection Logs
+You should see logs like:
+```
+🔑 Connecting to socket with token: eyJhbGciOiJIUzI1NiIs...
+🔌 Connecting to Socket.IO server: https://cenopie.com
+🌐 Current location: https://cenopie.com/chats
+🔑 Token available: true
+🌍 Environment: production
+📍 Hostname: cenopie.com
+```
+
+### Step 3: Check Connection Status
+Look for either:
+- ✅ `Socket connected successfully to: https://cenopie.com`
+- ❌ `Socket connection error: [error message]`
+
+### Step 4: Manual Socket Test
+If you see connection errors, run this in console:
+```javascript
+// Test basic connectivity
+fetch('https://cenopie.com/api/health')
+  .then(r => r.json())
+  .then(d => console.log('API Health:', d))
+  .catch(e => console.error('API Error:', e));
+
+// Test Socket.IO endpoint
+fetch('https://cenopie.com/socket.io/')
+  .then(r => console.log('Socket.IO endpoint status:', r.status))
+  .catch(e => console.error('Socket.IO endpoint error:', e));
+```
+
+### Step 5: Debug Panel
+On the chat page, you'll now see a red "Debug" button in the top-right. Click it to see:
+- Connection status
+- Socket ID
+- Transport type
+- Current timestamp
+
+## Common Error Messages & Solutions
+
+### "Failed to fetch" or "Network error"
+**Cause**: Backend not accessible
+**Check**: 
+```bash
+curl -I https://cenopie.com/api/health
+curl -I https://cenopie.com/socket.io/
+```
+
+### "CORS policy" error
+**Cause**: CORS configuration issue
+**Solution**: Backend CORS already includes cenopie.com, check server logs
+
+### "WebSocket connection failed"
+**Cause**: WebSocket blocked, falling back to polling
+**Expected**: This is normal, polling should still work
+
+### "Authentication error"
+**Cause**: Token issue
+**Check**: Look for "Token available: true" in console logs
+
+## Quick Diagnosis Commands
+
+Run these in browser console on cenopie.com/chats:
+
+```javascript
+// Check if Socket.IO library is loaded
+console.log('Socket.IO available:', typeof io !== 'undefined');
+
+// Check auth token
+console.log('Auth token:', localStorage.getItem('authToken')?.substring(0, 20) + '...');
+
+// Check API connectivity
+fetch('/api/health').then(r => r.json()).then(console.log);
+
+// Manual Socket.IO test
+const testSocket = io('https://cenopie.com', {
+  auth: { token: localStorage.getItem('authToken') },
+  transports: ['polling']
+});
+testSocket.on('connect', () => console.log('✅ Manual test: Connected!'));
+testSocket.on('connect_error', (e) => console.log('❌ Manual test error:', e.message));
+```
 
 **Good Signs:**
 ```
